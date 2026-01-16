@@ -235,7 +235,16 @@ async function fetchPackageData() {
         var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_CONFIG.package.id + '/gviz/tq?tqx=out:json&sheet=' + sheetName + '&tq=SELECT%20*&_=' + timestamp;
 
         var response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.status);
+        }
         var text = await response.text();
+
+        // Check if response is HTML (login page) instead of JSON
+        if (text.trim().startsWith('<!DOCTYPE html>') || text.includes('google.com/accounts')) {
+            throw new Error('Unauthorized: Please checking Google Sheet sharing settings (Must be "Anyone with the link")');
+        }
+
         var jsonText = text.substring(47).slice(0, -2);
         var json = JSON.parse(jsonText);
         var rows = json.table.rows;
@@ -274,6 +283,14 @@ async function fetchPackageData() {
     } catch (error) {
         console.error('Error fetching package data:', error);
         hideLoading();
+        var container = document.getElementById('cardsContainer');
+        if (container) {
+            container.innerHTML = '<div class="no-results" style="color: red; text-align: center; padding: 20px;">' +
+                '<h3>⚠️ ไม่สามารถโหลดข้อมูลได้</h3>' +
+                '<p>' + error.message + '</p>' +
+                '<p>กรุณาตรวจสอบการตั้งค่า "แชร์" (Share) ใน Google Sheet ให้เป็น "ทุกคนที่มีลิงก์" (Anyone with the link)</p>' +
+                '</div>';
+        }
     }
 }
 
@@ -314,7 +331,16 @@ async function fetchRMData() {
         var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_CONFIG.rm.id + '/gviz/tq?tqx=out:json&sheet=' + sheetName + '&tq=SELECT%20*&_=' + timestamp;
 
         var response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.status);
+        }
         var text = await response.text();
+
+        // Check if response is HTML (login page) instead of JSON
+        if (text.trim().startsWith('<!DOCTYPE html>') || text.includes('google.com/accounts')) {
+            throw new Error('Unauthorized: Please checking Google Sheet sharing settings (Must be "Anyone with the link")');
+        }
+
         var jsonText = text.substring(47).slice(0, -2);
         var json = JSON.parse(jsonText);
         var rows = json.table.rows;
@@ -374,7 +400,11 @@ async function fetchRMData() {
         // Show error message to user instead of silently failing
         var container = document.getElementById('cardsContainer');
         if (container) {
-            container.innerHTML = '<div class="no-results"><p>⚠️ ไม่สามารถโหลดข้อมูลวัตถุดิบได้</p><p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">กรุณาตรวจสอบการเชื่อมต่ออินเตอร์เน็ต แล้วกด "รีเฟรชข้อมูล"</p></div>';
+            container.innerHTML = '<div class="no-results" style="color: red; text-align: center; padding: 20px;">' +
+                '<h3>⚠️ ไม่สามารถโหลดข้อมูลวัตถุดิบได้</h3>' +
+                '<p>' + error.message + '</p>' +
+                '<p>กรุณาตรวจสอบการตั้งค่า "แชร์" (Share) ใน Google Sheet ให้เป็น "ทุกคนที่มีลิงก์" (Anyone with the link)</p>' +
+                '</div>';
         }
         hideLoading();
     }

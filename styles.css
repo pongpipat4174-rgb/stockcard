@@ -1788,8 +1788,8 @@ body {
 }
 
 .stock-table-rm th {
-    background: #d1fae5;
-    color: #065f46;
+    background: #f3f4f6;
+    color: #4b5563;
 }
 
 .stock-table-rm .type-in {
@@ -1974,8 +1974,8 @@ body {
 .stock-table-rm th {
     font-size: 0.7rem;
     font-weight: 600;
-    background: #d1fae5;
-    color: #065f46;
+    background: #f3f4f6;
+    color: #4b5563;
 }
 
 /* Column specific widths */
@@ -2391,15 +2391,15 @@ body {
     }
 
     .stock-table-rm th {
-        background: #d1fae5 !important;
-        color: #065f46 !important;
+        background: #f3f4f6 !important;
+        color: #4b5563 !important;
         padding: 10px 6px !important;
         font-size: 7pt !important;
         font-weight: 700 !important;
         text-align: center !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        border: 1px solid #10b981 !important;
+        border: 1px solid #e5e7eb !important;
         text-transform: uppercase !important;
         letter-spacing: 0.02em !important;
         white-space: nowrap !important;

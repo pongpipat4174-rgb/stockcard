@@ -135,8 +135,13 @@ function switchModule(module, event) {
     document.getElementById('searchInput').value = '';
     var rmProductSelect = document.getElementById('rmProductSelect');
     var rmSupplierSelect = document.getElementById('rmSupplierSelect');
+    var dateFilter = document.getElementById('dateFilter');
     if (rmProductSelect) rmProductSelect.value = '';
     if (rmSupplierSelect) rmSupplierSelect.value = '';
+    if (dateFilter) dateFilter.value = '';
+
+    // Update expiry alert banners visibility
+    updateExpiryAlerts();
 
     // Load data for the selected module
     showLoading();
@@ -361,6 +366,7 @@ async function fetchRMData() {
         populateRMSupplierDropdown();
         updateStatsRM();
         showAllProductsRM();
+        updateExpiryAlerts(); // Update expiry alert banners
         hideLoading();
 
     } catch (error) {
@@ -752,8 +758,10 @@ function clearAllFilters() {
     // Clear RM dropdowns
     var rmProductSelect = document.getElementById('rmProductSelect');
     var rmSupplierSelect = document.getElementById('rmSupplierSelect');
+    var dateFilter = document.getElementById('dateFilter');
     if (rmProductSelect) rmProductSelect.value = '';
     if (rmSupplierSelect) rmSupplierSelect.value = '';
+    if (dateFilter) dateFilter.value = '';
 
     // Hide selected filter badge
     var selectedFilter = document.getElementById('selectedFilter');
@@ -769,6 +777,204 @@ function clearAllFilters() {
     }
 
     console.log('All filters cleared for module:', currentModule);
+}
+
+// ==================== EXPIRY ALERT BANNERS ====================
+
+function updateExpiryAlerts() {
+    // Only show for RM module
+    var alertSection = document.getElementById('alertBannersSection');
+    if (!alertSection) return;
+
+    if (currentModule !== 'rm') {
+        alertSection.style.display = 'none';
+        return;
+    }
+
+    alertSection.style.display = 'block';
+
+    // Count critical items (<=30 days) and warning items (31-90 days)
+    var criticalItems = [];
+    var warningItems = [];
+
+    rmStockData.forEach(function (item) {
+        var daysNum = parseInt(item.daysLeft);
+        if (!isNaN(daysNum) && daysNum > 0) {
+            if (daysNum <= 30) {
+                criticalItems.push(item);
+            } else if (daysNum <= 90) {
+                warningItems.push(item);
+            }
+        }
+    });
+
+    // Update counts
+    var criticalCount = document.getElementById('criticalCount');
+    var warningCount = document.getElementById('warningCount');
+
+    if (criticalCount) {
+        criticalCount.textContent = criticalItems.length + ' รายการ';
+    }
+    if (warningCount) {
+        warningCount.textContent = warningItems.length + ' รายการ';
+    }
+
+    // Store for later use
+    window.expiryData = {
+        critical: criticalItems,
+        warning: warningItems
+    };
+}
+
+function showExpiryItems(type) {
+    if (!window.expiryData) {
+        showToast('ไม่มีข้อมูลหมดอายุ');
+        return;
+    }
+
+    var items = type === 'critical' ? window.expiryData.critical : window.expiryData.warning;
+    var title = type === 'critical' ? '⚠️ รายการหมดอายุภายใน 30 วัน' : '⏰ รายการหมดอายุภายใน 90 วัน';
+
+    if (items.length === 0) {
+        showToast('ไม่มีรายการ' + (type === 'critical' ? 'วิกฤต' : 'เตือน'));
+        return;
+    }
+
+    // Group by product
+    var productMap = new Map();
+    items.forEach(function (item) {
+        if (!productMap.has(item.productCode)) {
+            productMap.set(item.productCode, {
+                code: item.productCode,
+                name: item.productName,
+                entries: []
+            });
+        }
+        productMap.get(item.productCode).entries.push(item);
+    });
+
+    // Filter to show only these products
+    searchedProducts = Array.from(productMap.values()).map(function (prod) {
+        var entries = prod.entries;
+        var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+        var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+        var lastEntry = entries[entries.length - 1];
+        return {
+            code: prod.code,
+            name: prod.name,
+            entries: entries,
+            totalIn: totalIn,
+            totalOut: totalOut,
+            balance: lastEntry ? lastEntry.balance : 0,
+            lotNo: lastEntry ? lastEntry.lotNo : '',
+            supplier: lastEntry ? lastEntry.supplier : ''
+        };
+    });
+
+    renderStockCardsRM(searchedProducts);
+    showToast(title + ' (' + items.length + ' รายการ)');
+
+    // Scroll to cards
+    document.getElementById('cardsContainer')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ==================== DATE FILTER ====================
+
+function filterByDate(dateStr) {
+    if (!dateStr) {
+        // Clear date filter - show all
+        if (currentModule === 'package') {
+            showAllProducts();
+        } else {
+            showAllProductsRM();
+        }
+        return;
+    }
+
+    // Convert input date to Thai format for comparison
+    var inputDate = new Date(dateStr);
+    var day = inputDate.getDate();
+    var month = inputDate.getMonth() + 1;
+    var year = inputDate.getFullYear();
+    var thaiDateStr = day + '/' + month + '/' + year;
+
+    if (currentModule === 'package') {
+        // Filter package data by date
+        var filtered = stockData.filter(function (item) {
+            return item.date && item.date.includes(thaiDateStr);
+        });
+
+        // Group by product
+        var productMap = new Map();
+        filtered.forEach(function (item) {
+            if (!productMap.has(item.productCode)) {
+                productMap.set(item.productCode, {
+                    code: item.productCode,
+                    name: item.productName,
+                    entries: []
+                });
+            }
+            productMap.get(item.productCode).entries.push(item);
+        });
+
+        searchedProducts = Array.from(productMap.values()).map(function (prod) {
+            var entries = prod.entries;
+            var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+            var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+            var lastEntry = entries[entries.length - 1];
+            return {
+                code: prod.code,
+                name: prod.name,
+                entries: entries,
+                totalIn: totalIn,
+                totalOut: totalOut,
+                balance: lastEntry ? lastEntry.balance : 0,
+                lotNo: lastEntry ? lastEntry.lotNo : ''
+            };
+        });
+
+        renderStockCards(searchedProducts);
+        showToast('กรองวันที่: ' + thaiDateStr + ' (' + searchedProducts.length + ' สินค้า)');
+
+    } else {
+        // Filter RM data by date
+        var filtered = rmStockData.filter(function (item) {
+            return item.date && item.date.includes(thaiDateStr);
+        });
+
+        // Group by product
+        var productMap = new Map();
+        filtered.forEach(function (item) {
+            if (!productMap.has(item.productCode)) {
+                productMap.set(item.productCode, {
+                    code: item.productCode,
+                    name: item.productName,
+                    entries: []
+                });
+            }
+            productMap.get(item.productCode).entries.push(item);
+        });
+
+        searchedProducts = Array.from(productMap.values()).map(function (prod) {
+            var entries = prod.entries;
+            var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+            var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+            var lastEntry = entries[entries.length - 1];
+            return {
+                code: prod.code,
+                name: prod.name,
+                entries: entries,
+                totalIn: totalIn,
+                totalOut: totalOut,
+                balance: lastEntry ? lastEntry.balance : 0,
+                lotNo: lastEntry ? lastEntry.lotNo : '',
+                supplier: lastEntry ? lastEntry.supplier : ''
+            };
+        });
+
+        renderStockCardsRM(searchedProducts);
+        showToast('กรองวันที่: ' + thaiDateStr + ' (' + searchedProducts.length + ' วัตถุดิบ)');
+    }
 }
 
 // ==================== UTILITY ====================
@@ -998,6 +1204,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Clear Filter Button
     document.getElementById('clearFilterBtn')?.addEventListener('click', clearAllFilters);
+
+    // Date Filter
+    document.getElementById('dateFilter')?.addEventListener('change', function () {
+        filterByDate(this.value);
+    });
 
     // RM Modal events
     document.getElementById('entryModalCloseRM')?.addEventListener('click', closeEntryModalRM);

@@ -1,5 +1,23 @@
 /* Stock Card Web App - V.14 (Fixed Mobile Tab Switching + Print Styles) */
 
+// Global Error Handler
+window.onerror = function (msg, url, lineNo, columnNo, error) {
+    var container = document.getElementById('cardsContainer');
+    var loading = document.getElementById('loadingOverlay');
+    if (loading) loading.style.display = 'none';
+
+    var errorMsg = 'Error: ' + msg + '\nLine: ' + lineNo;
+    if (container) {
+        container.innerHTML = '<div style="color:red;padding:20px;text-align:center;">' +
+            '<h3>⚠️ เกิดข้อผิดพลาดร้ายแรง</h3>' +
+            '<pre>' + errorMsg + '</pre>' +
+            '<button onclick="location.reload()" class="btn btn-primary">รีเฟรช</button>' +
+            '</div>';
+    }
+    console.error('Global Error:', errorMsg);
+    return false;
+};
+
 // Configuration
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdF61u0WhgQ6Uxmb_fCmfK8Ww1wlTMFBC79a13AFAhN2TCjBHKDL4VmVL49C4W5bKdVw/exec';
 
@@ -261,7 +279,21 @@ async function fetchPackageData() {
         var sheetName = encodeURIComponent(SHEET_CONFIG.package.sheetName);
         var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_CONFIG.package.id + '/gviz/tq?tqx=out:json&sheet=' + sheetName + '&tq=SELECT%20*&_=' + timestamp;
 
-        var response = await fetch(url);
+        // Fetch with explicit 15s timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        try {
+            var response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+        } catch (err) {
+            clearTimeout(timeoutId);
+            if (err.name === 'AbortError') {
+                throw new Error('Connection timeout (15s). Please check internet.');
+            }
+            throw err;
+        }
+
         if (!response.ok) {
             throw new Error('Network response was not ok: ' + response.status);
         }

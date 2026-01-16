@@ -1,11 +1,39 @@
-/* Stock Card Web App - V.10 (Working Edition) */
+/* Stock Card Web App - V.13 (Package + RM with Product/Supplier Dropdown) */
 
 // Configuration
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdF61u0WhgQ6Uxmb_fCmfK8Ww1wlTMFBC79a13AFAhN2TCjBHKDL4VmVL49C4W5bKdVw/exec';
 
+// Google Sheet URLs for direct data fetching
+const SHEET_CONFIG = {
+    package: {
+        id: '1h6--jU1VAjrNwHY1TcCfWn9En_gl464fvMaheNPxaTU',
+        sheetName: 'บันทึก StockCard',
+        title: 'Stock Card แพ็คเกจ',
+        subtitle: 'ระบบจัดการสต็อกบรรจุภัณฑ์และแพ็คเกจ',
+        icon: '📦',
+        unit: 'ชิ้น',
+        color: '#6366f1'
+    },
+    rm: {
+        id: '1C3mPPxucPueSOfW4Hh7m4k3BjJ4ZHonqzc8j-JfQOfs',
+        sheetName: 'Sheet1',
+        title: 'Stock Card วัตถุดิบ (RM)',
+        subtitle: 'ระบบจัดการสต็อกวัตถุดิบและสารเคมี',
+        icon: '🧪',
+        unit: 'Kg',
+        color: '#10b981'
+    }
+};
+
+// Current module state
+let currentModule = 'package';
+
 // Data containers
 let stockData = [];
+let rmStockData = [];
 let productMasterData = [];
+let rmProductMasterData = [];
+let rmSuppliersList = [];
 let searchedProducts = [];
 
 // Loading
@@ -29,32 +57,100 @@ function showToast(message) {
     }
     toast.textContent = message;
     toast.style.display = 'block';
-    setTimeout(() => toast.style.display = 'none', 3000);
+    setTimeout(function () { toast.style.display = 'none'; }, 3000);
+}
+
+// Switch Module (Package / RM)
+function switchModule(module) {
+    currentModule = module;
+
+    // Update tab styles
+    document.querySelectorAll('.module-tab').forEach(function (tab) {
+        tab.classList.remove('active');
+        if (tab.dataset.module === module) {
+            tab.classList.add('active');
+        }
+    });
+
+    // Update banner
+    var config = SHEET_CONFIG[module];
+    document.getElementById('moduleIcon').textContent = config.icon;
+    document.getElementById('moduleTitle').textContent = config.title;
+    document.getElementById('moduleSubtitle').textContent = config.subtitle;
+
+    // Update banner color
+    var banner = document.getElementById('moduleBanner');
+    var rmFilterGroup = document.getElementById('rmFilterGroup');
+    var rmSupplierGroup = document.getElementById('rmSupplierGroup');
+
+    if (module === 'rm') {
+        banner.classList.add('rm-mode');
+        // Show RM filter dropdowns
+        if (rmFilterGroup) rmFilterGroup.style.display = 'flex';
+        if (rmSupplierGroup) rmSupplierGroup.style.display = 'flex';
+        document.getElementById('labelTotalIn').textContent = 'รับเข้าทั้งหมด (Kg)';
+        document.getElementById('labelTotalOut').textContent = 'เบิกออกทั้งหมด (Kg)';
+    } else {
+        banner.classList.remove('rm-mode');
+        // Hide RM filter dropdowns
+        if (rmFilterGroup) rmFilterGroup.style.display = 'none';
+        if (rmSupplierGroup) rmSupplierGroup.style.display = 'none';
+        document.getElementById('labelTotalIn').textContent = 'รับเข้าทั้งหมด';
+        document.getElementById('labelTotalOut').textContent = 'เบิกออกทั้งหมด';
+    }
+
+    // Clear search and reset dropdowns
+    document.getElementById('searchInput').value = '';
+    var rmProductSelect = document.getElementById('rmProductSelect');
+    var rmSupplierSelect = document.getElementById('rmSupplierSelect');
+    if (rmProductSelect) rmProductSelect.value = '';
+    if (rmSupplierSelect) rmSupplierSelect.value = '';
+
+    // Load data for the selected module
+    showLoading();
+    if (module === 'package') {
+        if (stockData.length > 0) {
+            updateStats();
+            showAllProducts();
+            hideLoading();
+        } else {
+            fetchPackageData();
+        }
+    } else {
+        if (rmStockData.length > 0) {
+            updateStatsRM();
+            showAllProductsRM();
+            hideLoading();
+        } else {
+            fetchRMData();
+        }
+    }
 }
 
 // Initialize
 async function init() {
-    console.log('Initializing...');
+    console.log('Initializing Stock Card System V.13...');
     showLoading();
-    await fetchDataFromSheets();
+    await fetchPackageData();
     hideLoading();
 }
 
-// Fetch Data from Google Sheets
-async function fetchDataFromSheets() {
+// ==================== PACKAGE DATA ====================
+
+async function fetchPackageData() {
     try {
-        const timestamp = new Date().getTime();
-        const sheetName = encodeURIComponent('บันทึก StockCard');
-        const url = `https://docs.google.com/spreadsheets/d/1h6--jU1VAjrNwHY1TcCfWn9En_gl464fvMaheNPxaTU/gviz/tq?tqx=out:json&sheet=${sheetName}&tq=SELECT%20*&_=${timestamp}`;
+        var timestamp = new Date().getTime();
+        var sheetName = encodeURIComponent(SHEET_CONFIG.package.sheetName);
+        var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_CONFIG.package.id + '/gviz/tq?tqx=out:json&sheet=' + sheetName + '&tq=SELECT%20*&_=' + timestamp;
 
-        const response = await fetch(url);
-        const text = await response.text();
-        const jsonText = text.substring(47).slice(0, -2);
-        const json = JSON.parse(jsonText);
-        const rows = json.table.rows;
+        var response = await fetch(url);
+        var text = await response.text();
+        var jsonText = text.substring(47).slice(0, -2);
+        var json = JSON.parse(jsonText);
+        var rows = json.table.rows;
 
-        stockData = rows.map((row, index) => {
-            const c = row.c;
+        stockData = rows.map(function (row, index) {
+            var c = row.c;
             return {
                 rowIndex: index + 2,
                 date: c[0]?.f || c[0]?.v || '',
@@ -69,10 +165,10 @@ async function fetchDataFromSheets() {
                 docRef: c[10]?.v || '',
                 remark: c[12]?.v || ''
             };
-        }).filter(item => item.productCode && item.productCode !== 'code');
+        }).filter(function (item) { return item.productCode && item.productCode !== 'code'; });
 
-        const uniqueProducts = new Map();
-        stockData.forEach(item => {
+        var uniqueProducts = new Map();
+        stockData.forEach(function (item) {
             if (item.productCode && !uniqueProducts.has(item.productCode)) {
                 uniqueProducts.set(item.productCode, { code: item.productCode, name: item.productName });
             }
@@ -82,29 +178,29 @@ async function fetchDataFromSheets() {
         populateProductDropdown();
         updateStats();
         showAllProducts();
+        hideLoading();
 
     } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching package data:', error);
+        hideLoading();
     }
 }
 
-// Update Stats
 function updateStats() {
     document.getElementById('totalProducts').textContent = productMasterData.length;
     document.getElementById('totalTransactions').textContent = stockData.length;
-    const totalIn = stockData.reduce((sum, d) => sum + d.inQty, 0);
-    const totalOut = stockData.reduce((sum, d) => sum + d.outQty, 0);
+    var totalIn = stockData.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+    var totalOut = stockData.reduce(function (sum, d) { return sum + d.outQty; }, 0);
     document.getElementById('totalIn').textContent = formatNumber(totalIn);
     document.getElementById('totalOut').textContent = formatNumber(totalOut);
 }
 
-// Show All Products
 function showAllProducts() {
-    searchedProducts = productMasterData.map(prod => {
-        const entries = stockData.filter(d => d.productCode === prod.code);
-        const totalIn = entries.reduce((sum, d) => sum + d.inQty, 0);
-        const totalOut = entries.reduce((sum, d) => sum + d.outQty, 0);
-        const lastEntry = entries[entries.length - 1];
+    searchedProducts = productMasterData.map(function (prod) {
+        var entries = stockData.filter(function (d) { return d.productCode === prod.code; });
+        var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+        var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+        var lastEntry = entries[entries.length - 1];
         return {
             code: prod.code,
             name: prod.name,
@@ -118,21 +214,147 @@ function showAllProducts() {
     renderStockCards(searchedProducts);
 }
 
-// Handle Search
-function handleSearch() {
-    const query = document.getElementById('searchInput').value.toLowerCase().trim();
-    if (!query) {
-        showAllProducts();
+// ==================== RM DATA ====================
+
+async function fetchRMData() {
+    try {
+        var timestamp = new Date().getTime();
+        var sheetName = encodeURIComponent(SHEET_CONFIG.rm.sheetName);
+        var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_CONFIG.rm.id + '/gviz/tq?tqx=out:json&sheet=' + sheetName + '&tq=SELECT%20*&_=' + timestamp;
+
+        var response = await fetch(url);
+        var text = await response.text();
+        var jsonText = text.substring(47).slice(0, -2);
+        var json = JSON.parse(jsonText);
+        var rows = json.table.rows;
+
+        // RM columns: A-วันที่, B-รหัส, C-ชื่อ, D-รายการ, E-จำนวนCont, F-นน.Cont, G-เศษ, H-IN, I-OUT, J-Balance, K-LotNo, L-VendorLot, M-MFD, N-EXP, O-DaysLeft, P-LotBalance, Q-Supplier
+        rmStockData = rows.map(function (row, index) {
+            var c = row.c;
+            return {
+                rowIndex: index + 2,
+                date: c[0]?.f || c[0]?.v || '',
+                productCode: c[1]?.v || '',
+                productName: c[2]?.v || '',
+                type: c[3]?.v || '',
+                containerQty: parseFloat(c[4]?.v) || 0,
+                containerWeight: parseFloat(c[5]?.v) || 0,
+                remainder: parseFloat(c[6]?.v) || 0,
+                inQty: parseFloat(c[7]?.v) || 0,
+                outQty: parseFloat(c[8]?.v) || 0,
+                balance: parseFloat(c[9]?.v) || 0,
+                lotNo: c[10]?.v || '',
+                vendorLot: c[11]?.v || '',
+                mfgDate: c[12]?.f || c[12]?.v || '',
+                expDate: c[13]?.f || c[13]?.v || '',
+                daysLeft: c[14]?.v || '',
+                lotBalance: parseFloat(c[15]?.v) || 0,
+                supplier: c[16]?.v || ''
+            };
+        }).filter(function (item) { return item.productCode && item.productCode !== 'รหัสสินค้า'; });
+
+        // Create unique products list
+        var uniqueProducts = new Map();
+        rmStockData.forEach(function (item) {
+            if (item.productCode && !uniqueProducts.has(item.productCode)) {
+                uniqueProducts.set(item.productCode, { code: item.productCode, name: item.productName });
+            }
+        });
+        rmProductMasterData = Array.from(uniqueProducts.values());
+
+        // Create unique suppliers list for dropdown
+        var uniqueSuppliers = new Set();
+        rmStockData.forEach(function (item) {
+            if (item.supplier && item.supplier.trim() !== '') {
+                uniqueSuppliers.add(item.supplier.trim());
+            }
+        });
+        rmSuppliersList = Array.from(uniqueSuppliers).sort();
+
+        populateRMProductDropdown();
+        populateRMSupplierDropdown();
+        updateStatsRM();
+        showAllProductsRM();
+        hideLoading();
+
+    } catch (error) {
+        console.error('Error fetching RM data:', error);
+        hideLoading();
+    }
+}
+
+function populateRMProductDropdown() {
+    var select = document.getElementById('rmProductSelect');
+    if (!select) return;
+
+    // Keep the first "show all" option
+    select.innerHTML = '<option value="">-- แสดงทั้งหมด (' + rmProductMasterData.length + ' รายการ) --</option>';
+
+    rmProductMasterData.forEach(function (p) {
+        var option = document.createElement('option');
+        option.value = p.code;
+        option.textContent = p.code + ' - ' + p.name;
+        select.appendChild(option);
+    });
+}
+
+function populateRMSupplierDropdown() {
+    var select = document.getElementById('rmSupplierSelect');
+    if (!select) return;
+
+    // Keep the first "show all" option
+    select.innerHTML = '<option value="">-- แสดงทั้งหมด (' + rmSuppliersList.length + ' Suppliers) --</option>';
+
+    rmSuppliersList.forEach(function (supplier) {
+        var option = document.createElement('option');
+        option.value = supplier;
+        option.textContent = supplier;
+        select.appendChild(option);
+    });
+}
+
+function updateStatsRM() {
+    document.getElementById('totalProducts').textContent = rmProductMasterData.length;
+    document.getElementById('totalTransactions').textContent = rmStockData.length;
+    var totalIn = rmStockData.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+    var totalOut = rmStockData.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+    document.getElementById('totalIn').textContent = formatNumber(totalIn);
+    document.getElementById('totalOut').textContent = formatNumber(totalOut);
+}
+
+function showAllProductsRM() {
+    searchedProducts = rmProductMasterData.map(function (prod) {
+        var entries = rmStockData.filter(function (d) { return d.productCode === prod.code; });
+        var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+        var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+        var lastEntry = entries[entries.length - 1];
+        return {
+            code: prod.code,
+            name: prod.name,
+            entries: entries,
+            totalIn: totalIn,
+            totalOut: totalOut,
+            balance: lastEntry ? lastEntry.balance : 0,
+            lotNo: lastEntry ? lastEntry.lotNo : '',
+            supplier: lastEntry ? lastEntry.supplier : ''
+        };
+    });
+    renderStockCardsRM(searchedProducts);
+}
+
+// Filter RM by Product Code
+function filterRMByProduct(productCode) {
+    if (!productCode) {
+        showAllProductsRM();
         return;
     }
-    const filtered = productMasterData.filter(p =>
-        p.code.toLowerCase().includes(query) || p.name.toLowerCase().includes(query)
-    );
-    searchedProducts = filtered.map(prod => {
-        const entries = stockData.filter(d => d.productCode === prod.code);
-        const totalIn = entries.reduce((sum, d) => sum + d.inQty, 0);
-        const totalOut = entries.reduce((sum, d) => sum + d.outQty, 0);
-        const lastEntry = entries[entries.length - 1];
+
+    var filtered = rmProductMasterData.filter(function (p) { return p.code === productCode; });
+    searchedProducts = filtered.map(function (prod) {
+        var entries = rmStockData.filter(function (d) { return d.productCode === prod.code; });
+        var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+        var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+        var lastEntry = entries[entries.length - 1];
         return {
             code: prod.code,
             name: prod.name,
@@ -140,15 +362,56 @@ function handleSearch() {
             totalIn: totalIn,
             totalOut: totalOut,
             balance: lastEntry ? lastEntry.balance : 0,
-            lotNo: lastEntry ? lastEntry.lotNo : ''
+            lotNo: lastEntry ? lastEntry.lotNo : '',
+            supplier: lastEntry ? lastEntry.supplier : ''
         };
     });
-    renderStockCards(searchedProducts);
+    renderStockCardsRM(searchedProducts);
 }
 
-// Render Stock Cards
+// Filter RM by Supplier
+function filterRMBySupplier(supplierName) {
+    if (!supplierName) {
+        showAllProductsRM();
+        return;
+    }
+
+    // Get all entries from this supplier
+    var filteredEntries = rmStockData.filter(function (d) {
+        return d.supplier && d.supplier.trim() === supplierName;
+    });
+
+    // Get unique products from these entries
+    var uniqueProducts = new Map();
+    filteredEntries.forEach(function (item) {
+        if (!uniqueProducts.has(item.productCode)) {
+            uniqueProducts.set(item.productCode, { code: item.productCode, name: item.productName });
+        }
+    });
+
+    searchedProducts = Array.from(uniqueProducts.values()).map(function (prod) {
+        var entries = filteredEntries.filter(function (d) { return d.productCode === prod.code; });
+        var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+        var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+        var lastEntry = entries[entries.length - 1];
+        return {
+            code: prod.code,
+            name: prod.name,
+            entries: entries,
+            totalIn: totalIn,
+            totalOut: totalOut,
+            balance: lastEntry ? lastEntry.balance : 0,
+            lotNo: lastEntry ? lastEntry.lotNo : '',
+            supplier: supplierName
+        };
+    });
+    renderStockCardsRM(searchedProducts);
+}
+
+// ==================== RENDER FUNCTIONS ====================
+
 function renderStockCards(products) {
-    const container = document.getElementById('cardsContainer');
+    var container = document.getElementById('cardsContainer');
     if (!container) return;
 
     if (products.length === 0) {
@@ -156,130 +419,280 @@ function renderStockCards(products) {
         return;
     }
 
-    container.innerHTML = products.map((prod, idx) => `
-        <div class="stock-card" id="card-${idx}">
-            <div class="stock-card-header">
-                <div class="stock-card-title">
-                    <h3>${prod.name}</h3>
-                    <span class="product-code">${prod.code}</span>
-                </div>
-                <button class="btn print-btn" onclick="printSingleCard('card-${idx}', '${prod.name}', '${prod.code}')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                        <rect x="6" y="14" width="12" height="8"></rect>
-                    </svg>
-                    พิมพ์
-                </button>
-            </div>
-            <div class="stock-card-summary">
-                <div class="summary-item">
-                    <span class="summary-label">รับเข้าทั้งหมด</span>
-                    <span class="summary-value positive">+${formatNumber(prod.totalIn)}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="summary-label">เบิกออกทั้งหมด</span>
-                    <span class="summary-value negative">-${formatNumber(prod.totalOut)}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="summary-label">คงเหลือปัจจุบัน</span>
-                    <span class="summary-value">${formatNumber(prod.balance)}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="summary-label">LOT ล่าสุด</span>
-                    <span class="summary-value">${prod.lotNo || '-'}</span>
-                </div>
-            </div>
-            <div class="stock-table-container">
-                <table class="stock-table">
-                    <thead>
-                        <tr>
-                            <th>วันที่</th>
-                            <th>ประเภท</th>
-                            <th>รับเข้า</th>
-                            <th>เบิกออก</th>
-                            <th>คงเหลือ</th>
-                            <th>Lot No.</th>
-                            <th>คงเหลือ Lot</th>
-                            <th>อ้างอิง</th>
-                            <th>หมายเหตุ</th>
-                            <th class="no-print">ลบ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${prod.entries.map(entry => {
-        // คำนวณคงเหลือเฉพาะ Lot
-        const lotEntries = prod.entries.filter(e => e.lotNo === entry.lotNo);
-        const lotIdx = lotEntries.findIndex(e => e.rowIndex === entry.rowIndex);
-        let lotBalance = 0;
-        for (let i = 0; i <= lotIdx; i++) {
-            lotBalance += lotEntries[i].inQty - lotEntries[i].outQty;
+    var html = '';
+    products.forEach(function (prod, idx) {
+        // Calculate FIFO - Find the oldest lot with remaining balance
+        var lotBalances = {};
+        var lotFirstDate = {};
+
+        prod.entries.forEach(function (entry) {
+            if (entry.lotNo) {
+                if (!lotBalances[entry.lotNo]) {
+                    lotBalances[entry.lotNo] = 0;
+                    lotFirstDate[entry.lotNo] = entry.date;
+                }
+                lotBalances[entry.lotNo] += entry.inQty - entry.outQty;
+            }
+        });
+
+        // Find lots with positive balance, sorted by first appearance (oldest first)
+        var lotsWithBalance = Object.keys(lotBalances)
+            .filter(function (lot) { return lotBalances[lot] > 0; })
+            .sort(function (a, b) {
+                // Sort by first date (oldest first)
+                return lotFirstDate[a] < lotFirstDate[b] ? -1 : 1;
+            });
+
+        // The first lot in sorted array is the one to use first (FIFO)
+        var fifoLot = lotsWithBalance.length > 0 ? lotsWithBalance[0] : '-';
+        var fifoBalance = lotsWithBalance.length > 0 ? lotBalances[fifoLot] : 0;
+        var hasMultipleLots = lotsWithBalance.length > 1;
+
+        var entriesHtml = '';
+        prod.entries.forEach(function (entry) {
+            var lotEntries = prod.entries.filter(function (e) { return e.lotNo === entry.lotNo; });
+            var lotIdx = lotEntries.findIndex(function (e) { return e.rowIndex === entry.rowIndex; });
+            var lotBalance = 0;
+            for (var i = 0; i <= lotIdx; i++) {
+                lotBalance += lotEntries[i].inQty - lotEntries[i].outQty;
+            }
+            entriesHtml += '<tr>';
+            entriesHtml += '<td>' + entry.date + '</td>';
+            entriesHtml += '<td><span class="type-cell ' + (entry.type === 'รับเข้า' ? 'type-in' : 'type-out') + '">' + entry.type + '</span></td>';
+            entriesHtml += '<td class="qty-in">' + (entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-') + '</td>';
+            entriesHtml += '<td class="qty-out">' + (entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-') + '</td>';
+            entriesHtml += '<td>' + formatNumber(entry.balance) + '</td>';
+            entriesHtml += '<td>' + (entry.lotNo || '-') + '</td>';
+            entriesHtml += '<td>' + (entry.lotNo ? formatNumber(lotBalance) : '-') + '</td>';
+            entriesHtml += '<td>' + (entry.docRef || '-') + '</td>';
+            entriesHtml += '<td>' + (entry.remark || '-') + '</td>';
+            entriesHtml += '<td class="no-print"><button class="btn btn-delete" onclick="deleteEntry(' + entry.rowIndex + ', \'' + prod.code + '\', \'' + entry.type + '\')">ลบ</button></td>';
+            entriesHtml += '</tr>';
+        });
+
+        html += '<div class="stock-card" id="card-' + idx + '">';
+        html += '<div class="stock-card-header">';
+        html += '<div class="stock-card-title"><h3>📦 ' + prod.name + '</h3><span class="product-code">' + prod.code + '</span></div>';
+        html += '<button class="btn print-btn" onclick="printSingleCard(\'card-' + idx + '\', \'' + prod.name + '\', \'' + prod.code + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> พิมพ์</button>';
+        html += '</div>';
+        html += '<div class="stock-card-summary">';
+        html += '<div class="summary-item"><span class="summary-label">รับเข้าทั้งหมด</span><span class="summary-value positive">+' + formatNumber(prod.totalIn) + '</span></div>';
+        html += '<div class="summary-item"><span class="summary-label">เบิกออกทั้งหมด</span><span class="summary-value negative">-' + formatNumber(prod.totalOut) + '</span></div>';
+        html += '<div class="summary-item"><span class="summary-label">คงเหลือปัจจุบัน</span><span class="summary-value">' + formatNumber(prod.balance) + '</span></div>';
+        html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
+        html += '<span class="summary-label">' + (hasMultipleLots ? '⚠️ ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
+        html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
+        if (hasMultipleLots) {
+            html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' ชิ้น · มี ' + lotsWithBalance.length + ' Lots</span>';
         }
-        return `
-                            <tr>
-                                <td>${entry.date}</td>
-                                <td><span class="type-cell ${entry.type === 'รับเข้า' ? 'type-in' : 'type-out'}">${entry.type}</span></td>
-                                <td class="qty-in">${entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-'}</td>
-                                <td class="qty-out">${entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-'}</td>
-                                <td>${formatNumber(entry.balance)}</td>
-                                <td>${entry.lotNo || '-'}</td>
-                                <td>${entry.lotNo ? formatNumber(lotBalance) : '-'}</td>
-                                <td>${entry.docRef || '-'}</td>
-                                <td>${entry.remark || '-'}</td>
-                                <td class="no-print">
-                                    <button class="btn btn-delete" onclick="deleteEntry(${entry.rowIndex}, '${prod.code}', '${entry.type}')">ลบ</button>
-                                </td>
-                            </tr>
-                        `}).join('')}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `).join('');
+        html += '</div>';
+        html += '</div>';
+        html += '<div class="stock-table-container"><table class="stock-table"><thead><tr><th>วันที่</th><th>ประเภท</th><th>รับเข้า</th><th>เบิกออก</th><th>คงเหลือ</th><th>Lot No.</th><th>คงเหลือ Lot</th><th>อ้างอิง</th><th>หมายเหตุ</th><th class="no-print">ลบ</th></tr></thead>';
+        html += '<tbody>' + entriesHtml + '</tbody></table></div>';
+        html += '</div>';
+    });
+
+    container.innerHTML = html;
 }
 
-// Format Number
+function renderStockCardsRM(products) {
+    var container = document.getElementById('cardsContainer');
+    if (!container) return;
+
+    if (products.length === 0) {
+        container.innerHTML = '<div class="no-results"><p>ไม่พบข้อมูลวัตถุดิบ</p></div>';
+        return;
+    }
+
+    var html = '';
+    products.forEach(function (prod, idx) {
+        // Calculate FIFO - Find the oldest lot with remaining balance
+        var lotBalances = {};
+        var lotFirstDate = {};
+
+        prod.entries.forEach(function (entry) {
+            if (entry.lotNo) {
+                if (!lotBalances[entry.lotNo]) {
+                    lotBalances[entry.lotNo] = 0;
+                    lotFirstDate[entry.lotNo] = entry.date;
+                }
+                lotBalances[entry.lotNo] += entry.inQty - entry.outQty;
+            }
+        });
+
+        // Find lots with positive balance, sorted by first appearance (oldest first)
+        var lotsWithBalance = Object.keys(lotBalances)
+            .filter(function (lot) { return lotBalances[lot] > 0; })
+            .sort(function (a, b) {
+                // Sort by first date (oldest first)
+                return lotFirstDate[a] < lotFirstDate[b] ? -1 : 1;
+            });
+
+        // The first lot in sorted array is the one to use first (FIFO)
+        var fifoLot = lotsWithBalance.length > 0 ? lotsWithBalance[0] : '-';
+        var fifoBalance = lotsWithBalance.length > 0 ? lotBalances[fifoLot] : 0;
+        var hasMultipleLots = lotsWithBalance.length > 1;
+
+        var entriesHtml = '';
+        prod.entries.forEach(function (entry) {
+            // Days left styling
+            var daysLeftClass = '';
+            var daysNum = parseInt(entry.daysLeft);
+            if (!isNaN(daysNum)) {
+                if (daysNum <= 30) daysLeftClass = 'days-critical';
+                else if (daysNum <= 90) daysLeftClass = 'days-warning';
+                else daysLeftClass = 'days-ok';
+            }
+
+            entriesHtml += '<tr>';
+            entriesHtml += '<td class="col-date">' + entry.date + '</td>';
+            entriesHtml += '<td class="col-type"><span class="type-cell ' + (entry.type === 'รับเข้า' ? 'type-in' : 'type-out') + '">' + entry.type + '</span></td>';
+            entriesHtml += '<td class="col-num no-print">' + (entry.containerQty > 0 ? formatNumber(entry.containerQty) : '-') + '</td>';
+            entriesHtml += '<td class="col-num no-print">' + (entry.containerWeight > 0 ? formatNumber(entry.containerWeight) : '-') + '</td>';
+            entriesHtml += '<td class="col-num no-print">' + (entry.remainder > 0 ? formatNumber(entry.remainder) : '-') + '</td>';
+            entriesHtml += '<td class="col-num qty-in">' + (entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-') + '</td>';
+            entriesHtml += '<td class="col-num qty-out">' + (entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-') + '</td>';
+            entriesHtml += '<td class="col-num">' + formatNumber(entry.balance) + '</td>';
+            entriesHtml += '<td class="col-lot">' + (entry.lotNo || '-') + '</td>';
+            entriesHtml += '<td class="col-vendor no-print">' + (entry.vendorLot || '-') + '</td>';
+            entriesHtml += '<td class="col-date no-print">' + (entry.mfgDate || '-') + '</td>';
+            entriesHtml += '<td class="col-date">' + (entry.expDate || '-') + '</td>';
+            entriesHtml += '<td class="col-num ' + daysLeftClass + '">' + (entry.daysLeft || '-') + '</td>';
+            entriesHtml += '<td class="col-num">' + (entry.lotBalance > 0 ? formatNumber(entry.lotBalance) : '-') + '</td>';
+            entriesHtml += '<td class="col-supplier">' + (entry.supplier || '-') + '</td>';
+            entriesHtml += '</tr>';
+        });
+
+        html += '<div class="stock-card stock-card-rm" id="card-rm-' + idx + '">';
+        html += '<div class="stock-card-header stock-card-header-rm">';
+        html += '<div class="stock-card-title"><h3>🧪 ' + prod.name + '</h3><span class="product-code">' + prod.code + '</span></div>';
+        html += '<button class="btn print-btn" onclick="printSingleCard(\'card-rm-' + idx + '\', \'' + prod.name + '\', \'' + prod.code + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> พิมพ์</button>';
+        html += '</div>';
+        html += '<div class="stock-card-summary stock-card-summary-rm">';
+        html += '<div class="summary-item"><span class="summary-label">รับเข้าทั้งหมด (Kg)</span><span class="summary-value positive">+' + formatNumber(prod.totalIn) + '</span></div>';
+        html += '<div class="summary-item"><span class="summary-label">เบิกออกทั้งหมด (Kg)</span><span class="summary-value negative">-' + formatNumber(prod.totalOut) + '</span></div>';
+        html += '<div class="summary-item"><span class="summary-label">คงเหลือปัจจุบัน (Kg)</span><span class="summary-value">' + formatNumber(prod.balance) + '</span></div>';
+        html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
+        html += '<span class="summary-label">' + (hasMultipleLots ? '⚠️ ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
+        html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
+        if (hasMultipleLots) {
+            html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg · มี ' + lotsWithBalance.length + ' Lots</span>';
+        }
+        html += '</div>';
+        html += '</div>';
+        html += '<div class="stock-table-container"><table class="stock-table stock-table-rm"><thead><tr>';
+        html += '<th>วันที่</th><th>ประเภท</th><th class="no-print">Cont.</th><th class="no-print">นน./Cont.</th><th class="no-print">เศษ(Kg)</th><th>รับเข้า</th><th>เบิกออก</th><th>คงเหลือ</th><th>Lot No.</th><th class="no-print">Vendor Lot</th><th class="no-print">MFD</th><th>EXP</th><th>Days Left</th><th>Lot Bal.</th><th>Supplier</th>';
+        html += '</tr></thead>';
+        html += '<tbody>' + entriesHtml + '</tbody></table></div>';
+        html += '</div>';
+    });
+
+    container.innerHTML = html;
+}
+
+// ==================== SEARCH ====================
+
+function handleSearch() {
+    var query = document.getElementById('searchInput').value.toLowerCase().trim();
+
+    if (currentModule === 'package') {
+        if (!query) {
+            showAllProducts();
+            return;
+        }
+        var filtered = productMasterData.filter(function (p) {
+            return p.code.toLowerCase().includes(query) || p.name.toLowerCase().includes(query);
+        });
+        searchedProducts = filtered.map(function (prod) {
+            var entries = stockData.filter(function (d) { return d.productCode === prod.code; });
+            var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+            var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+            var lastEntry = entries[entries.length - 1];
+            return {
+                code: prod.code,
+                name: prod.name,
+                entries: entries,
+                totalIn: totalIn,
+                totalOut: totalOut,
+                balance: lastEntry ? lastEntry.balance : 0,
+                lotNo: lastEntry ? lastEntry.lotNo : ''
+            };
+        });
+        renderStockCards(searchedProducts);
+    } else {
+        // RM Module - text search
+        if (!query) {
+            showAllProductsRM();
+            return;
+        }
+
+        var filtered = rmProductMasterData.filter(function (p) {
+            return p.code.toLowerCase().includes(query) || p.name.toLowerCase().includes(query);
+        });
+        searchedProducts = filtered.map(function (prod) {
+            var entries = rmStockData.filter(function (d) { return d.productCode === prod.code; });
+            var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+            var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+            var lastEntry = entries[entries.length - 1];
+            return {
+                code: prod.code,
+                name: prod.name,
+                entries: entries,
+                totalIn: totalIn,
+                totalOut: totalOut,
+                balance: lastEntry ? lastEntry.balance : 0,
+                lotNo: lastEntry ? lastEntry.lotNo : '',
+                supplier: lastEntry ? lastEntry.supplier : ''
+            };
+        });
+        renderStockCardsRM(searchedProducts);
+    }
+}
+
+// ==================== UTILITY ====================
+
 function formatNumber(num) {
     return new Intl.NumberFormat('th-TH').format(num || 0);
 }
 
-// Format Date to DD/M/YYYY (Thai format)
 function formatDateThai(dateStr) {
     if (!dateStr) return '';
-    const parts = dateStr.split('-'); // YYYY-MM-DD
+    var parts = dateStr.split('-');
     if (parts.length !== 3) return dateStr;
-    const day = parseInt(parts[2], 10);
-    const month = parseInt(parts[1], 10);
-    const year = parts[0];
-    return `${day}/${month}/${year}`;
+    var day = parseInt(parts[2], 10);
+    var month = parseInt(parts[1], 10);
+    var year = parts[0];
+    return day + '/' + month + '/' + year;
 }
 
-// Populate Product Dropdown
 function populateProductDropdown() {
-    const select = document.getElementById('entryProductCode');
-    if (!select) return;
-    select.innerHTML = '<option value="">-- เลือกสินค้า --</option>';
-    productMasterData.forEach(p => {
-        select.innerHTML += `<option value="${p.code}">${p.code} - ${p.name}</option>`;
+    var datalist = document.getElementById('productCodeList');
+    if (!datalist) return;
+    datalist.innerHTML = '';
+    productMasterData.forEach(function (p) {
+        datalist.innerHTML += '<option value="' + p.code + '">' + p.code + ' - ' + p.name + '</option>';
+    });
+}
+
+function populateProductDropdownRM() {
+    var datalist = document.getElementById('productCodeListRM');
+    if (!datalist) return;
+    datalist.innerHTML = '';
+    rmProductMasterData.forEach(function (p) {
+        datalist.innerHTML += '<option value="' + p.code + '">' + p.code + ' - ' + p.name + '</option>';
     });
 }
 
 // Print Single Card
 function printSingleCard(cardId, productName, productCode) {
-    const card = document.getElementById(cardId);
+    var card = document.getElementById(cardId);
     if (!card) return;
 
-    const printHeader = document.createElement('div');
+    var printHeader = document.createElement('div');
     printHeader.className = 'print-header';
-    printHeader.innerHTML = `
-        <img src="logo.png" alt="Logo" style="height:50px;">
-        <div>
-            <h2 style="margin:0;">${productName}</h2>
-            <p style="margin:0;color:#666;">${productCode} | วันที่พิมพ์: ${new Date().toLocaleDateString('th-TH')}</p>
-        </div>
-    `;
+    printHeader.innerHTML = '<img src="logo.png" alt="Logo" style="height:50px;"><div><h2 style="margin:0;">' + productName + '</h2><p style="margin:0;color:#666;">' + productCode + ' | วันที่พิมพ์: ' + new Date().toLocaleDateString('th-TH') + '</p></div>';
 
-    document.querySelectorAll('.stock-card').forEach(c => {
+    document.querySelectorAll('.stock-card').forEach(function (c) {
         if (c.id !== cardId) c.style.display = 'none';
     });
 
@@ -287,7 +700,7 @@ function printSingleCard(cardId, productName, productCode) {
     window.print();
 
     printHeader.remove();
-    document.querySelectorAll('.stock-card').forEach(c => c.style.display = '');
+    document.querySelectorAll('.stock-card').forEach(function (c) { c.style.display = ''; });
 }
 
 // Delete Entry
@@ -306,34 +719,49 @@ function deleteEntry(rowIndex, productCode, type) {
             rowIndex: rowIndex,
             criteria: { productCode: productCode, type: type }
         })
-    }).then(() => {
-        setTimeout(async () => {
+    }).then(function () {
+        setTimeout(async function () {
             showToast('ลบเรียบร้อย!');
-            await fetchDataFromSheets();
+            await fetchPackageData();
             hideLoading();
         }, 2000);
-    }).catch(e => { alert(e); hideLoading(); });
+    }).catch(function (e) { alert(e); hideLoading(); });
 }
 
-// ========== MODAL FUNCTIONS ==========
-function openEntryModal() {
-    const modal = document.getElementById('entryModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.style.opacity = '1';
-        modal.style.visibility = 'visible';
+// ==================== MODAL FUNCTIONS ====================
 
-        // ตั้งวันที่เป็นวันปัจจุบัน
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        document.getElementById('entryDate').value = `${yyyy}-${mm}-${dd}`;
+function openEntryModal() {
+    if (currentModule === 'package') {
+        var modal = document.getElementById('entryModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
+
+            var today = new Date();
+            var yyyy = today.getFullYear();
+            var mm = String(today.getMonth() + 1).padStart(2, '0');
+            var dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('entryDate').value = yyyy + '-' + mm + '-' + dd;
+        }
+    } else {
+        var modal = document.getElementById('entryModalRM');
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
+
+            var today = new Date();
+            var yyyy = today.getFullYear();
+            var mm = String(today.getMonth() + 1).padStart(2, '0');
+            var dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('entryDateRM').value = yyyy + '-' + mm + '-' + dd;
+        }
     }
 }
 
 function closeEntryModal() {
-    const modal = document.getElementById('entryModal');
+    var modal = document.getElementById('entryModal');
     if (modal) {
         modal.style.display = 'none';
         modal.style.opacity = '0';
@@ -341,31 +769,38 @@ function closeEntryModal() {
     }
 }
 
-// Save Entry
+function closeEntryModalRM() {
+    var modal = document.getElementById('entryModalRM');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+    }
+}
+
+// Save Entry for Package
 function saveEntry() {
-    const productCode = document.getElementById('entryProductCode').value;
-    const date = document.getElementById('entryDate').value;
-    const type = document.getElementById('entryType').value;
-    const inQty = parseFloat(document.getElementById('entryInQty').value) || 0;
-    const outQty = parseFloat(document.getElementById('entryOutQty').value) || 0;
-    const lotNo = document.getElementById('entryLotNo').value || '-';
-    const docRef = document.getElementById('entryDocRef').value || '-';
-    const remark = document.getElementById('entryRemark').value || '-';
-    const pkId = document.getElementById('entryPkId')?.value || '-';
+    var productCode = document.getElementById('entryProductCode').value;
+    var date = document.getElementById('entryDate').value;
+    var type = document.getElementById('entryType').value;
+    var inQty = parseFloat(document.getElementById('entryInQty').value) || 0;
+    var outQty = parseFloat(document.getElementById('entryOutQty').value) || 0;
+    var lotNo = document.getElementById('entryLotNo').value || '-';
+    var docRef = document.getElementById('entryDocRef').value || '-';
+    var remark = document.getElementById('entryRemark').value || '-';
+    var pkId = document.getElementById('entryPkId')?.value || '-';
 
     if (!productCode || !date) {
         alert('กรุณากรอกรหัสสินค้าและวันที่');
         return;
     }
 
-    // Get product name
-    const prod = productMasterData.find(p => p.code === productCode);
-    const productName = prod ? prod.name : productCode;
+    var prod = productMasterData.find(function (p) { return p.code === productCode; });
+    var productName = prod ? prod.name : productCode;
 
-    // Calculate balance from last entry
-    const lastEntry = stockData.filter(d => d.productCode === productCode).pop();
-    const lastBalance = lastEntry ? lastEntry.balance : 0;
-    const balance = lastBalance + inQty - outQty;
+    var lastEntry = stockData.filter(function (d) { return d.productCode === productCode; }).pop();
+    var lastBalance = lastEntry ? lastEntry.balance : 0;
+    var balance = lastBalance + inQty - outQty;
 
     showLoading();
     showToast('กำลังบันทึก...');
@@ -390,8 +825,8 @@ function saveEntry() {
                 remark: remark
             }
         })
-    }).then(() => {
-        setTimeout(async () => {
+    }).then(function () {
+        setTimeout(async function () {
             showToast('บันทึกเรียบร้อย!');
             closeEntryModal();
             document.getElementById('entryDate').value = '';
@@ -400,10 +835,10 @@ function saveEntry() {
             document.getElementById('entryLotNo').value = '';
             document.getElementById('entryDocRef').value = '';
             document.getElementById('entryRemark').value = '';
-            await fetchDataFromSheets();
+            await fetchPackageData();
             hideLoading();
         }, 2000);
-    }).catch(e => { alert(e); hideLoading(); });
+    }).catch(function (e) { alert(e); hideLoading(); });
 }
 
 // Stats Detail Modal
@@ -412,26 +847,70 @@ function showStatDetail(type) {
 }
 
 function closeStatsModal() {
-    const modal = document.getElementById('statsModal');
+    var modal = document.getElementById('statsModal');
     if (modal) modal.style.display = 'none';
 }
 
-// ========== EVENT LISTENERS ==========
-document.addEventListener('DOMContentLoaded', () => {
+// ==================== EVENT LISTENERS ====================
+
+document.addEventListener('DOMContentLoaded', function () {
     init();
 
     document.getElementById('searchInput')?.addEventListener('input', handleSearch);
     document.getElementById('addEntryBtn')?.addEventListener('click', openEntryModal);
     document.getElementById('saveEntry')?.addEventListener('click', saveEntry);
-    document.getElementById('refreshBtn')?.addEventListener('click', init);
+    document.getElementById('refreshBtn')?.addEventListener('click', function () {
+        if (currentModule === 'package') {
+            showLoading();
+            stockData = [];
+            fetchPackageData();
+        } else {
+            showLoading();
+            rmStockData = [];
+            fetchRMData();
+        }
+    });
     document.getElementById('entryModalClose')?.addEventListener('click', closeEntryModal);
     document.getElementById('entryModalBackdrop')?.addEventListener('click', closeEntryModal);
     document.getElementById('cancelEntry')?.addEventListener('click', closeEntryModal);
 
+    // RM Modal events
+    document.getElementById('entryModalCloseRM')?.addEventListener('click', closeEntryModalRM);
+    document.getElementById('entryModalBackdropRM')?.addEventListener('click', closeEntryModalRM);
+    document.getElementById('cancelEntryRM')?.addEventListener('click', closeEntryModalRM);
+
+    // RM Product Dropdown
+    document.getElementById('rmProductSelect')?.addEventListener('change', function () {
+        var value = this.value;
+        // Reset supplier dropdown
+        var supplierSelect = document.getElementById('rmSupplierSelect');
+        if (supplierSelect) supplierSelect.value = '';
+        // Filter by product
+        filterRMByProduct(value);
+    });
+
+    // RM Supplier Dropdown
+    document.getElementById('rmSupplierSelect')?.addEventListener('change', function () {
+        var value = this.value;
+        // Reset product dropdown
+        var productSelect = document.getElementById('rmProductSelect');
+        if (productSelect) productSelect.value = '';
+        // Filter by supplier
+        filterRMBySupplier(value);
+    });
+
     document.getElementById('entryProductCode')?.addEventListener('change', function () {
-        const prod = productMasterData.find(p => p.code === this.value);
+        var prod = productMasterData.find(function (p) { return p.code === this.value; }.bind(this));
         if (prod) {
-            const nameInput = document.getElementById('entryProductName');
+            var nameInput = document.getElementById('entryProductName');
+            if (nameInput) nameInput.value = prod.name;
+        }
+    });
+
+    document.getElementById('entryProductCodeRM')?.addEventListener('change', function () {
+        var prod = rmProductMasterData.find(function (p) { return p.code === this.value; }.bind(this));
+        if (prod) {
+            var nameInput = document.getElementById('entryProductNameRM');
             if (nameInput) nameInput.value = prod.name;
         }
     });

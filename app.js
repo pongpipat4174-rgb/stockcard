@@ -184,6 +184,26 @@ function switchModule(module, event) {
 async function init() {
     console.log('Initializing Stock Card System V.14...');
 
+    // Safety Timeout: Force hide loading after 20 seconds if stuck
+    const safetyTimeout = setTimeout(function () {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay && loadingOverlay.style.display !== 'none') {
+            console.error('Loading timed out - Forcing display');
+            hideLoading();
+            showToast('การโหลดข้อมูลใช้เวลานานผิดปกติ กรุณารีเฟรชหน้านี้ใหม่');
+
+            // Show error in container if empty
+            const container = document.getElementById('cardsContainer');
+            if (container && !container.innerHTML.trim()) {
+                container.innerHTML = '<div class="no-results" style="color: red; text-align: center; padding: 20px;">' +
+                    '<h3>⚠️ การโหลดข้อมูลล่าช้า</h3>' +
+                    '<p>ระบบใช้เวลาโหลดนานเกินไป อาจเกิดจากปัญหาการเชื่อมต่ออินเทอร์เน็ต</p>' +
+                    '<button class="btn btn-primary" onclick="location.reload()" style="margin-top:10px;">รีเฟรชหน้าเว็บ</button>' +
+                    '</div>';
+            }
+        }
+    }, 20000); // 20 seconds
+
     // Check for saved module in sessionStorage (for mobile persistence)
     var savedModule = null;
     try {
@@ -194,36 +214,43 @@ async function init() {
 
     showLoading();
 
-    // Load the appropriate module based on saved state
-    if (savedModule === 'rm') {
-        currentModule = 'rm';
-        // Update tab styles immediately
-        document.querySelectorAll('.module-tab').forEach(function (tab) {
-            tab.classList.remove('active');
-            if (tab.dataset.module === 'rm') {
-                tab.classList.add('active');
-            }
-        });
-        // Update banner
-        var config = SHEET_CONFIG.rm;
-        document.getElementById('moduleIcon').textContent = config.icon;
-        document.getElementById('moduleTitle').textContent = config.title;
-        document.getElementById('moduleSubtitle').textContent = config.subtitle;
-        var banner = document.getElementById('moduleBanner');
-        banner.classList.add('rm-mode');
-        var rmFilterGroup = document.getElementById('rmFilterGroup');
-        var rmSupplierGroup = document.getElementById('rmSupplierGroup');
-        if (rmFilterGroup) rmFilterGroup.style.display = 'flex';
-        if (rmSupplierGroup) rmSupplierGroup.style.display = 'flex';
-        document.getElementById('labelTotalIn').textContent = 'รับเข้าทั้งหมด (Kg)';
-        document.getElementById('labelTotalOut').textContent = 'เบิกออกทั้งหมด (Kg)';
+    try {
+        // Load the appropriate module based on saved state
+        if (savedModule === 'rm') {
+            currentModule = 'rm';
+            // Update tab styles immediately
+            document.querySelectorAll('.module-tab').forEach(function (tab) {
+                tab.classList.remove('active');
+                if (tab.dataset.module === 'rm') {
+                    tab.classList.add('active');
+                }
+            });
+            // Update banner
+            var config = SHEET_CONFIG.rm;
+            document.getElementById('moduleIcon').textContent = config.icon;
+            document.getElementById('moduleTitle').textContent = config.title;
+            document.getElementById('moduleSubtitle').textContent = config.subtitle;
+            var banner = document.getElementById('moduleBanner');
+            banner.classList.add('rm-mode');
+            var rmFilterGroup = document.getElementById('rmFilterGroup');
+            var rmSupplierGroup = document.getElementById('rmSupplierGroup');
+            if (rmFilterGroup) rmFilterGroup.style.display = 'flex';
+            if (rmSupplierGroup) rmSupplierGroup.style.display = 'flex';
+            document.getElementById('labelTotalIn').textContent = 'รับเข้าทั้งหมด (Kg)';
+            document.getElementById('labelTotalOut').textContent = 'เบิกออกทั้งหมด (Kg)';
 
-        await fetchRMData();
-    } else {
-        await fetchPackageData();
+            await fetchRMData();
+        } else {
+            await fetchPackageData();
+        }
+    } catch (error) {
+        console.error('Init error:', error);
+        showToast('เกิดล้มเหลวในการเริ่มต้นระบบ: ' + error.message);
+    } finally {
+        // Always clear timeout and hide loading
+        clearTimeout(safetyTimeout);
+        hideLoading();
     }
-
-    hideLoading();
 }
 
 // ==================== PACKAGE DATA ====================

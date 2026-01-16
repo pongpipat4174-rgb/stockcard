@@ -1743,7 +1743,7 @@ body {
 }
 
 .module-banner.rm-mode {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #ea580c, #c2410c);
 }
 
 .module-banner-content {
@@ -1775,21 +1775,21 @@ body {
 
 /* ==================== RM STOCK CARD STYLES ==================== */
 .stock-card-rm {
-    border-left: 4px solid #10b981;
+    border-left: 4px solid #ea580c;
 }
 
 .stock-card-header-rm {
-    background: linear-gradient(135deg, #10b981, #059669) !important;
+    background: linear-gradient(135deg, #ea580c, #c2410c) !important;
 }
 
 .stock-card-summary-rm {
-    background: linear-gradient(135deg, #d1fae5, #f0fdf4);
-    border-bottom: 2px solid #10b981;
+    background: linear-gradient(135deg, #fed7aa, #fff7ed);
+    border-bottom: 2px solid #ea580c;
 }
 
 .stock-table-rm th {
-    background: #d1fae5;
-    color: #065f46;
+    background: #fed7aa;
+    color: #9a3412;
 }
 
 .stock-table-rm .type-in {
@@ -1804,7 +1804,7 @@ body {
 
 /* ==================== MODAL RM STYLES ==================== */
 .modal-header-rm {
-    background: linear-gradient(135deg, #10b981, #059669) !important;
+    background: linear-gradient(135deg, #ea580c, #c2410c) !important;
     color: white;
 }
 
@@ -1974,7 +1974,7 @@ body {
 .stock-table-rm th {
     font-size: 0.7rem;
     font-weight: 600;
-    background: linear-gradient(135deg, #047857, #065f46);
+    background: linear-gradient(135deg, #ea580c, #c2410c);
 }
 
 /* Column specific widths */
@@ -2235,9 +2235,9 @@ body {
         align-items: center !important;
     }
 
-    /* RM uses green header */
+    /* RM uses orange header */
     .stock-card-header-rm {
-        background: linear-gradient(135deg, #059669, #10b981) !important;
+        background: linear-gradient(135deg, #ea580c, #c2410c) !important;
     }
 
     .stock-card-title h3 {
@@ -2390,7 +2390,7 @@ body {
     }
 
     .stock-table-rm th {
-        background: #065f46 !important;
+        background: #c2410c !important;
         color: white !important;
         padding: 10px 6px !important;
         font-size: 7pt !important;

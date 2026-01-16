@@ -1974,7 +1974,7 @@ body {
 .stock-table-rm th {
     font-size: 0.7rem;
     font-weight: 600;
-    background: linear-gradient(135deg, #059669, #047857);
+    background: linear-gradient(135deg, #047857, #065f46);
 }
 
 /* Column specific widths */
@@ -2390,7 +2390,7 @@ body {
     }
 
     .stock-table-rm th {
-        background: #059669 !important;
+        background: #065f46 !important;
         color: white !important;
         padding: 10px 6px !important;
         font-size: 7pt !important;

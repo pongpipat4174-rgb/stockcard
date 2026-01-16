@@ -40,7 +40,7 @@
 
             <!-- Module Tabs Navigation -->
             <div class="module-tabs">
-                <button class="module-tab active" data-module="package" onclick="switchModule('package')">
+                <button class="module-tab active" data-module="package" type="button" id="tabPackage">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                         <path
                             d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -49,7 +49,7 @@
                     </svg>
                     📦 แพ็คเกจ
                 </button>
-                <button class="module-tab" data-module="rm" onclick="switchModule('rm')">
+                <button class="module-tab" data-module="rm" type="button" id="tabRM">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                         <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                         <line x1="3" y1="6" x2="21" y2="6" />
@@ -194,6 +194,18 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Clear Filter Button -->
+            <button class="btn btn-clear-filter" id="clearFilterBtn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+                ล้างตัวกรอง
+            </button>
 
             <div class="selected-filter" id="selectedFilter" style="display: none;">
                 <span class="selected-label">กรองตาม:</span>
@@ -478,7 +490,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=16"></script>
+    <script src="app.js?v=19"></script>
 </body>
 
 </html>

@@ -1,4 +1,4 @@
-/* Stock Card Web App - V.13 (Package + RM with Product/Supplier Dropdown) */
+/* Stock Card Web App - V.14 (Fixed Mobile Tab Switching + Print Styles) */
 
 // Configuration
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdF61u0WhgQ6Uxmb_fCmfK8Ww1wlTMFBC79a13AFAhN2TCjBHKDL4VmVL49C4W5bKdVw/exec';
@@ -27,6 +27,7 @@ const SHEET_CONFIG = {
 
 // Current module state
 let currentModule = 'package';
+let isSwitchingModule = false; // Prevent double-tap on mobile
 
 // Data containers
 let stockData = [];
@@ -61,8 +62,39 @@ function showToast(message) {
 }
 
 // Switch Module (Package / RM)
-function switchModule(module) {
+function switchModule(module, event) {
+    // Prevent default button behavior and stop propagation immediately
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+    }
+
+    // Prevent double-tap on mobile - use longer timeout
+    if (isSwitchingModule) {
+        console.log('Module switch in progress, ignoring duplicate call');
+        return;
+    }
+
+    // If already on this module, do nothing
+    if (currentModule === module) {
+        console.log('Already on module:', module);
+        return;
+    }
+
+    // Set lock immediately and keep it longer for mobile
+    isSwitchingModule = true;
+
+    // Force the module change
     currentModule = module;
+    console.log('Switching to module:', module);
+
+    // Save to sessionStorage to persist across any page refresh
+    try {
+        sessionStorage.setItem('currentStockCardModule', module);
+    } catch (e) {
+        console.log('SessionStorage not available');
+    }
 
     // Update tab styles
     document.querySelectorAll('.module-tab').forEach(function (tab) {
@@ -113,25 +145,79 @@ function switchModule(module) {
             updateStats();
             showAllProducts();
             hideLoading();
+            // Delay unlock to prevent mobile double-tap issues
+            setTimeout(function () {
+                isSwitchingModule = false;
+            }, 500);
         } else {
-            fetchPackageData();
+            fetchPackageData().finally(function () {
+                setTimeout(function () {
+                    isSwitchingModule = false;
+                }, 500);
+            });
         }
     } else {
         if (rmStockData.length > 0) {
             updateStatsRM();
             showAllProductsRM();
             hideLoading();
+            // Delay unlock to prevent mobile double-tap issues
+            setTimeout(function () {
+                isSwitchingModule = false;
+            }, 500);
         } else {
-            fetchRMData();
+            fetchRMData().finally(function () {
+                setTimeout(function () {
+                    isSwitchingModule = false;
+                }, 500);
+            });
         }
     }
 }
 
 // Initialize
 async function init() {
-    console.log('Initializing Stock Card System V.13...');
+    console.log('Initializing Stock Card System V.14...');
+
+    // Check for saved module in sessionStorage (for mobile persistence)
+    var savedModule = null;
+    try {
+        savedModule = sessionStorage.getItem('currentStockCardModule');
+    } catch (e) {
+        console.log('SessionStorage not available');
+    }
+
     showLoading();
-    await fetchPackageData();
+
+    // Load the appropriate module based on saved state
+    if (savedModule === 'rm') {
+        currentModule = 'rm';
+        // Update tab styles immediately
+        document.querySelectorAll('.module-tab').forEach(function (tab) {
+            tab.classList.remove('active');
+            if (tab.dataset.module === 'rm') {
+                tab.classList.add('active');
+            }
+        });
+        // Update banner
+        var config = SHEET_CONFIG.rm;
+        document.getElementById('moduleIcon').textContent = config.icon;
+        document.getElementById('moduleTitle').textContent = config.title;
+        document.getElementById('moduleSubtitle').textContent = config.subtitle;
+        var banner = document.getElementById('moduleBanner');
+        banner.classList.add('rm-mode');
+        var rmFilterGroup = document.getElementById('rmFilterGroup');
+        var rmSupplierGroup = document.getElementById('rmSupplierGroup');
+        if (rmFilterGroup) rmFilterGroup.style.display = 'flex';
+        if (rmSupplierGroup) rmSupplierGroup.style.display = 'flex';
+        document.getElementById('labelTotalIn').textContent = 'รับเข้าทั้งหมด (Kg)';
+        document.getElementById('labelTotalOut').textContent = 'เบิกออกทั้งหมด (Kg)';
+
+        await fetchRMData();
+    } else {
+        await fetchPackageData();
+    }
+
     hideLoading();
 }
 
@@ -279,6 +365,11 @@ async function fetchRMData() {
 
     } catch (error) {
         console.error('Error fetching RM data:', error);
+        // Show error message to user instead of silently failing
+        var container = document.getElementById('cardsContainer');
+        if (container) {
+            container.innerHTML = '<div class="no-results"><p>⚠️ ไม่สามารถโหลดข้อมูลวัตถุดิบได้</p><p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">กรุณาตรวจสอบการเชื่อมต่ออินเตอร์เน็ต แล้วกด "รีเฟรชข้อมูล"</p></div>';
+        }
         hideLoading();
     }
 }
@@ -649,6 +740,37 @@ function handleSearch() {
     }
 }
 
+// ==================== CLEAR ALL FILTERS ====================
+
+function clearAllFilters() {
+    // Clear search input
+    var searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+
+    // Clear RM dropdowns
+    var rmProductSelect = document.getElementById('rmProductSelect');
+    var rmSupplierSelect = document.getElementById('rmSupplierSelect');
+    if (rmProductSelect) rmProductSelect.value = '';
+    if (rmSupplierSelect) rmSupplierSelect.value = '';
+
+    // Hide selected filter badge
+    var selectedFilter = document.getElementById('selectedFilter');
+    if (selectedFilter) selectedFilter.style.display = 'none';
+
+    // Show all products based on current module
+    if (currentModule === 'package') {
+        showAllProducts();
+        showToast('ล้างตัวกรองแพ็คเกจแล้ว');
+    } else {
+        showAllProductsRM();
+        showToast('ล้างตัวกรองวัตถุดิบแล้ว');
+    }
+
+    console.log('All filters cleared for module:', currentModule);
+}
+
 // ==================== UTILITY ====================
 
 function formatNumber(num) {
@@ -874,6 +996,9 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('entryModalBackdrop')?.addEventListener('click', closeEntryModal);
     document.getElementById('cancelEntry')?.addEventListener('click', closeEntryModal);
 
+    // Clear Filter Button
+    document.getElementById('clearFilterBtn')?.addEventListener('click', clearAllFilters);
+
     // RM Modal events
     document.getElementById('entryModalCloseRM')?.addEventListener('click', closeEntryModalRM);
     document.getElementById('entryModalBackdropRM')?.addEventListener('click', closeEntryModalRM);
@@ -914,4 +1039,55 @@ document.addEventListener('DOMContentLoaded', function () {
             if (nameInput) nameInput.value = prod.name;
         }
     });
+
+    // ==================== MODULE TAB EVENT HANDLERS ====================
+    // Use a single unified approach for both touch and click
+    var tabPackage = document.getElementById('tabPackage');
+    var tabRM = document.getElementById('tabRM');
+    var isProcessingTab = false;
+
+    function handleTabSwitch(module, e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Prevent multiple rapid calls
+        if (isProcessingTab) {
+            console.log('Tab switch blocked - already processing');
+            return;
+        }
+
+        // Already on this tab
+        if (currentModule === module) {
+            console.log('Already on module:', module);
+            return;
+        }
+
+        isProcessingTab = true;
+        console.log('Handling tab switch to:', module);
+
+        // Call the actual switch function
+        switchModule(module, e);
+
+        // Reset after delay
+        setTimeout(function () {
+            isProcessingTab = false;
+        }, 1000);
+    }
+
+    // Package tab handlers
+    if (tabPackage) {
+        tabPackage.addEventListener('click', function (e) {
+            handleTabSwitch('package', e);
+        });
+    }
+
+    // RM tab handlers
+    if (tabRM) {
+        tabRM.addEventListener('click', function (e) {
+            handleTabSwitch('rm', e);
+        });
+    }
 });
+

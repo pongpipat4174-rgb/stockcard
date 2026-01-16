@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Card Report - TAN PRODUCTION</title>
+    <meta name="description" content="ระบบรายงาน Stock Card สำหรับการจัดการสต็อกแพ็คเกจ TAN PRODUCTION">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader">
+            <div class="loader-ring"></div>
+            <div class="loader-ring"></div>
+            <div class="loader-ring"></div>
+            <span class="loader-text">กำลังโหลดข้อมูล...</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="main-header">
+        <div class="header-content">
+            <div class="brand">
+                <div class="brand-logo">
+                    <img src="logo.png" alt="TAN PRODUCTION Logo">
+                </div>
+                <div class="brand-text">
+                    <h1>Stock Card</h1>
+                    <span>TAN PRODUCTION</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-success" id="addEntryBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    เพิ่มรายการ
+                </button>
+                <button class="btn btn-outline" id="refreshBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                    รีเฟรชข้อมูล
+                </button>
+                <button class="btn btn-primary" id="printAllBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                    </svg>
+                    พิมพ์ทั้งหมด
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats Dashboard -->
+    <section class="stats-section">
+        <div class="stats-grid">
+            <div class="stat-card stat-primary clickable" onclick="showStatDetail('products')"
+                title="คลิกเพื่อดูรายละเอียด">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                        <line x1="7" y1="7" x2="7.01" y2="7" />
+                    </svg>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value" id="totalProducts">0</span>
+                    <span class="stat-label">สินค้าทั้งหมด</span>
+                </div>
+                <div class="stat-arrow">→</div>
+            </div>
+            <div class="stat-card stat-success clickable" onclick="showStatDetail('in')" title="คลิกเพื่อดูรายละเอียด">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value" id="totalIn">0</span>
+                    <span class="stat-label">รับเข้าทั้งหมด</span>
+                </div>
+                <div class="stat-arrow">→</div>
+            </div>
+            <div class="stat-card stat-warning clickable" onclick="showStatDetail('out')" title="คลิกเพื่อดูรายละเอียด">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="1" y="3" width="15" height="13" />
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                        <circle cx="5.5" cy="18.5" r="2.5" />
+                        <circle cx="18.5" cy="18.5" r="2.5" />
+                    </svg>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value" id="totalOut">0</span>
+                    <span class="stat-label">เบิกออกทั้งหมด</span>
+                </div>
+                <div class="stat-arrow">→</div>
+            </div>
+            <div class="stat-card stat-info clickable" onclick="showStatDetail('all')" title="คลิกเพื่อดูรายละเอียด">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                    </svg>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value" id="totalTransactions">0</span>
+                    <span class="stat-label">รายการทั้งหมด</span>
+                </div>
+                <div class="stat-arrow">→</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filter Section -->
+    <section class="filter-section">
+        <div class="filter-container">
+            <div class="search-wrapper">
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="M21 21l-4.35-4.35" />
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="ค้นหาสินค้า / เลขที่เอกสาร / Lot No..."
+                        autocomplete="off">
+                    <button class="clear-search" id="clearSearch" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="search-dropdown" id="searchDropdown">
+                    <!-- Autocomplete suggestions will be added here -->
+                </div>
+            </div>
+            <div class="selected-filter" id="selectedFilter" style="display: none;">
+                <span class="selected-label">กรองตาม:</span>
+                <span class="selected-value" id="selectedFilterValue"></span>
+                <button class="remove-filter" id="removeFilter">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stock Cards Container -->
+    <main class="cards-container" id="cardsContainer">
+        <!-- Stock cards will be dynamically generated -->
+    </main>
+
+    <!-- Print Preview Modal -->
+    <div class="modal" id="printModal">
+        <div class="modal-backdrop" id="modalBackdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>พรีวิวก่อนพิมพ์</h2>
+                <button class="modal-close" id="modalClose">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="printPreview">
+                <!-- Print preview content -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="cancelPrint">ยกเลิก</button>
+                <button class="btn btn-primary" id="confirmPrint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                    </svg>
+                    พิมพ์เอกสาร
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Entry Modal -->
+    <div class="modal" id="entryModal">
+        <div class="modal-backdrop" id="entryModalBackdrop"></div>
+        <div class="modal-content entry-modal-content">
+            <div class="modal-header">
+                <h2 id="entryModalTitle">เพิ่มรายการใหม่</h2>
+                <button class="modal-close" id="entryModalClose">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="entryForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="entryDate">วันที่ <span class="required">*</span></label>
+                            <input type="date" id="entryDate" name="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="entryType">ประเภทรายการ <span class="required">*</span></label>
+                            <select id="entryType" name="type" required>
+                                <option value="">-- เลือกประเภท --</option>
+                                <option value="รับเข้า">รับเข้า</option>
+                                <option value="เบิกผลิต">เบิกผลิต</option>
+                                <option value="รับคืนจากผลิต">รับคืนจากผลิต</option>
+                                <option value="เบิกคืนลูกค้า">เบิกคืนลูกค้า</option>
+                                <option value="เบิก(เคลม)">เบิก(เคลม)</option>
+                                <option value="รับคืน(เคลม)">รับคืน(เคลม)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="entryProductCode">รหัสสินค้า <span class="required">*</span></label>
+                            <input type="text" id="entryProductCode" name="productCode" list="productCodeList" required
+                                placeholder="พิมพ์หรือเลือกรหัสสินค้า">
+                            <datalist id="productCodeList">
+                                <!-- Options will be populated dynamically -->
+                            </datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="entryProductName">ชื่อสินค้า <span class="required">*</span></label>
+                            <input type="text" id="entryProductName" name="productName" required
+                                placeholder="ชื่อสินค้า">
+                        </div>
+                    </div>
+                    <div class="form-grid form-grid-3">
+                        <div class="form-group">
+                            <label for="entryInQty">รับเข้า (IN)</label>
+                            <input type="number" id="entryInQty" name="inQty" min="0" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="entryOutQty">เบิกออก (OUT)</label>
+                            <input type="number" id="entryOutQty" name="outQty" min="0" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="entryBalance">คงเหลือ (BALANCE)</label>
+                            <input type="number" id="entryBalance" name="balance" placeholder="คำนวณอัตโนมัติ">
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="entryLotNo">Lot No./FIFO ID</label>
+                            <input type="text" id="entryLotNo" name="lotNo" placeholder="เช่น PKT2511033">
+                        </div>
+                        <div class="form-group">
+                            <label for="entryPkId">เลขรับเข้า (PK ID)</label>
+                            <input type="text" id="entryPkId" name="pkId" placeholder="เช่น PK2601001">
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="entryDocRef">เลขเอกสารอ้างอิง</label>
+                            <input type="text" id="entryDocRef" name="docRef" placeholder="เช่น PDT-2511018/1">
+                        </div>
+                        <div class="form-group">
+                            <label for="entryRemark">หมายเหตุ</label>
+                            <input type="text" id="entryRemark" name="remark" placeholder="หมายเหตุเพิ่มเติม">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="cancelEntry">ยกเลิก</button>
+                <button class="btn btn-success" id="saveEntry">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    บันทึกข้อมูล
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <div class="toast-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+        </div>
+        <span class="toast-message" id="toastMessage">สำเร็จ!</span>
+    </div>
+
+    <!-- Stats Detail Modal -->
+    <div class="modal" id="statsModal">
+        <div class="modal-backdrop" onclick="closeStatsModal()"></div>
+        <div class="modal-content" style="max-width: 900px; max-height: 80vh;">
+            <div class="modal-header">
+                <h2 id="statsModalTitle">รายละเอียด</h2>
+                <button class="modal-close" onclick="closeStatsModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="statsModalBody" style="overflow-y: auto; max-height: 60vh;">
+                <!-- Content will be injected here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeStatsModal()">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

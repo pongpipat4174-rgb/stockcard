@@ -272,8 +272,24 @@ async function fetchPackageData() {
             throw new Error('Unauthorized: Please checking Google Sheet sharing settings (Must be "Anyone with the link")');
         }
 
-        var jsonText = text.substring(47).slice(0, -2);
-        var json = JSON.parse(jsonText);
+        // Robust JSON extraction using Regex
+        const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
+        var jsonText = '';
+        if (jsonMatch && jsonMatch[1]) {
+            jsonText = jsonMatch[1];
+        } else {
+            // Fallback for simple JSON or unexpected format
+            jsonText = text;
+        }
+
+        var json;
+        try {
+            json = JSON.parse(jsonText);
+        } catch (e) {
+            console.error('JSON Parse Error:', e);
+            console.log('Raw text:', text);
+            throw new Error('Invalid Data Format from Google Sheet');
+        }
         var rows = json.table.rows;
 
         stockData = rows.map(function (row, index) {
@@ -368,8 +384,24 @@ async function fetchRMData() {
             throw new Error('Unauthorized: Please checking Google Sheet sharing settings (Must be "Anyone with the link")');
         }
 
-        var jsonText = text.substring(47).slice(0, -2);
-        var json = JSON.parse(jsonText);
+        // Robust JSON extraction using Regex
+        const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
+        var jsonText = '';
+        if (jsonMatch && jsonMatch[1]) {
+            jsonText = jsonMatch[1];
+        } else {
+            // Fallback for simple JSON or unexpected format
+            jsonText = text;
+        }
+
+        var json;
+        try {
+            json = JSON.parse(jsonText);
+        } catch (e) {
+            console.error('JSON Parse Error:', e);
+            console.log('Raw text:', text);
+            throw new Error('Invalid Data Format from Google Sheet (RM)');
+        }
         var rows = json.table.rows;
 
         // RM columns: A-วันที่, B-รหัส, C-ชื่อ, D-รายการ, E-จำนวนCont, F-นน.Cont, G-เศษ, H-IN, I-OUT, J-Balance, K-LotNo, L-VendorLot, M-MFD, N-EXP, O-DaysLeft, P-LotBalance, Q-Supplier

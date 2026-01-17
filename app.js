@@ -283,8 +283,9 @@ async function fetchPackageData() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
 
+        var response;
         try {
-            var response = await fetch(url, { signal: controller.signal });
+            response = await fetch(url, { signal: controller.signal });
             clearTimeout(timeoutId);
         } catch (err) {
             clearTimeout(timeoutId);
@@ -297,6 +298,7 @@ async function fetchPackageData() {
         if (!response.ok) {
             throw new Error('Network response was not ok: ' + response.status);
         }
+
         var text = await response.text();
 
         // Check if response is HTML (login page) instead of JSON
@@ -929,105 +931,169 @@ function handleSearch() {
 
         renderStockCardsRM(searchedProducts);
     }
+}
 
+// ==================== CLEAR ALL FILTERS ====================
 
-    // ==================== CLEAR ALL FILTERS ====================
+function clearAllFilters() {
+    // Clear search input
+    var searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
 
-    function clearAllFilters() {
-        // Clear search input
-        var searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.value = '';
+    // Clear RM dropdowns
+    var rmProductSelect = document.getElementById('rmProductSelect');
+    var rmSupplierSelect = document.getElementById('rmSupplierSelect');
+    var dateFilter = document.getElementById('dateFilter');
+    if (rmProductSelect) rmProductSelect.value = '';
+    if (rmSupplierSelect) rmSupplierSelect.value = '';
+    if (dateFilter) dateFilter.value = '';
+
+    // Hide selected filter badge
+    var selectedFilter = document.getElementById('selectedFilter');
+    if (selectedFilter) selectedFilter.style.display = 'none';
+
+    // Show all products based on current module
+    if (currentModule === 'package') {
+        showAllProducts();
+        showToast('ล้างตัวกรองแพ็คเกจแล้ว');
+    } else {
+        showAllProductsRM();
+        showToast('ล้างตัวกรองวัตถุดิบแล้ว');
+    }
+
+    console.log('All filters cleared for module:', currentModule);
+}
+
+// ==================== EXPIRY ALERT BANNERS ====================
+
+function updateExpiryAlerts() {
+    // Only show for RM module
+    var alertSection = document.getElementById('alertBannersSection');
+    if (!alertSection) return;
+
+    if (currentModule !== 'rm') {
+        alertSection.style.display = 'none';
+        return;
+    }
+
+    alertSection.style.display = 'block';
+
+    // Count critical items (<=30 days) and warning items (31-90 days)
+    var criticalItems = [];
+    var warningItems = [];
+
+    rmStockData.forEach(function (item) {
+        var daysNum = parseInt(item.daysLeft);
+        if (!isNaN(daysNum) && daysNum > 0) {
+            if (daysNum <= 30) {
+                criticalItems.push(item);
+            } else if (daysNum <= 90) {
+                warningItems.push(item);
+            }
         }
+    });
 
-        // Clear RM dropdowns
-        var rmProductSelect = document.getElementById('rmProductSelect');
-        var rmSupplierSelect = document.getElementById('rmSupplierSelect');
-        var dateFilter = document.getElementById('dateFilter');
-        if (rmProductSelect) rmProductSelect.value = '';
-        if (rmSupplierSelect) rmSupplierSelect.value = '';
-        if (dateFilter) dateFilter.value = '';
+    // Update counts
+    var criticalCount = document.getElementById('criticalCount');
+    var warningCount = document.getElementById('warningCount');
 
-        // Hide selected filter badge
-        var selectedFilter = document.getElementById('selectedFilter');
-        if (selectedFilter) selectedFilter.style.display = 'none';
+    if (criticalCount) {
+        criticalCount.textContent = criticalItems.length + ' รายการ';
+    }
+    if (warningCount) {
+        warningCount.textContent = warningItems.length + ' รายการ';
+    }
 
-        // Show all products based on current module
+    // Store for later use
+    window.expiryData = {
+        critical: criticalItems,
+        warning: warningItems
+    };
+}
+
+function showExpiryItems(type) {
+    if (!window.expiryData) {
+        showToast('ไม่มีข้อมูลหมดอายุ');
+        return;
+    }
+
+    var items = type === 'critical' ? window.expiryData.critical : window.expiryData.warning;
+    var title = type === 'critical' ? '⚠️ รายการหมดอายุภายใน 30 วัน' : '⏰ รายการหมดอายุภายใน 90 วัน';
+
+    if (items.length === 0) {
+        showToast('ไม่มีรายการ' + (type === 'critical' ? 'วิกฤต' : 'เตือน'));
+        return;
+    }
+
+    // Group by product
+    var productMap = new Map();
+    items.forEach(function (item) {
+        if (!productMap.has(item.productCode)) {
+            productMap.set(item.productCode, {
+                code: item.productCode,
+                name: item.productName,
+                entries: []
+            });
+        }
+        productMap.get(item.productCode).entries.push(item);
+    });
+
+    // Filter to show only these products
+    searchedProducts = Array.from(productMap.values()).map(function (prod) {
+        var entries = prod.entries;
+        var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+        var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+        var lastEntry = entries[entries.length - 1];
+        return {
+            code: prod.code,
+            name: prod.name,
+            entries: entries,
+            totalIn: totalIn,
+            totalOut: totalOut,
+            balance: lastEntry ? lastEntry.balance : 0,
+            lotNo: lastEntry ? lastEntry.lotNo : '',
+            supplier: lastEntry ? lastEntry.supplier : ''
+        };
+    });
+
+    renderStockCardsRM(searchedProducts);
+    showToast(title + ' (' + items.length + ' รายการ)');
+
+    // Scroll to cards
+    document.getElementById('cardsContainer')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ==================== DATE FILTER ====================
+
+function filterByDate(dateStr) {
+    if (!dateStr) {
+        // Clear date filter - show all
         if (currentModule === 'package') {
             showAllProducts();
-            showToast('ล้างตัวกรองแพ็คเกจแล้ว');
         } else {
             showAllProductsRM();
-            showToast('ล้างตัวกรองวัตถุดิบแล้ว');
         }
-
-        console.log('All filters cleared for module:', currentModule);
+        return;
     }
 
-    // ==================== EXPIRY ALERT BANNERS ====================
+    // Convert input date to Thai format for comparison
+    var inputDate = new Date(dateStr);
+    var day = inputDate.getDate();
+    var month = inputDate.getMonth() + 1;
+    var year = inputDate.getFullYear();
+    var thaiDateStr = day + '/' + month + '/' + year;
 
-    function updateExpiryAlerts() {
-        // Only show for RM module
-        var alertSection = document.getElementById('alertBannersSection');
-        if (!alertSection) return;
-
-        if (currentModule !== 'rm') {
-            alertSection.style.display = 'none';
-            return;
-        }
-
-        alertSection.style.display = 'block';
-
-        // Count critical items (<=30 days) and warning items (31-90 days)
-        var criticalItems = [];
-        var warningItems = [];
-
-        rmStockData.forEach(function (item) {
-            var daysNum = parseInt(item.daysLeft);
-            if (!isNaN(daysNum) && daysNum > 0) {
-                if (daysNum <= 30) {
-                    criticalItems.push(item);
-                } else if (daysNum <= 90) {
-                    warningItems.push(item);
-                }
-            }
+    if (currentModule === 'package') {
+        // Filter package data by date
+        var filtered = stockData.filter(function (item) {
+            return item.date && item.date.includes(thaiDateStr);
         });
-
-        // Update counts
-        var criticalCount = document.getElementById('criticalCount');
-        var warningCount = document.getElementById('warningCount');
-
-        if (criticalCount) {
-            criticalCount.textContent = criticalItems.length + ' รายการ';
-        }
-        if (warningCount) {
-            warningCount.textContent = warningItems.length + ' รายการ';
-        }
-
-        // Store for later use
-        window.expiryData = {
-            critical: criticalItems,
-            warning: warningItems
-        };
-    }
-
-    function showExpiryItems(type) {
-        if (!window.expiryData) {
-            showToast('ไม่มีข้อมูลหมดอายุ');
-            return;
-        }
-
-        var items = type === 'critical' ? window.expiryData.critical : window.expiryData.warning;
-        var title = type === 'critical' ? '⚠️ รายการหมดอายุภายใน 30 วัน' : '⏰ รายการหมดอายุภายใน 90 วัน';
-
-        if (items.length === 0) {
-            showToast('ไม่มีรายการ' + (type === 'critical' ? 'วิกฤต' : 'เตือน'));
-            return;
-        }
 
         // Group by product
         var productMap = new Map();
-        items.forEach(function (item) {
+        filtered.forEach(function (item) {
             if (!productMap.has(item.productCode)) {
                 productMap.set(item.productCode, {
                     code: item.productCode,
@@ -1038,7 +1104,44 @@ function handleSearch() {
             productMap.get(item.productCode).entries.push(item);
         });
 
-        // Filter to show only these products
+        searchedProducts = Array.from(productMap.values()).map(function (prod) {
+            var entries = prod.entries;
+            var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
+            var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
+            var lastEntry = entries[entries.length - 1];
+            return {
+                code: prod.code,
+                name: prod.name,
+                entries: entries,
+                totalIn: totalIn,
+                totalOut: totalOut,
+                balance: lastEntry ? lastEntry.balance : 0,
+                lotNo: lastEntry ? lastEntry.lotNo : ''
+            };
+        });
+
+        renderStockCards(searchedProducts);
+        showToast('กรองวันที่: ' + thaiDateStr + ' (' + searchedProducts.length + ' สินค้า)');
+
+    } else {
+        // Filter RM data by date
+        var filtered = rmStockData.filter(function (item) {
+            return item.date && item.date.includes(thaiDateStr);
+        });
+
+        // Group by product
+        var productMap = new Map();
+        filtered.forEach(function (item) {
+            if (!productMap.has(item.productCode)) {
+                productMap.set(item.productCode, {
+                    code: item.productCode,
+                    name: item.productName,
+                    entries: []
+                });
+            }
+            productMap.get(item.productCode).entries.push(item);
+        });
+
         searchedProducts = Array.from(productMap.values()).map(function (prod) {
             var entries = prod.entries;
             var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
@@ -1057,433 +1160,332 @@ function handleSearch() {
         });
 
         renderStockCardsRM(searchedProducts);
-        showToast(title + ' (' + items.length + ' รายการ)');
-
-        // Scroll to cards
-        document.getElementById('cardsContainer')?.scrollIntoView({ behavior: 'smooth' });
+        showToast('กรองวันที่: ' + thaiDateStr + ' (' + searchedProducts.length + ' วัตถุดิบ)');
     }
+}
 
-    // ==================== DATE FILTER ====================
+// ==================== UTILITY ====================
 
-    function filterByDate(dateStr) {
-        if (!dateStr) {
-            // Clear date filter - show all
-            if (currentModule === 'package') {
-                showAllProducts();
-            } else {
-                showAllProductsRM();
-            }
-            return;
-        }
+function formatNumber(num) {
+    return new Intl.NumberFormat('th-TH').format(num || 0);
+}
 
-        // Convert input date to Thai format for comparison
-        var inputDate = new Date(dateStr);
-        var day = inputDate.getDate();
-        var month = inputDate.getMonth() + 1;
-        var year = inputDate.getFullYear();
-        var thaiDateStr = day + '/' + month + '/' + year;
+function formatDateThai(dateStr) {
+    if (!dateStr) return '';
+    var parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    var day = parseInt(parts[2], 10);
+    var month = parseInt(parts[1], 10);
+    var year = parts[0];
+    return day + '/' + month + '/' + year;
+}
 
-        if (currentModule === 'package') {
-            // Filter package data by date
-            var filtered = stockData.filter(function (item) {
-                return item.date && item.date.includes(thaiDateStr);
-            });
+function populateProductDropdown() {
+    var datalist = document.getElementById('productCodeList');
+    if (!datalist) return;
+    datalist.innerHTML = '';
+    productMasterData.forEach(function (p) {
+        datalist.innerHTML += '<option value="' + p.code + '">' + p.code + ' - ' + p.name + '</option>';
+    });
+}
 
-            // Group by product
-            var productMap = new Map();
-            filtered.forEach(function (item) {
-                if (!productMap.has(item.productCode)) {
-                    productMap.set(item.productCode, {
-                        code: item.productCode,
-                        name: item.productName,
-                        entries: []
-                    });
-                }
-                productMap.get(item.productCode).entries.push(item);
-            });
+function populateProductDropdownRM() {
+    var datalist = document.getElementById('productCodeListRM');
+    if (!datalist) return;
+    datalist.innerHTML = '';
+    rmProductMasterData.forEach(function (p) {
+        datalist.innerHTML += '<option value="' + p.code + '">' + p.code + ' - ' + p.name + '</option>';
+    });
+}
 
-            searchedProducts = Array.from(productMap.values()).map(function (prod) {
-                var entries = prod.entries;
-                var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
-                var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
-                var lastEntry = entries[entries.length - 1];
-                return {
-                    code: prod.code,
-                    name: prod.name,
-                    entries: entries,
-                    totalIn: totalIn,
-                    totalOut: totalOut,
-                    balance: lastEntry ? lastEntry.balance : 0,
-                    lotNo: lastEntry ? lastEntry.lotNo : ''
-                };
-            });
+// Print Single Card
+function printSingleCard(cardId, productName, productCode) {
+    var card = document.getElementById(cardId);
+    if (!card) return;
 
-            renderStockCards(searchedProducts);
-            showToast('กรองวันที่: ' + thaiDateStr + ' (' + searchedProducts.length + ' สินค้า)');
+    var printHeader = document.createElement('div');
+    printHeader.className = 'print-header';
+    printHeader.innerHTML = '<img src="logo.png" alt="Logo" style="height:50px;"><div><h2 style="margin:0;">' + productName + '</h2><p style="margin:0;color:#666;">' + productCode + ' | วันที่พิมพ์: ' + new Date().toLocaleDateString('th-TH') + '</p></div>';
 
-        } else {
-            // Filter RM data by date
-            var filtered = rmStockData.filter(function (item) {
-                return item.date && item.date.includes(thaiDateStr);
-            });
+    document.querySelectorAll('.stock-card').forEach(function (c) {
+        if (c.id !== cardId) c.style.display = 'none';
+    });
 
-            // Group by product
-            var productMap = new Map();
-            filtered.forEach(function (item) {
-                if (!productMap.has(item.productCode)) {
-                    productMap.set(item.productCode, {
-                        code: item.productCode,
-                        name: item.productName,
-                        entries: []
-                    });
-                }
-                productMap.get(item.productCode).entries.push(item);
-            });
+    card.insertBefore(printHeader, card.firstChild);
+    window.print();
 
-            searchedProducts = Array.from(productMap.values()).map(function (prod) {
-                var entries = prod.entries;
-                var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
-                var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
-                var lastEntry = entries[entries.length - 1];
-                return {
-                    code: prod.code,
-                    name: prod.name,
-                    entries: entries,
-                    totalIn: totalIn,
-                    totalOut: totalOut,
-                    balance: lastEntry ? lastEntry.balance : 0,
-                    lotNo: lastEntry ? lastEntry.lotNo : '',
-                    supplier: lastEntry ? lastEntry.supplier : ''
-                };
-            });
+    printHeader.remove();
+    document.querySelectorAll('.stock-card').forEach(function (c) { c.style.display = ''; });
+}
 
-            renderStockCardsRM(searchedProducts);
-            showToast('กรองวันที่: ' + thaiDateStr + ' (' + searchedProducts.length + ' วัตถุดิบ)');
-        }
-    }
+// Delete Entry
+function deleteEntry(rowIndex, productCode, type) {
+    if (!confirm('ยืนยันการลบรายการนี้?')) return;
 
-    // ==================== UTILITY ====================
+    showLoading();
+    showToast('กำลังลบ...');
 
-    function formatNumber(num) {
-        return new Intl.NumberFormat('th-TH').format(num || 0);
-    }
+    fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'delete_force',
+            rowIndex: rowIndex,
+            criteria: { productCode: productCode, type: type }
+        })
+    }).then(function () {
+        setTimeout(async function () {
+            showToast('ลบเรียบร้อย!');
+            await fetchPackageData();
+            hideLoading();
+        }, 2000);
+    }).catch(function (e) { alert(e); hideLoading(); });
+}
 
-    function formatDateThai(dateStr) {
-        if (!dateStr) return '';
-        var parts = dateStr.split('-');
-        if (parts.length !== 3) return dateStr;
-        var day = parseInt(parts[2], 10);
-        var month = parseInt(parts[1], 10);
-        var year = parts[0];
-        return day + '/' + month + '/' + year;
-    }
+// ==================== MODAL FUNCTIONS ====================
 
-    function populateProductDropdown() {
-        var datalist = document.getElementById('productCodeList');
-        if (!datalist) return;
-        datalist.innerHTML = '';
-        productMasterData.forEach(function (p) {
-            datalist.innerHTML += '<option value="' + p.code + '">' + p.code + ' - ' + p.name + '</option>';
-        });
-    }
-
-    function populateProductDropdownRM() {
-        var datalist = document.getElementById('productCodeListRM');
-        if (!datalist) return;
-        datalist.innerHTML = '';
-        rmProductMasterData.forEach(function (p) {
-            datalist.innerHTML += '<option value="' + p.code + '">' + p.code + ' - ' + p.name + '</option>';
-        });
-    }
-
-    // Print Single Card
-    function printSingleCard(cardId, productName, productCode) {
-        var card = document.getElementById(cardId);
-        if (!card) return;
-
-        var printHeader = document.createElement('div');
-        printHeader.className = 'print-header';
-        printHeader.innerHTML = '<img src="logo.png" alt="Logo" style="height:50px;"><div><h2 style="margin:0;">' + productName + '</h2><p style="margin:0;color:#666;">' + productCode + ' | วันที่พิมพ์: ' + new Date().toLocaleDateString('th-TH') + '</p></div>';
-
-        document.querySelectorAll('.stock-card').forEach(function (c) {
-            if (c.id !== cardId) c.style.display = 'none';
-        });
-
-        card.insertBefore(printHeader, card.firstChild);
-        window.print();
-
-        printHeader.remove();
-        document.querySelectorAll('.stock-card').forEach(function (c) { c.style.display = ''; });
-    }
-
-    // Delete Entry
-    function deleteEntry(rowIndex, productCode, type) {
-        if (!confirm('ยืนยันการลบรายการนี้?')) return;
-
-        showLoading();
-        showToast('กำลังลบ...');
-
-        fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'delete_force',
-                rowIndex: rowIndex,
-                criteria: { productCode: productCode, type: type }
-            })
-        }).then(function () {
-            setTimeout(async function () {
-                showToast('ลบเรียบร้อย!');
-                await fetchPackageData();
-                hideLoading();
-            }, 2000);
-        }).catch(function (e) { alert(e); hideLoading(); });
-    }
-
-    // ==================== MODAL FUNCTIONS ====================
-
-    function openEntryModal() {
-        if (currentModule === 'package') {
-            var modal = document.getElementById('entryModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                modal.style.opacity = '1';
-                modal.style.visibility = 'visible';
-
-                var today = new Date();
-                var yyyy = today.getFullYear();
-                var mm = String(today.getMonth() + 1).padStart(2, '0');
-                var dd = String(today.getDate()).padStart(2, '0');
-                document.getElementById('entryDate').value = yyyy + '-' + mm + '-' + dd;
-            }
-        } else {
-            var modal = document.getElementById('entryModalRM');
-            if (modal) {
-                modal.style.display = 'flex';
-                modal.style.opacity = '1';
-                modal.style.visibility = 'visible';
-
-                var today = new Date();
-                var yyyy = today.getFullYear();
-                var mm = String(today.getMonth() + 1).padStart(2, '0');
-                var dd = String(today.getDate()).padStart(2, '0');
-                document.getElementById('entryDateRM').value = yyyy + '-' + mm + '-' + dd;
-            }
-        }
-    }
-
-    function closeEntryModal() {
+function openEntryModal() {
+    if (currentModule === 'package') {
         var modal = document.getElementById('entryModal');
         if (modal) {
-            modal.style.display = 'none';
-            modal.style.opacity = '0';
-            modal.style.visibility = 'hidden';
-        }
-    }
+            modal.style.display = 'flex';
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
 
-    function closeEntryModalRM() {
+            var today = new Date();
+            var yyyy = today.getFullYear();
+            var mm = String(today.getMonth() + 1).padStart(2, '0');
+            var dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('entryDate').value = yyyy + '-' + mm + '-' + dd;
+        }
+    } else {
         var modal = document.getElementById('entryModalRM');
         if (modal) {
-            modal.style.display = 'none';
-            modal.style.opacity = '0';
-            modal.style.visibility = 'hidden';
+            modal.style.display = 'flex';
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
+
+            var today = new Date();
+            var yyyy = today.getFullYear();
+            var mm = String(today.getMonth() + 1).padStart(2, '0');
+            var dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('entryDateRM').value = yyyy + '-' + mm + '-' + dd;
         }
     }
+}
 
-    // Save Entry for Package
-    function saveEntry() {
-        var productCode = document.getElementById('entryProductCode').value;
-        var date = document.getElementById('entryDate').value;
-        var type = document.getElementById('entryType').value;
-        var inQty = parseFloat(document.getElementById('entryInQty').value) || 0;
-        var outQty = parseFloat(document.getElementById('entryOutQty').value) || 0;
-        var lotNo = document.getElementById('entryLotNo').value || '-';
-        var docRef = document.getElementById('entryDocRef').value || '-';
-        var remark = document.getElementById('entryRemark').value || '-';
-        var pkId = document.getElementById('entryPkId')?.value || '-';
+function closeEntryModal() {
+    var modal = document.getElementById('entryModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+    }
+}
 
-        if (!productCode || !date) {
-            alert('กรุณากรอกรหัสสินค้าและวันที่');
+function closeEntryModalRM() {
+    var modal = document.getElementById('entryModalRM');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+    }
+}
+
+// Save Entry for Package
+function saveEntry() {
+    var productCode = document.getElementById('entryProductCode').value;
+    var date = document.getElementById('entryDate').value;
+    var type = document.getElementById('entryType').value;
+    var inQty = parseFloat(document.getElementById('entryInQty').value) || 0;
+    var outQty = parseFloat(document.getElementById('entryOutQty').value) || 0;
+    var lotNo = document.getElementById('entryLotNo').value || '-';
+    var docRef = document.getElementById('entryDocRef').value || '-';
+    var remark = document.getElementById('entryRemark').value || '-';
+    var pkId = document.getElementById('entryPkId')?.value || '-';
+
+    if (!productCode || !date) {
+        alert('กรุณากรอกรหัสสินค้าและวันที่');
+        return;
+    }
+
+    var prod = productMasterData.find(function (p) { return p.code === productCode; });
+    var productName = prod ? prod.name : productCode;
+
+    var lastEntry = stockData.filter(function (d) { return d.productCode === productCode; }).pop();
+    var lastBalance = lastEntry ? lastEntry.balance : 0;
+    var balance = lastBalance + inQty - outQty;
+
+    showLoading();
+    showToast('กำลังบันทึก...');
+
+    fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'add',
+            entry: {
+                date: formatDateThai(date),
+                productCode: productCode,
+                productName: productName,
+                type: type,
+                inQty: inQty,
+                outQty: outQty,
+                balance: balance,
+                lotNo: lotNo,
+                pkId: pkId,
+                docRef: docRef,
+                remark: remark
+            }
+        })
+    }).then(function () {
+        setTimeout(async function () {
+            showToast('บันทึกเรียบร้อย!');
+            closeEntryModal();
+            document.getElementById('entryDate').value = '';
+            document.getElementById('entryInQty').value = '';
+            document.getElementById('entryOutQty').value = '';
+            document.getElementById('entryLotNo').value = '';
+            document.getElementById('entryDocRef').value = '';
+            document.getElementById('entryRemark').value = '';
+            await fetchPackageData();
+            hideLoading();
+        }, 2000);
+    }).catch(function (e) { alert(e); hideLoading(); });
+}
+
+// Stats Detail Modal
+function showStatDetail(type) {
+    alert('ดูรายละเอียด: ' + type);
+}
+
+function closeStatsModal() {
+    var modal = document.getElementById('statsModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// ==================== EVENT LISTENERS ====================
+
+document.addEventListener('DOMContentLoaded', function () {
+    init();
+
+    document.getElementById('searchInput')?.addEventListener('input', handleSearch);
+    document.getElementById('addEntryBtn')?.addEventListener('click', openEntryModal);
+    document.getElementById('saveEntry')?.addEventListener('click', saveEntry);
+    document.getElementById('refreshBtn')?.addEventListener('click', function () {
+        if (currentModule === 'package') {
+            showLoading();
+            stockData = [];
+            fetchPackageData();
+        } else {
+            showLoading();
+            rmStockData = [];
+            fetchRMData();
+        }
+    });
+    document.getElementById('entryModalClose')?.addEventListener('click', closeEntryModal);
+    document.getElementById('entryModalBackdrop')?.addEventListener('click', closeEntryModal);
+    document.getElementById('cancelEntry')?.addEventListener('click', closeEntryModal);
+
+    // Clear Filter Button
+    document.getElementById('clearFilterBtn')?.addEventListener('click', clearAllFilters);
+
+    // Date Filter
+    document.getElementById('dateFilter')?.addEventListener('change', function () {
+        filterByDate(this.value);
+    });
+
+    // RM Modal events
+    document.getElementById('entryModalCloseRM')?.addEventListener('click', closeEntryModalRM);
+    document.getElementById('entryModalBackdropRM')?.addEventListener('click', closeEntryModalRM);
+    document.getElementById('cancelEntryRM')?.addEventListener('click', closeEntryModalRM);
+
+    // RM Product Dropdown
+    document.getElementById('rmProductSelect')?.addEventListener('change', function () {
+        var value = this.value;
+        // Reset supplier dropdown
+        var supplierSelect = document.getElementById('rmSupplierSelect');
+        if (supplierSelect) supplierSelect.value = '';
+        // Filter by product
+        filterRMByProduct(value);
+    });
+
+    // RM Supplier Dropdown
+    document.getElementById('rmSupplierSelect')?.addEventListener('change', function () {
+        var value = this.value;
+        // Reset product dropdown
+        var productSelect = document.getElementById('rmProductSelect');
+        if (productSelect) productSelect.value = '';
+        // Filter by supplier
+        filterRMBySupplier(value);
+    });
+
+    document.getElementById('entryProductCode')?.addEventListener('change', function () {
+        var prod = productMasterData.find(function (p) { return p.code === this.value; }.bind(this));
+        if (prod) {
+            var nameInput = document.getElementById('entryProductName');
+            if (nameInput) nameInput.value = prod.name;
+        }
+    });
+
+    document.getElementById('entryProductCodeRM')?.addEventListener('change', function () {
+        var prod = rmProductMasterData.find(function (p) { return p.code === this.value; }.bind(this));
+        if (prod) {
+            var nameInput = document.getElementById('entryProductNameRM');
+            if (nameInput) nameInput.value = prod.name;
+        }
+    });
+
+    // ==================== MODULE TAB EVENT HANDLERS ====================
+    // Use a single unified approach for both touch and click
+    var tabPackage = document.getElementById('tabPackage');
+    var tabRM = document.getElementById('tabRM');
+    var isProcessingTab = false;
+
+    function handleTabSwitch(module, e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Prevent multiple rapid calls
+        if (isProcessingTab) {
+            console.log('Tab switch blocked - already processing');
             return;
         }
 
-        var prod = productMasterData.find(function (p) { return p.code === productCode; });
-        var productName = prod ? prod.name : productCode;
-
-        var lastEntry = stockData.filter(function (d) { return d.productCode === productCode; }).pop();
-        var lastBalance = lastEntry ? lastEntry.balance : 0;
-        var balance = lastBalance + inQty - outQty;
-
-        showLoading();
-        showToast('กำลังบันทึก...');
-
-        fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'add',
-                entry: {
-                    date: formatDateThai(date),
-                    productCode: productCode,
-                    productName: productName,
-                    type: type,
-                    inQty: inQty,
-                    outQty: outQty,
-                    balance: balance,
-                    lotNo: lotNo,
-                    pkId: pkId,
-                    docRef: docRef,
-                    remark: remark
-                }
-            })
-        }).then(function () {
-            setTimeout(async function () {
-                showToast('บันทึกเรียบร้อย!');
-                closeEntryModal();
-                document.getElementById('entryDate').value = '';
-                document.getElementById('entryInQty').value = '';
-                document.getElementById('entryOutQty').value = '';
-                document.getElementById('entryLotNo').value = '';
-                document.getElementById('entryDocRef').value = '';
-                document.getElementById('entryRemark').value = '';
-                await fetchPackageData();
-                hideLoading();
-            }, 2000);
-        }).catch(function (e) { alert(e); hideLoading(); });
-    }
-
-    // Stats Detail Modal
-    function showStatDetail(type) {
-        alert('ดูรายละเอียด: ' + type);
-    }
-
-    function closeStatsModal() {
-        var modal = document.getElementById('statsModal');
-        if (modal) modal.style.display = 'none';
-    }
-
-    // ==================== EVENT LISTENERS ====================
-
-    document.addEventListener('DOMContentLoaded', function () {
-        init();
-
-        document.getElementById('searchInput')?.addEventListener('input', handleSearch);
-        document.getElementById('addEntryBtn')?.addEventListener('click', openEntryModal);
-        document.getElementById('saveEntry')?.addEventListener('click', saveEntry);
-        document.getElementById('refreshBtn')?.addEventListener('click', function () {
-            if (currentModule === 'package') {
-                showLoading();
-                stockData = [];
-                fetchPackageData();
-            } else {
-                showLoading();
-                rmStockData = [];
-                fetchRMData();
-            }
-        });
-        document.getElementById('entryModalClose')?.addEventListener('click', closeEntryModal);
-        document.getElementById('entryModalBackdrop')?.addEventListener('click', closeEntryModal);
-        document.getElementById('cancelEntry')?.addEventListener('click', closeEntryModal);
-
-        // Clear Filter Button
-        document.getElementById('clearFilterBtn')?.addEventListener('click', clearAllFilters);
-
-        // Date Filter
-        document.getElementById('dateFilter')?.addEventListener('change', function () {
-            filterByDate(this.value);
-        });
-
-        // RM Modal events
-        document.getElementById('entryModalCloseRM')?.addEventListener('click', closeEntryModalRM);
-        document.getElementById('entryModalBackdropRM')?.addEventListener('click', closeEntryModalRM);
-        document.getElementById('cancelEntryRM')?.addEventListener('click', closeEntryModalRM);
-
-        // RM Product Dropdown
-        document.getElementById('rmProductSelect')?.addEventListener('change', function () {
-            var value = this.value;
-            // Reset supplier dropdown
-            var supplierSelect = document.getElementById('rmSupplierSelect');
-            if (supplierSelect) supplierSelect.value = '';
-            // Filter by product
-            filterRMByProduct(value);
-        });
-
-        // RM Supplier Dropdown
-        document.getElementById('rmSupplierSelect')?.addEventListener('change', function () {
-            var value = this.value;
-            // Reset product dropdown
-            var productSelect = document.getElementById('rmProductSelect');
-            if (productSelect) productSelect.value = '';
-            // Filter by supplier
-            filterRMBySupplier(value);
-        });
-
-        document.getElementById('entryProductCode')?.addEventListener('change', function () {
-            var prod = productMasterData.find(function (p) { return p.code === this.value; }.bind(this));
-            if (prod) {
-                var nameInput = document.getElementById('entryProductName');
-                if (nameInput) nameInput.value = prod.name;
-            }
-        });
-
-        document.getElementById('entryProductCodeRM')?.addEventListener('change', function () {
-            var prod = rmProductMasterData.find(function (p) { return p.code === this.value; }.bind(this));
-            if (prod) {
-                var nameInput = document.getElementById('entryProductNameRM');
-                if (nameInput) nameInput.value = prod.name;
-            }
-        });
-
-        // ==================== MODULE TAB EVENT HANDLERS ====================
-        // Use a single unified approach for both touch and click
-        var tabPackage = document.getElementById('tabPackage');
-        var tabRM = document.getElementById('tabRM');
-        var isProcessingTab = false;
-
-        function handleTabSwitch(module, e) {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-
-            // Prevent multiple rapid calls
-            if (isProcessingTab) {
-                console.log('Tab switch blocked - already processing');
-                return;
-            }
-
-            // Already on this tab
-            if (currentModule === module) {
-                console.log('Already on module:', module);
-                return;
-            }
-
-            isProcessingTab = true;
-            console.log('Handling tab switch to:', module);
-
-            // Call the actual switch function
-            switchModule(module, e);
-
-            // Reset after delay
-            setTimeout(function () {
-                isProcessingTab = false;
-            }, 1000);
+        // Already on this tab
+        if (currentModule === module) {
+            console.log('Already on module:', module);
+            return;
         }
 
-        // Package tab handlers
-        if (tabPackage) {
-            tabPackage.addEventListener('click', function (e) {
-                handleTabSwitch('package', e);
-            });
-        }
+        isProcessingTab = true;
+        console.log('Handling tab switch to:', module);
 
-        // RM tab handlers
-        if (tabRM) {
-            tabRM.addEventListener('click', function (e) {
-                handleTabSwitch('rm', e);
-            });
-        }
-    });
+        // Call the actual switch function
+        switchModule(module, e);
+
+        // Reset after delay
+        setTimeout(function () {
+            isProcessingTab = false;
+        }, 1000);
+    }
+
+    // Package tab handlers
+    if (tabPackage) {
+        tabPackage.addEventListener('click', function (e) {
+            handleTabSwitch('package', e);
+        });
+    }
+
+    // RM tab handlers
+    if (tabRM) {
+        tabRM.addEventListener('click', function (e) {
+            handleTabSwitch('rm', e);
+        });
+    }
+});
 

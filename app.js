@@ -1199,14 +1199,32 @@ function updateExpiryAlerts() {
     var criticalCount = document.getElementById('criticalCount');
     var warningCount = document.getElementById('warningCount');
     var revalCount = document.getElementById('revalCount');
-    var alertReval = document.getElementById('alertReval');
 
-    if (criticalCount) criticalCount.textContent = criticalItems.length + ' รายการ';
-    if (warningCount) warningCount.textContent = warningItems.length + ' รายการ';
+    var alertReval = document.getElementById('alertReval');
+    var alertCritical = document.getElementById('alertCritical');
+    var alertWarning = document.getElementById('alertWarning');
+
+    if (criticalCount && alertCritical) {
+        criticalCount.textContent = criticalItems.length + ' รายการ';
+        alertCritical.style.display = criticalItems.length > 0 ? 'flex' : 'none';
+    }
+
+    if (warningCount && alertWarning) {
+        warningCount.textContent = warningItems.length + ' รายการ';
+        alertWarning.style.display = warningItems.length > 0 ? 'flex' : 'none';
+    }
 
     if (revalCount && alertReval) {
         revalCount.textContent = revalItems.length + ' รายการ';
-        alertReval.style.display = revalItems.length > 0 ? 'block' : 'none';
+        alertReval.style.display = revalItems.length > 0 ? 'flex' : 'none';
+    }
+
+    // If no alerts at all, hide the section container (optional, but good for spacing)
+    var hasAnyAlert = revalItems.length > 0 || criticalItems.length > 0 || warningItems.length > 0;
+    if (!hasAnyAlert) {
+        alertSection.style.display = 'none';
+    } else {
+        alertSection.style.display = 'block';
     }
 
     // Store for later use

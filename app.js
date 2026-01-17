@@ -511,6 +511,9 @@ async function fetchRMData() {
         updateExpiryAlerts(); // Update expiry alert banners
         hideLoading();
 
+        // Fetch master data from RawMaterial sheet for dropdown options
+        fetchRMMasterData();
+
     } catch (error) {
         console.error('Error fetching RM data:', error);
         // Show error message to user instead of silently failing
@@ -523,6 +526,74 @@ async function fetchRMData() {
                 '</div>';
         }
         hideLoading();
+    }
+}
+
+// Fetch RM Master Data from RawMaterial sheet (for dropdowns)
+async function fetchRMMasterData() {
+    try {
+        var timestamp = new Date().getTime();
+        var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_CONFIG.rm.id + '/gviz/tq?tqx=out:json&sheet=RawMaterial&tq=SELECT%20A,B,C&_=' + timestamp;
+
+        var response = await fetch(url);
+        if (!response.ok) {
+            console.error('Failed to fetch RawMaterial sheet');
+            return;
+        }
+        var text = await response.text();
+
+        // Parse JSON
+        var jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
+        if (!jsonMatch) {
+            console.error('No JSON data found in RawMaterial sheet');
+            return;
+        }
+
+        var data = JSON.parse(jsonMatch[1]);
+        var rows = data.table.rows || [];
+
+        // Skip header row if present
+        var startIdx = 0;
+        if (rows.length > 0 && rows[0].c[0]?.v === 'Product Code1') {
+            startIdx = 1;
+        }
+
+        // Build master data from RawMaterial sheet
+        var masterProducts = [];
+        var masterSuppliers = new Set();
+
+        for (var i = startIdx; i < rows.length; i++) {
+            var row = rows[i];
+            var code = row.c[0]?.v || '';
+            var name = row.c[1]?.v || '';
+            var supplier = row.c[2]?.v || '';
+
+            if (code && code.trim()) {
+                masterProducts.push({
+                    code: code.trim(),
+                    name: name.trim(),
+                    supplier: supplier.trim()
+                });
+
+                if (supplier && supplier.trim()) {
+                    masterSuppliers.add(supplier.trim());
+                }
+            }
+        }
+
+        // Override the existing master data with data from RawMaterial sheet
+        rmProductMasterData = masterProducts;
+        rmSuppliersList = Array.from(masterSuppliers).sort();
+
+        console.log('Loaded', rmProductMasterData.length, 'products and', rmSuppliersList.length, 'suppliers from RawMaterial sheet');
+
+        // Re-populate dropdowns
+        populateRMProductDropdown();
+        populateRMSupplierDropdown();
+        populateProductDropdownRM(); // For entry modal datalist
+
+    } catch (error) {
+        console.error('Error fetching RawMaterial master data:', error);
     }
 }
 
@@ -1412,6 +1483,84 @@ function saveEntry() {
     }).catch(function (e) { alert(e); hideLoading(); });
 }
 
+// Save Entry for RM (วัตถุดิบ)
+function saveEntryRM() {
+    var productCode = document.getElementById('entryProductCodeRM').value;
+    var date = document.getElementById('entryDateRM').value;
+    var type = document.getElementById('entryTypeRM').value;
+    var containerQty = parseFloat(document.getElementById('entryContainerQtyRM').value) || 0;
+    var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
+    var remainder = parseFloat(document.getElementById('entryRemainderRM').value) || 0;
+    var inQty = parseFloat(document.getElementById('entryInQtyRM').value) || 0;
+    var outQty = parseFloat(document.getElementById('entryOutQtyRM').value) || 0;
+    var lotNo = document.getElementById('entryLotNoRM').value || '-';
+    var vendor = document.getElementById('entryVendorRM').value || '-';
+
+    if (!productCode || !date) {
+        alert('กรุณากรอกรหัสสินค้าและวันที่');
+        return;
+    }
+
+    // Find product name from master data
+    var prod = rmProductMasterData.find(function (p) { return p.code === productCode; });
+    var productName = prod ? prod.name : productCode;
+    var supplier = prod ? prod.supplier : vendor;
+
+    // Calculate balance
+    var lastEntry = rmStockData.filter(function (d) { return d.productCode === productCode; }).pop();
+    var lastBalance = lastEntry ? lastEntry.balance : 0;
+    var balance = lastBalance + inQty - outQty;
+
+    showLoading();
+    showToast('กำลังบันทึกวัตถุดิบ...');
+
+    // Use the same Apps Script URL but with action 'addRM'
+    fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'addRM',
+            sheetId: SHEET_CONFIG.rm.id,
+            sheetName: SHEET_CONFIG.rm.sheetName,
+            entry: {
+                date: formatDateThai(date),
+                productCode: productCode,
+                productName: productName,
+                type: type,
+                containerQty: containerQty,
+                containerWeight: containerWeight,
+                remainder: remainder,
+                inQty: inQty,
+                outQty: outQty,
+                balance: balance,
+                lotNo: lotNo,
+                vendorLot: vendor,
+                supplier: supplier
+            }
+        })
+    }).then(function () {
+        setTimeout(async function () {
+            showToast('บันทึกวัตถุดิบเรียบร้อย!');
+            closeEntryModalRM();
+            // Clear form
+            document.getElementById('entryDateRM').value = '';
+            document.getElementById('entryContainerQtyRM').value = '';
+            document.getElementById('entryContainerWeightRM').value = '';
+            document.getElementById('entryRemainderRM').value = '';
+            document.getElementById('entryInQtyRM').value = '';
+            document.getElementById('entryOutQtyRM').value = '';
+            document.getElementById('entryLotNoRM').value = '';
+            document.getElementById('entryVendorRM').value = '';
+            await fetchRMData();
+            hideLoading();
+        }, 2000);
+    }).catch(function (e) {
+        alert('เกิดข้อผิดพลาด: ' + e);
+        hideLoading();
+    });
+}
+
 // Stats Detail Modal
 function showStatDetail(type) {
     alert('ดูรายละเอียด: ' + type);
@@ -1457,6 +1606,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('entryModalCloseRM')?.addEventListener('click', closeEntryModalRM);
     document.getElementById('entryModalBackdropRM')?.addEventListener('click', closeEntryModalRM);
     document.getElementById('cancelEntryRM')?.addEventListener('click', closeEntryModalRM);
+    document.getElementById('saveEntryRM')?.addEventListener('click', saveEntryRM);
 
     // RM Product Dropdown
     document.getElementById('rmProductSelect')?.addEventListener('change', function () {

@@ -54,6 +54,37 @@ function doPost(e) {
             return jsonResp(false, 'Not found');
         }
 
+        // ========== ADD RM LOGIC (สำหรับวัตถุดิบ) ==========
+        if (data.action === 'addRM') {
+            // Open the RM spreadsheet by ID
+            var rmSpreadsheet = SpreadsheetApp.openById(data.sheetId);
+            var rmSheet = rmSpreadsheet.getSheetByName(data.sheetName);
+            if (!rmSheet) return jsonResp(false, 'RM Sheet not found');
+
+            var d = data.entry || data;
+            // RM columns: A-วันที่, B-รหัส, C-ชื่อ, D-รายการ, E-จำนวนCont, F-นน.Cont, G-เศษ, H-IN, I-OUT, J-Balance, K-LotNo, L-VendorLot, M-MFD, N-EXP, O-DaysLeft, P-LotBalance, Q-Supplier
+            rmSheet.appendRow([
+                d.date,
+                d.productCode,
+                d.productName,
+                d.type,
+                d.containerQty || 0,
+                d.containerWeight || 0,
+                d.remainder || 0,
+                d.inQty || 0,
+                d.outQty || 0,
+                d.balance || 0,
+                d.lotNo || '',
+                d.vendorLot || '',
+                '', // MFD (จะใส่ภายหลัง)
+                '', // EXP
+                '', // DaysLeft (formula ใน sheet จะคำนวณ)
+                '', // LotBalance
+                d.supplier || ''
+            ]);
+            return jsonResp(true, 'Added RM Entry');
+        }
+
         // ========== ADD LOGIC (ต่อท้ายรายการล่าสุดของ Sheet) ==========
         var d = data.entry || data;
         sheet.appendRow([d.date, d.productCode, d.productName, d.type, d.inQty, d.outQty, d.balance, d.lotNo, d.pkId, '', d.docRef, '', d.remark]);

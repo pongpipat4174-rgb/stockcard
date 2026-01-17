@@ -2566,33 +2566,121 @@ mark.search-highlight {
     border-color: #fff;
 }
 
+/* ==================== ALERT ANIMATIONS ==================== */
+
+/* Critical Alert (Red) */
 .alert-critical {
     background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
     border-color: #fca5a5;
-    animation: pulse-critical 2s infinite;
+    animation: alert-pulse-red 2s infinite;
+    will-change: transform, box-shadow;
 }
 
+/* Warning Alert (Yellow) */
 .alert-warning-exp {
     background: linear-gradient(135deg, #f59e0b, #d97706);
     color: white;
     border-color: #fcd34d;
+    animation: alert-pulse-yellow 3s infinite;
+    will-change: transform, box-shadow;
 }
 
-/* Alert Reval (Purple) */
+/* Reval Alert (Purple) - Most Prominent */
 .alert-reval {
     background: linear-gradient(135deg, #8b5cf6, #7c3aed);
     color: white;
     border-color: #c4b5fd;
-    box-shadow: 0 4px 6px rgba(139, 92, 246, 0.25);
+    animation: alert-pulse-purple 1.5s infinite;
+    transform-origin: center;
+    will-change: transform, box-shadow;
+    z-index: 10;
+    /* Put on top */
 }
 
+/* Reval Banner Icon Animation */
 .alert-reval .alert-banner-icon {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
     color: white;
+    animation: icon-shake 2.5s infinite;
 }
 
-/* Print All Expiry Button */
+/* --- Keyframes --- */
+
+@keyframes alert-pulse-red {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5);
+        transform: scale(1);
+    }
+
+    50% {
+        box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+        transform: scale(1.01);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+        transform: scale(1);
+    }
+}
+
+@keyframes alert-pulse-yellow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 0 6px rgba(217, 119, 6, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(217, 119, 6, 0);
+    }
+}
+
+@keyframes alert-pulse-purple {
+    0% {
+        box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.6);
+        transform: scale(1);
+    }
+
+    50% {
+        box-shadow: 0 0 0 12px rgba(124, 58, 237, 0);
+        transform: scale(1.02);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
+        transform: scale(1);
+    }
+}
+
+@keyframes icon-shake {
+
+    0%,
+    90%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    92% {
+        transform: rotate(-10deg);
+    }
+
+    94% {
+        transform: rotate(10deg);
+    }
+
+    96% {
+        transform: rotate(-10deg);
+    }
+
+    98% {
+        transform: rotate(10deg);
+    }
+}
+
+/* Print All Expiry Button (Restored) */
 .btn-print-all-expiry {
     display: flex;
     align-items: center;
@@ -2613,21 +2701,6 @@ mark.search-highlight {
 .btn-print-all-expiry:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 10px rgba(99, 102, 241, 0.4);
-}
-
-/* Critical Pulse Animation */
-@keyframes pulse-critical {
-
-    0%,
-    100% {
-        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
-        border-color: #f87171;
-    }
-
-    50% {
-        box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
-        border-color: #dc2626;
-    }
 }
 
 /* Responsive */

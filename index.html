@@ -11,69 +11,43 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=16">
+    <link rel="stylesheet" href="styles.css?v=17">
 </head>
 
 <body>
     <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loader">
-            <div class="loader-ring"></div>
-            <div class="loader-ring"></div>
-            <div class="loader-ring"></div>
-            <span class="loader-text">กำลังโหลดข้อมูล...</span>
-        </div>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">กำลังโหลดข้อมูล...</div>
     </div>
 
-    <!-- Header -->
-    <header class="main-header">
-        <div class="header-content">
-            <div class="brand">
-                <div class="brand-logo">
-                    <img src="logo.png" alt="TAN PRODUCTION Logo">
+    <!-- Toast Notification -->
+    <div id="toast"></div>
+
+    <!-- Header Section -->
+    <header class="stock-header">
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="logo-placeholder">
+                    <img src="https://lh3.googleusercontent.com/d/1Xy8c_iF7V9Gq4w7w2_D1Z5b8z,q.B!3" alt="Logo">
                 </div>
-                <div class="brand-text">
+                <div class="logo-text">
                     <h1>Stock Card</h1>
                     <span>TAN PRODUCTION</span>
                 </div>
             </div>
 
-            <!-- Module Tabs Navigation -->
-            <div class="module-tabs">
-                <button class="module-tab active" data-module="package" type="button" id="tabPackage">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                        <path
-                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                        <line x1="12" y1="22.08" x2="12" y2="12" />
-                    </svg>
-                    📦 แพ็คเกจ
+            <div class="module-switcher">
+                <button class="module-btn" id="btnPackage" onclick="switchModule('package')">
+                    <span class="icon">📦</span> แพ็คเกจ
                 </button>
-                <button class="module-tab" data-module="rm" type="button" id="tabRM">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                        <line x1="3" y1="6" x2="21" y2="6" />
-                        <path d="M16 10a4 4 0 0 1-8 0" />
-                    </svg>
-                    🧪 วัตถุดิบ (RM)
+                <button class="module-btn active" id="btnRM" onclick="switchModule('rm')">
+                    <span class="icon">🧪</span> วัตถุดิบ (RM)
                 </button>
             </div>
 
             <div class="header-actions">
-                <button class="btn btn-success" id="addEntryBtn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    เพิ่มรายการ
-                </button>
-                <button class="btn btn-outline" id="refreshBtn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M23 4v6h-6M1 20v-6h6" />
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                    </svg>
-                    รีเฟรชข้อมูล
-                </button>
+
                 <button class="btn btn-primary" id="printAllBtn" onclick="printAll()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="6 9 6 2 18 2 18 9" />
@@ -95,6 +69,11 @@
                 <p id="moduleSubtitle">ระบบจัดการสต็อกบรรจุภัณฑ์และแพ็คเกจ</p>
             </div>
         </div>
+    </div>
+
+    <!-- Alerts Section -->
+    <div id="alertBannersContainer" class="alert-banners-section">
+        <div class="alert-banners-container"></div>
     </div>
 
     <!-- Stats Dashboard -->
@@ -591,7 +570,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=50"></script>
+    <script src="app.js?v=52"></script>
 </body>
 
 </html>

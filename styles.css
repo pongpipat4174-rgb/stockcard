@@ -2720,6 +2720,15 @@ mark.search-highlight {
 /* Disable Animations and Complex Styles on Mobile to Prevent Flickering (Safe Mode) */
 @media (max-width: 768px) {
 
+    /* Stack Banners Vertical on Mobile */
+    .alert-banners-container {
+        grid-template-columns: 1fr !important;
+    }
+
+    .alert-banner {
+        margin-bottom: 0.5rem;
+    }
+
     .reval-lot,
     .fefo-urgent,
     .fifo-lot.has-warning,

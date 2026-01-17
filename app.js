@@ -918,9 +918,6 @@ function renderStockCardsRM(products) {
             html += '<div class="summary-item" style="opacity: 0; visibility: hidden;"></div>';
         }
 
-        // Check if item is revalidated
-        var isReval = entry.remark && /(ต่ออายุ|reval|extend)/i.test(entry.remark);
-
         // Row 3: Priority Recommendation Box
         if (isRevalPriority) {
             // REVAL BOX (Purple) - Highest Priority

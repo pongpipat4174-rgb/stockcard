@@ -784,9 +784,11 @@ function renderStockCardsRM(products) {
         var lotsWithBalance = Object.keys(lotBalances)
             .filter(function (lot) { return lotBalances[lot] > 0; });
 
-        // FIFO: Sort by first appearance date (oldest first)
+        // FIFO: Sort by first appearance date (oldest first) - using proper date comparison
         var fifoSorted = lotsWithBalance.slice().sort(function (a, b) {
-            return lotFirstDate[a] < lotFirstDate[b] ? -1 : 1;
+            var dateA = parseDateThai(lotFirstDate[a]);
+            var dateB = parseDateThai(lotFirstDate[b]);
+            return dateA.getTime() - dateB.getTime();
         });
 
         // FEFO: Sort by expiry days (soonest expiry first)
@@ -1293,6 +1295,22 @@ function formatDateThai(dateStr) {
     var month = parseInt(parts[1], 10);
     var year = parts[0];
     return day + '/' + month + '/' + year;
+}
+
+// Parse Thai date format (D/M/YYYY or DD/MM/YYYY) to Date object
+function parseDateThai(dateStr) {
+    if (!dateStr) return new Date(0);
+    var str = String(dateStr).trim();
+    var parts = str.split('/');
+    if (parts.length === 3) {
+        var day = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
+        var year = parseInt(parts[2], 10);
+        return new Date(year, month, day);
+    }
+    // Try to parse as is
+    var d = new Date(str);
+    return isNaN(d.getTime()) ? new Date(0) : d;
 }
 
 function populateProductDropdown() {

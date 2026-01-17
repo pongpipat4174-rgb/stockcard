@@ -871,19 +871,17 @@ function renderStockCardsRM(products) {
         html += '</span>';
         html += '</div>';
 
-        // FEFO Box (show if there's expiry data)
-        if (fefoLot !== '-' && fefoExpDays !== null) {
+        // FEFO Box (show ONLY if FIFO ≠ FEFO - when there's a conflict)
+        if (fefoConflict && fefoLot !== '-' && fefoExpDays !== null) {
             var fefoClass = 'fefo-lot';
             if (fefoUrgent) fefoClass += ' fefo-urgent';
-            if (fefoConflict) fefoClass += ' fefo-conflict';
+            fefoClass += ' fefo-conflict';
 
             html += '<div class="summary-item ' + fefoClass + '">';
             html += '<span class="summary-label">' + (fefoUrgent ? '🚨 FEFO: หมดอายุเร็ว!' : '⏰ FEFO: หมดอายุก่อน') + '</span>';
             html += '<span class="summary-value fefo-value">' + fefoLot + '</span>';
-            html += '<span class="fefo-note">หมดอายุ ' + fefoExpDate + ' · เหลือ ' + fefoExpDays + ' วัน</span>';
-            if (fefoConflict) {
-                html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
-            }
+            html += '<span class="fefo-note">เหลือ ' + formatNumber(fefoBalance) + ' Kg · หมดอายุ ' + fefoExpDate + ' (' + fefoExpDays + ' วัน)</span>';
+            html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
             html += '</div>';
         }
 

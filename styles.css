@@ -3129,6 +3129,41 @@ mark.search-highlight {
     .stock-card-summary {
         gap: 0.5rem;
         padding: 0.75rem;
+        /* Force 2 columns on mobile for FIFO/FEFO side by side */
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Make FIFO and FEFO smaller and side-by-side */
+    .fifo-lot,
+    .fefo-lot {
+        padding: 0.5rem;
+        border-radius: 8px;
+    }
+
+    .fifo-lot .summary-label,
+    .fefo-lot .summary-label {
+        font-size: 0.6rem;
+    }
+
+    .fifo-lot .summary-value,
+    .fefo-lot .summary-value,
+    .fifo-value,
+    .fefo-value {
+        font-size: 0.85rem;
+    }
+
+    .fifo-note,
+    .fefo-note {
+        font-size: 0.6rem;
+        margin-top: 0.15rem;
+    }
+
+    /* Lots badge smaller on mobile */
+    .lots-badge {
+        font-size: 0.55rem;
+        padding: 0.15rem 0.4rem;
+        top: -5px;
+        right: -5px;
     }
 
     .summary-item {
@@ -3142,6 +3177,7 @@ mark.search-highlight {
     .summary-label {
         font-size: 0.625rem;
     }
+
 
     /* Stock Table */
     .stock-table-container {

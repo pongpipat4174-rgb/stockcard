@@ -54,6 +54,29 @@ let productMasterData = [];
 let rmProductMasterData = [];
 let rmSuppliersList = [];
 let searchedProducts = [];
+let currentSearchQuery = ''; // For highlighting search results
+
+// Highlight matching text in search results
+function highlightText(text, query) {
+    if (!query || !text) return text;
+    var textStr = String(text);
+    var queryLower = query.toLowerCase();
+    var textLower = textStr.toLowerCase();
+    var idx = textLower.indexOf(queryLower);
+    if (idx === -1) return textStr;
+
+    // Build highlighted string
+    var result = '';
+    var lastIdx = 0;
+    while (idx !== -1) {
+        result += textStr.substring(lastIdx, idx);
+        result += '<mark class="search-highlight">' + textStr.substring(idx, idx + query.length) + '</mark>';
+        lastIdx = idx + query.length;
+        idx = textLower.indexOf(queryLower, lastIdx);
+    }
+    result += textStr.substring(lastIdx);
+    return result;
+}
 
 // Loading
 function showLoading() {
@@ -676,23 +699,25 @@ function renderStockCards(products) {
             for (var i = 0; i <= lotIdx; i++) {
                 lotBalance += lotEntries[i].inQty - lotEntries[i].outQty;
             }
+            var q = currentSearchQuery;
             entriesHtml += '<tr>';
-            entriesHtml += '<td>' + entry.date + '</td>';
-            entriesHtml += '<td><span class="type-cell ' + (entry.type === 'รับเข้า' ? 'type-in' : 'type-out') + '">' + entry.type + '</span></td>';
+            entriesHtml += '<td>' + highlightText(entry.date, q) + '</td>';
+            entriesHtml += '<td><span class="type-cell ' + (entry.type === 'รับเข้า' ? 'type-in' : 'type-out') + '">' + highlightText(entry.type, q) + '</span></td>';
             entriesHtml += '<td class="qty-in">' + (entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-') + '</td>';
             entriesHtml += '<td class="qty-out">' + (entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-') + '</td>';
             entriesHtml += '<td>' + formatNumber(entry.balance) + '</td>';
-            entriesHtml += '<td>' + (entry.lotNo || '-') + '</td>';
+            entriesHtml += '<td>' + highlightText(entry.lotNo || '-', q) + '</td>';
             entriesHtml += '<td>' + (entry.lotNo ? formatNumber(lotBalance) : '-') + '</td>';
-            entriesHtml += '<td>' + (entry.docRef || '-') + '</td>';
-            entriesHtml += '<td>' + (entry.remark || '-') + '</td>';
+            entriesHtml += '<td>' + highlightText(entry.docRef || '-', q) + '</td>';
+            entriesHtml += '<td>' + highlightText(entry.remark || '-', q) + '</td>';
             entriesHtml += '<td class="no-print"><button class="btn btn-delete" onclick="deleteEntry(' + entry.rowIndex + ', \'' + prod.code + '\', \'' + entry.type + '\')">ลบ</button></td>';
             entriesHtml += '</tr>';
         });
 
+        var q = currentSearchQuery;
         html += '<div class="stock-card" id="card-' + idx + '">';
         html += '<div class="stock-card-header">';
-        html += '<div class="stock-card-title"><h3>📦 ' + prod.name + '</h3><span class="product-code">' + prod.code + '</span></div>';
+        html += '<div class="stock-card-title"><h3>📦 ' + highlightText(prod.name, q) + '</h3><span class="product-code">' + highlightText(prod.code, q) + '</span></div>';
         html += '<button class="btn print-btn" onclick="printSingleCard(\'card-' + idx + '\', \'' + prod.name + '\', \'' + prod.code + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> พิมพ์</button>';
         html += '</div>';
         html += '<div class="stock-card-summary">';
@@ -764,28 +789,30 @@ function renderStockCardsRM(products) {
                 else daysLeftClass = 'days-ok';
             }
 
+            var q = currentSearchQuery;
             entriesHtml += '<tr>';
-            entriesHtml += '<td class="col-date">' + entry.date + '</td>';
-            entriesHtml += '<td class="col-type"><span class="type-cell ' + (entry.type === 'รับเข้า' ? 'type-in' : 'type-out') + '">' + entry.type + '</span></td>';
+            entriesHtml += '<td class="col-date">' + highlightText(entry.date, q) + '</td>';
+            entriesHtml += '<td class="col-type"><span class="type-cell ' + (entry.type === 'รับเข้า' ? 'type-in' : 'type-out') + '">' + highlightText(entry.type, q) + '</span></td>';
             entriesHtml += '<td class="col-num no-print">' + (entry.containerQty > 0 ? formatNumber(entry.containerQty) : '-') + '</td>';
             entriesHtml += '<td class="col-num no-print">' + (entry.containerWeight > 0 ? formatNumber(entry.containerWeight) : '-') + '</td>';
             entriesHtml += '<td class="col-num no-print">' + (entry.remainder > 0 ? formatNumber(entry.remainder) : '-') + '</td>';
             entriesHtml += '<td class="col-num qty-in">' + (entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-') + '</td>';
             entriesHtml += '<td class="col-num qty-out">' + (entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-') + '</td>';
             entriesHtml += '<td class="col-num">' + formatNumber(entry.balance) + '</td>';
-            entriesHtml += '<td class="col-lot">' + (entry.lotNo || '-') + '</td>';
-            entriesHtml += '<td class="col-vendor no-print">' + (entry.vendorLot || '-') + '</td>';
-            entriesHtml += '<td class="col-date no-print">' + (entry.mfgDate || '-') + '</td>';
-            entriesHtml += '<td class="col-date">' + (entry.expDate || '-') + '</td>';
-            entriesHtml += '<td class="col-num ' + daysLeftClass + '">' + (entry.daysLeft || '-') + '</td>';
+            entriesHtml += '<td class="col-lot">' + highlightText(entry.lotNo || '-', q) + '</td>';
+            entriesHtml += '<td class="col-vendor no-print">' + highlightText(entry.vendorLot || '-', q) + '</td>';
+            entriesHtml += '<td class="col-date no-print">' + highlightText(entry.mfgDate || '-', q) + '</td>';
+            entriesHtml += '<td class="col-date">' + highlightText(entry.expDate || '-', q) + '</td>';
+            entriesHtml += '<td class="col-num ' + daysLeftClass + '">' + highlightText(entry.daysLeft || '-', q) + '</td>';
             entriesHtml += '<td class="col-num">' + (entry.lotBalance > 0 ? formatNumber(entry.lotBalance) : '-') + '</td>';
-            entriesHtml += '<td class="col-supplier">' + (entry.supplier || '-') + '</td>';
+            entriesHtml += '<td class="col-supplier">' + highlightText(entry.supplier || '-', q) + '</td>';
             entriesHtml += '</tr>';
         });
 
+        var q = currentSearchQuery;
         html += '<div class="stock-card stock-card-rm" id="card-rm-' + idx + '">';
         html += '<div class="stock-card-header stock-card-header-rm">';
-        html += '<div class="stock-card-title"><h3>🧪 ' + prod.name + '</h3><span class="product-code">' + prod.code + '</span></div>';
+        html += '<div class="stock-card-title"><h3>🧪 ' + highlightText(prod.name, q) + '</h3><span class="product-code">' + highlightText(prod.code, q) + '</span></div>';
         html += '<button class="btn print-btn" onclick="printSingleCard(\'card-rm-' + idx + '\', \'' + prod.name + '\', \'' + prod.code + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> พิมพ์</button>';
         html += '</div>';
         html += '<div class="stock-card-summary stock-card-summary-rm">';
@@ -814,9 +841,11 @@ function renderStockCardsRM(products) {
 
 function handleSearch() {
     var query = document.getElementById('searchInput').value.toLowerCase().trim();
+    currentSearchQuery = query; // Store for highlighting
 
     if (currentModule === 'package') {
         if (!query) {
+            currentSearchQuery = '';
             showAllProducts();
             return;
         }
@@ -885,6 +914,7 @@ function handleSearch() {
     } else {
         // RM Module - Deep Search ALL Fields
         if (!query) {
+            currentSearchQuery = '';
             showAllProductsRM();
             return;
         }

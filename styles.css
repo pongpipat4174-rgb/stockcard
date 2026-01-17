@@ -487,6 +487,41 @@ body {
     border-radius: 2px;
 }
 
+/* Search Highlight in Tables and Cards */
+.search-highlight,
+mark.search-highlight {
+    background: linear-gradient(120deg, #fef08a 0%, #fde047 100%);
+    color: #854d0e;
+    padding: 0.1em 0.25em;
+    border-radius: 3px;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    animation: highlightPulse 1s ease-out;
+}
+
+@keyframes highlightPulse {
+    0% {
+        background: #fde047;
+        transform: scale(1.1);
+    }
+
+    100% {
+        background: linear-gradient(120deg, #fef08a 0%, #fde047 100%);
+        transform: scale(1);
+    }
+}
+
+/* Print: Remove highlight animation */
+@media print {
+
+    .search-highlight,
+    mark.search-highlight {
+        background: #fef08a !important;
+        box-shadow: none;
+        animation: none;
+    }
+}
+
 /* Selected Filter Badge */
 .selected-filter {
     display: flex;

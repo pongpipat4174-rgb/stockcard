@@ -782,7 +782,9 @@ function renderStockCardsRM(products) {
         var lotFirstDate = {};
         var lotExpDays = {}; // Store expiry days for FEFO
         var lotExpDate = {}; // Store expiry date for FEFO
-        var lotIsReval = {}; // Track reval status per lot
+        var lotIsReval = {}; // Optimize: Track reval status per lot
+        var lotVendorLot = {}; // Fix: Declare missing variable
+        var lotMfgDate = {};   // Fix: Declare missing variable
 
         prod.entries.forEach(function (entry) {
             var type = entry.type ? entry.type.toString().trim().toLowerCase() : '';
@@ -876,8 +878,8 @@ function renderStockCardsRM(products) {
         var isRevalPriority = revalLots.length > 0;
         var revalLot = revalLots.length > 0 ? revalLots[0] : '-';
         var revalBalance = revalLots.length > 0 ? lotBalances[revalLot] : 0;
-        var revalExpDays = revalLots.length > 0 ? lotExpDays[revalLot] : null;
-        var revalExpDate = revalLots.length > 0 ? lotExpDate[revalLot] : '';
+        // Try to get Exp Date for Reval Lot from our map, or look it up
+        var revalExpDate = revalLot !== '-' ? (lotExpDate[revalLot] || '-') : '-';
 
         // Check if FEFO differs from FIFO (important to highlight)
         // If Reval exists, it overrides everything
@@ -942,7 +944,7 @@ function renderStockCardsRM(products) {
 
         // Row 3: Priority Boxes (Display ALL if applicable)
 
-        /* REVAL/FEFO/FIFO BOXES COMMENTED OUT FOR DEBUGGING
+        // 1. REVAL BOX (Purple) - Highest Priority
         if (isRevalPriority) {
             html += '<div class="summary-item reval-lot">';
             html += '<span class="summary-label">🔄 สารต่ออายุ: ต้องใช้ก่อน!</span>';
@@ -951,30 +953,42 @@ function renderStockCardsRM(products) {
             html += '</div>';
         }
 
+        // 2. FEFO Box (Red) - Urgent Expiry or Conflict
         var showFefo = (fefoConflict && fefoLot !== '-' && fefoExpDays !== null) || (fefoUrgent && fefoLot !== '-');
-        if (showFefo && isRevalPriority && fefoLot === revalLot) showFefo = false;
+
+        // Avoid duplicate showing if Red box is exactly the same lot as Purple box
+        if (showFefo && isRevalPriority && fefoLot === revalLot) {
+            showFefo = false;
+        }
 
         if (showFefo) {
             var fefoClass = 'fefo-lot';
-            if (fefoUrgent) fefoClass += ' fefo-urgent';
+            if (fefoUrgent) fefoClass += ' fefo-urgent'; // Red Pulse
             if (fefoConflict) fefoClass += ' fefo-conflict';
+
             html += '<div class="summary-item ' + fefoClass + '">';
-            html += '<span class="summary-label">' + (fefoUrgent ? ' FEFO: หมดอายุเร็ว!' : '⏰ FEFO: หมดอายุก่อน') + '</span>';
+            html += '<span class="summary-label">' + (fefoUrgent ? '⚠️ FEFO: หมดอายุเร็ว!' : '⏰ FEFO: หมดอายุก่อน') + '</span>';
             html += '<span class="summary-value fefo-value">' + fefoLot + '</span>';
             html += '<span class="fefo-note">เหลือ ' + formatNumber(fefoBalance) + ' Kg · หมดอายุ ' + fefoExpDate + ' (' + fefoExpDays + ' วัน)</span>';
-            if (fefoConflict) html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
+            if (fefoConflict) {
+                html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
+            }
             html += '</div>';
         }
 
+        // 3. FIFO Box (Yellow/Green) - Standard
         html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
-        if (hasMultipleLots) html += '<span class="lots-badge">' + lotsWithBalance.length + ' Lots</span>';
-        html += '<span class="summary-label">' + (hasMultipleLots ? ' FIFO: ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
+        if (hasMultipleLots) {
+            html += '<span class="lots-badge">' + lotsWithBalance.length + ' Lots</span>';
+        }
+        html += '<span class="summary-label">' + (hasMultipleLots ? '👈 FIFO: ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
         html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
         html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg';
-        if (fifoExpDate && fifoExpDays !== null) html += ' · หมดอายุ ' + fifoExpDate + ' (' + fifoExpDays + ' วัน)';
+        if (fifoExpDate && fifoExpDays !== null) {
+            html += ' · หมดอายุ ' + fifoExpDate + ' (' + fifoExpDays + ' วัน)';
+        }
         html += '</span>';
         html += '</div>';
-        */
 
         html += '</div>';
         html += '<div class="stock-table-container"><table class="stock-table stock-table-rm"><thead><tr>';

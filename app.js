@@ -534,7 +534,7 @@ async function fetchRMData() {
         populateRMSupplierDropdown();
         updateStatsRM();
         showAllProductsRM();
-        // updateExpiryAlerts(); // Commented out to test crash issue
+        updateExpiryAlerts(); // Update expiry alert banners
         hideLoading();
 
     } catch (error) {

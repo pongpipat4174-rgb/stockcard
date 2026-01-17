@@ -799,6 +799,8 @@ function renderStockCardsRM(products) {
         // FIFO recommendation
         var fifoLot = fifoSorted.length > 0 ? fifoSorted[0] : '-';
         var fifoBalance = fifoSorted.length > 0 ? lotBalances[fifoLot] : 0;
+        var fifoExpDays = fifoSorted.length > 0 ? lotExpDays[fifoLot] : null;
+        var fifoExpDate = fifoSorted.length > 0 ? lotExpDate[fifoLot] : '';
         var hasMultipleLots = lotsWithBalance.length > 1;
 
         // FEFO recommendation
@@ -855,11 +857,16 @@ function renderStockCardsRM(products) {
 
         // FIFO Box
         html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
+        if (hasMultipleLots) {
+            html += '<span class="lots-badge">' + lotsWithBalance.length + ' Lots</span>';
+        }
         html += '<span class="summary-label">' + (hasMultipleLots ? '📦 FIFO: ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
         html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
-        if (hasMultipleLots) {
-            html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg · มี ' + lotsWithBalance.length + ' Lots</span>';
+        html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg';
+        if (fifoExpDate && fifoExpDays !== null) {
+            html += ' · หมดอายุ ' + fifoExpDate + ' (' + fifoExpDays + ' วัน)';
         }
+        html += '</span>';
         html += '</div>';
 
         // FEFO Box (show if there's expiry data)

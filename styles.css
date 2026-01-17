@@ -2274,6 +2274,45 @@ mark.search-highlight {
     }
 }
 
+/* ==================== REVAL / EXTENDED STYLES ==================== */
+/* Priority Box for Revalidated Items (Purple) */
+.reval-lot {
+    border-left-color: #8b5cf6 !important;
+    background: linear-gradient(to right, #f5f3ff, #ede9fe);
+}
+
+.reval-lot .summary-label {
+    color: #7c3aed;
+    font-weight: 700;
+}
+
+.reval-value {
+    color: #6d28d9;
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+.reval-note {
+    font-size: 0.75rem;
+    color: #5b21b6;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+/* Reval Badge in Table */
+.badge-reval {
+    display: inline-block;
+    background: #8b5cf6;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
 /* ==================== CLEAR FILTER BUTTON ==================== */
 .btn-clear-filter {
     display: inline-flex;
@@ -2475,13 +2514,14 @@ mark.search-highlight {
 }
 
 /* Print Button in Alert Banner */
+/* Print Button in Alert Banner */
 .btn-print-alert {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 48px;
     height: 48px;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 2px solid rgba(255, 255, 255, 0.5);
     background: rgba(255, 255, 255, 0.25);
     color: white;
@@ -2491,17 +2531,18 @@ mark.search-highlight {
 }
 
 .btn-print-alert svg {
-    width: 24px !important;
-    height: 24px !important;
+    width: 24px;
+    height: 24px;
     stroke-width: 2.5;
 }
 
 .btn-print-alert:hover {
     background: rgba(255, 255, 255, 0.5);
-    transform: scale(1.1);
+    transform: scale(1.05);
     border-color: white;
 }
 
+/* Specific button styles for warnings */
 .btn-print-warning {
     background: rgba(146, 64, 14, 0.25);
     color: #92400e;
@@ -2511,6 +2552,44 @@ mark.search-highlight {
 .btn-print-warning:hover {
     background: rgba(146, 64, 14, 0.4);
     border-color: #92400e;
+}
+
+/* Specific button styles for Reval (Purple) */
+.btn-print-reval {
+    background: rgba(109, 40, 217, 0.25);
+    color: #fff;
+    border-color: rgba(139, 92, 246, 0.5);
+}
+
+.btn-print-reval:hover {
+    background: rgba(139, 92, 246, 0.4);
+    border-color: #fff;
+}
+
+.alert-critical {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border-color: #fca5a5;
+    animation: pulse-critical 2s infinite;
+}
+
+.alert-warning-exp {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    border-color: #fcd34d;
+}
+
+/* Alert Reval (Purple) */
+.alert-reval {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: white;
+    border-color: #c4b5fd;
+    box-shadow: 0 4px 6px rgba(139, 92, 246, 0.25);
+}
+
+.alert-reval .alert-banner-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
 }
 
 /* Print All Expiry Button */

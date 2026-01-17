@@ -507,7 +507,8 @@ async function fetchRMData() {
                 expDate: c[13]?.f || c[13]?.v || '',
                 daysLeft: c[14]?.v || '',
                 lotBalance: parseFloat(c[15]?.v) || 0,
-                supplier: c[16]?.v || ''
+                supplier: c[16]?.v || '',
+                remark: c[17]?.v || '' // Column R: หมายเหตุ (ระบุ "ต่ออายุ" ที่นี่)
             };
         }).filter(function (item) { return item.productCode && item.productCode !== 'รหัสสินค้า'; });
 
@@ -836,8 +837,23 @@ function renderStockCardsRM(products) {
         var fefoExpDate = fefoSorted.length > 0 ? lotExpDate[fefoLot] : '';
         var fefoBalance = fefoSorted.length > 0 ? lotBalances[fefoLot] : 0;
 
+        // Check for Revalidated Lots (Must use first!)
+        var revalLots = lotsWithBalance.filter(function (lot) {
+            // Check if any entry for this lot has "ต่ออายุ" or "reval" in remark
+            return prod.entries.some(function (e) {
+                return e.lotNo === lot && (e.remark && /(ต่ออายุ|reval|extend)/i.test(e.remark));
+            });
+        });
+
+        var isRevalPriority = revalLots.length > 0;
+        var revalLot = revalLots.length > 0 ? revalLots[0] : '-';
+        var revalBalance = revalLots.length > 0 ? lotBalances[revalLot] : 0;
+        var revalExpDays = revalLots.length > 0 ? lotExpDays[revalLot] : null;
+        var revalExpDate = revalLots.length > 0 ? lotExpDate[revalLot] : '';
+
         // Check if FEFO differs from FIFO (important to highlight)
-        var fefoConflict = hasMultipleLots && fefoLot !== fifoLot && fefoLot !== '-';
+        // If Reval exists, it overrides everything
+        var fefoConflict = !isRevalPriority && hasMultipleLots && fefoLot !== fifoLot && fefoLot !== '-';
         var fefoUrgent = fefoExpDays !== null && fefoExpDays <= 30;
 
         var entriesHtml = '';
@@ -851,6 +867,8 @@ function renderStockCardsRM(products) {
                 else daysLeftClass = 'days-ok';
             }
 
+            var isReval = entry.remark && /(ต่ออายุ|reval|extend)/i.test(entry.remark);
+
             var q = currentSearchQuery;
             entriesHtml += '<tr>';
             entriesHtml += '<td class="col-date">' + highlightText(entry.date, q) + '</td>';
@@ -861,7 +879,14 @@ function renderStockCardsRM(products) {
             entriesHtml += '<td class="col-num qty-in">' + (entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-') + '</td>';
             entriesHtml += '<td class="col-num qty-out">' + (entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-') + '</td>';
             entriesHtml += '<td class="col-num">' + formatNumber(entry.balance) + '</td>';
-            entriesHtml += '<td class="col-lot">' + highlightText(entry.lotNo || '-', q) + '</td>';
+
+            // Lot No with Reval Badge
+            var lotHtml = highlightText(entry.lotNo || '-', q);
+            if (isReval) {
+                lotHtml += ' <span class="badge-reval">🔄 ต่ออายุ</span>';
+            }
+            entriesHtml += '<td class="col-lot">' + lotHtml + '</td>';
+
             entriesHtml += '<td class="col-vendor no-print">' + highlightText(entry.vendorLot || '-', q) + '</td>';
             entriesHtml += '<td class="col-date no-print">' + highlightText(entry.mfgDate || '-', q) + '</td>';
             entriesHtml += '<td class="col-date">' + highlightText(entry.expDate || '-', q) + '</td>';
@@ -893,32 +918,53 @@ function renderStockCardsRM(products) {
             html += '<div class="summary-item" style="opacity: 0; visibility: hidden;"></div>';
         }
 
-        // Row 3 (or 2 second half): FIFO Box
-        html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
-        if (hasMultipleLots) {
-            html += '<span class="lots-badge">' + lotsWithBalance.length + ' Lots</span>';
-        }
-        html += '<span class="summary-label">' + (hasMultipleLots ? '📦 FIFO: ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
-        html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
-        html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg';
-        if (fifoExpDate && fifoExpDays !== null) {
-            html += ' · หมดอายุ ' + fifoExpDate + ' (' + fifoExpDays + ' วัน)';
-        }
-        html += '</span>';
-        html += '</div>';
+        // Check if item is revalidated
+        var isReval = entry.remark && /(ต่ออายุ|reval|extend)/i.test(entry.remark);
 
-        // FEFO Box (show ONLY if FIFO ≠ FEFO - when there's a conflict) - will be next to FIFO in Row 3
-        if (fefoConflict && fefoLot !== '-' && fefoExpDays !== null) {
-            var fefoClass = 'fefo-lot';
-            if (fefoUrgent) fefoClass += ' fefo-urgent';
-            fefoClass += ' fefo-conflict';
-
-            html += '<div class="summary-item ' + fefoClass + '">';
-            html += '<span class="summary-label">' + (fefoUrgent ? '🚨 FEFO: หมดอายุเร็ว!' : '⏰ FEFO: หมดอายุก่อน') + '</span>';
-            html += '<span class="summary-value fefo-value">' + fefoLot + '</span>';
-            html += '<span class="fefo-note">เหลือ ' + formatNumber(fefoBalance) + ' Kg · หมดอายุ ' + fefoExpDate + ' (' + fefoExpDays + ' วัน)</span>';
-            html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
+        // Row 3: Priority Recommendation Box
+        if (isRevalPriority) {
+            // REVAL BOX (Purple) - Highest Priority
+            html += '<div class="summary-item reval-lot">';
+            html += '<span class="summary-label">🔄 สารต่ออายุ: ต้องใช้ก่อน!</span>';
+            html += '<span class="summary-value reval-value">' + revalLot + '</span>';
+            html += '<span class="reval-note">เหลือ ' + formatNumber(revalBalance) + ' Kg · หมดอายุ ' + revalExpDate + '</span>';
             html += '</div>';
+
+            // Add FIFO box next to it (if space permits) or hidden if we want to focus on Reval
+            html += '<div class="summary-item fifo-lot">';
+            html += '<span class="summary-label">📦 FIFO ปกติ</span>';
+            html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
+            html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg</span>';
+            html += '</div>';
+
+        } else {
+            // Normal Logic (FIFO / FEFO)
+            html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
+            if (hasMultipleLots) {
+                html += '<span class="lots-badge">' + lotsWithBalance.length + ' Lots</span>';
+            }
+            html += '<span class="summary-label">' + (hasMultipleLots ? '📦 FIFO: ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
+            html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
+            html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg';
+            if (fifoExpDate && fifoExpDays !== null) {
+                html += ' · หมดอายุ ' + fifoExpDate + ' (' + fifoExpDays + ' วัน)';
+            }
+            html += '</span>';
+            html += '</div>';
+
+            // FEFO Box (show ONLY if FIFO ≠ FEFO - when there's a conflict)
+            if (fefoConflict && fefoLot !== '-' && fefoExpDays !== null) {
+                var fefoClass = 'fefo-lot';
+                if (fefoUrgent) fefoClass += ' fefo-urgent';
+                fefoClass += ' fefo-conflict';
+
+                html += '<div class="summary-item ' + fefoClass + '">';
+                html += '<span class="summary-label">' + (fefoUrgent ? '🚨 FEFO: หมดอายุเร็ว!' : '⏰ FEFO: หมดอายุก่อน') + '</span>';
+                html += '<span class="summary-value fefo-value">' + fefoLot + '</span>';
+                html += '<span class="fefo-note">เหลือ ' + formatNumber(fefoBalance) + ' Kg · หมดอายุ ' + fefoExpDate + ' (' + fefoExpDays + ' วัน)</span>';
+                html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
+                html += '</div>';
+            }
         }
 
         html += '</div>';
@@ -1131,11 +1177,17 @@ function updateExpiryAlerts() {
 
     alertSection.style.display = 'block';
 
-    // Count critical items (<=30 days) and warning items (31-90 days)
+    // Count critical items (<=30 days), warning items (31-90 days), and Reval items
     var criticalItems = [];
     var warningItems = [];
+    var revalItems = [];
 
     rmStockData.forEach(function (item) {
+        // Check for Revalidate (Column R)
+        if (item.remark && /(ต่ออายุ|reval|extend)/i.test(item.remark) && item.balance > 0) {
+            revalItems.push(item);
+        }
+
         var daysNum = parseInt(item.daysLeft);
         if (!isNaN(daysNum) && daysNum > 0) {
             if (daysNum <= 30) {
@@ -1146,21 +1198,25 @@ function updateExpiryAlerts() {
         }
     });
 
-    // Update counts
+    // Update counts and visibility
     var criticalCount = document.getElementById('criticalCount');
     var warningCount = document.getElementById('warningCount');
+    var revalCount = document.getElementById('revalCount');
+    var alertReval = document.getElementById('alertReval');
 
-    if (criticalCount) {
-        criticalCount.textContent = criticalItems.length + ' รายการ';
-    }
-    if (warningCount) {
-        warningCount.textContent = warningItems.length + ' รายการ';
+    if (criticalCount) criticalCount.textContent = criticalItems.length + ' รายการ';
+    if (warningCount) warningCount.textContent = warningItems.length + ' รายการ';
+
+    if (revalCount && alertReval) {
+        revalCount.textContent = revalItems.length + ' รายการ';
+        alertReval.style.display = revalItems.length > 0 ? 'block' : 'none';
     }
 
     // Store for later use
     window.expiryData = {
         critical: criticalItems,
-        warning: warningItems
+        warning: warningItems,
+        reval: revalItems
     };
 }
 
@@ -1170,11 +1226,22 @@ function showExpiryItems(type) {
         return;
     }
 
-    var items = type === 'critical' ? window.expiryData.critical : window.expiryData.warning;
-    var title = type === 'critical' ? '⚠️ รายการหมดอายุภายใน 30 วัน' : '⏰ รายการหมดอายุภายใน 90 วัน';
+    var items = [];
+    var title = '';
 
-    if (items.length === 0) {
-        showToast('ไม่มีรายการ' + (type === 'critical' ? 'วิกฤต' : 'เตือน'));
+    if (type === 'critical') {
+        items = window.expiryData.critical;
+        title = '⚠️ รายการหมดอายุภายใน 30 วัน';
+    } else if (type === 'warning') {
+        items = window.expiryData.warning;
+        title = '⏰ รายการหมดอายุภายใน 90 วัน';
+    } else if (type === 'reval') {
+        items = window.expiryData.reval;
+        title = '🔄 รายการต่ออายุ (ต้องใช้ก่อน)';
+    }
+
+    if (!items || items.length === 0) {
+        showToast('ไม่มีรายการ' + (type === 'reval' ? 'ต่ออายุ' : (type === 'critical' ? 'วิกฤต' : 'เตือน')));
         return;
     }
 
@@ -1214,6 +1281,153 @@ function showExpiryItems(type) {
 
     // Scroll to cards
     document.getElementById('cardsContainer')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Print Expiry Items (Critical + Warning + Reval)
+function printExpiryItems(type) {
+    if (currentModule !== 'rm') {
+        showToast('ฟังก์ชันนี้ใช้งานได้เฉพาะโหมดวัตถุดิบ (RM)');
+        return;
+    }
+
+    if (!window.expiryData) {
+        showToast('ไม่มีข้อมูลหมดอายุ');
+        return;
+    }
+
+    var items = [];
+    var title = '';
+    var headerColor = '';
+
+    if (type === 'critical') {
+        items = window.expiryData.critical || [];
+        title = '⚠️ รายการหมดอายุภายใน 30 วัน (วิกฤต)';
+        headerColor = '#dc2626';
+    } else if (type === 'warning') {
+        items = window.expiryData.warning || [];
+        title = '⏰ รายการหมดอายุภายใน 90 วัน (เตือน)';
+        headerColor = '#f59e0b';
+    } else if (type === 'reval') {
+        items = window.expiryData.reval || [];
+        title = '🔄 รายการต่ออายุ (ต้องใช้ก่อน)';
+        headerColor = '#7c3aed';
+    } else if (type === 'all') {
+        items = (window.expiryData.reval || [])
+            .concat(window.expiryData.critical || [])
+            .concat(window.expiryData.warning || []);
+        title = '🔔 รายการที่ต้องเฝ้าระวังทั้งหมด (ต่ออายุ + หมดอายุเร็ว)';
+        headerColor = '#4f46e5';
+    }
+
+    if (items.length === 0) {
+        showToast('ไม่มีรายการที่จะพิมพ์');
+        return;
+    }
+
+    // Group by product
+    var productMap = new Map();
+    items.forEach(function (item) {
+        if (!productMap.has(item.productCode)) {
+            productMap.set(item.productCode, {
+                code: item.productCode,
+                name: item.productName,
+                entries: []
+            });
+        }
+        productMap.get(item.productCode).entries.push(item);
+    });
+
+    // Build print content
+    var printWindow = window.open('', '_blank');
+    var printContent = `
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <title>${title}</title>
+            <style>
+                body { font-family: 'Sarabun', 'Inter', sans-serif; padding: 20px; }
+                .print-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb; }
+                .print-header img { height: 50px; }
+                .print-header h1 { margin: 0; font-size: 18px; }
+                .print-header p { margin: 5px 0 0; color: #666; font-size: 12px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
+                th { background: ${headerColor}; color: white; padding: 8px; text-align: left; }
+                td { padding: 8px; border-bottom: 1px solid #e5e7eb; }
+                tr:nth-child(even) { background: #f9fafb; }
+                .product-header { background: #f3f4f6; padding: 10px; margin-top: 20px; border-radius: 8px; }
+                .product-header h3 { margin: 0; font-size: 14px; }
+                .days-critical { color: #dc2626; font-weight: bold; }
+                .days-warning { color: #d97706; font-weight: bold; }
+                .badge-reval { display: inline-block; background: #8b5cf6; color: white; font-size: 10px; padding: 2px 4px; border-radius: 4px; margin-left: 5px; }
+                @media print { @page { size: A4 landscape; margin: 10mm; } }
+            </style>
+        </head>
+        <body>
+            <div class="print-header">
+                <img src="logo.png" alt="Logo">
+                <div>
+                    <h1>🧪 ${title}</h1>
+                    <p>TAN PRODUCTION | พิมพ์เมื่อ: ${new Date().toLocaleDateString('th-TH')} ${new Date().toLocaleTimeString('th-TH')}</p>
+                    <p>จำนวน: ${items.length} รายการ จาก ${productMap.size} สินค้า</p>
+                </div>
+            </div>
+    `;
+
+    productMap.forEach(function (prod) {
+        printContent += `
+            <div class="product-header">
+                <h3>🧪 ${prod.name} (${prod.code})</h3>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>วันที่</th>
+                        <th>ประเภท</th>
+                        <th>Lot No.</th>
+                        <th>EXP Date</th>
+                        <th>Days Left</th>
+                        <th>Lot Balance</th>
+                        <th>Supplier</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        prod.entries.forEach(function (entry) {
+            var daysClass = parseInt(entry.daysLeft) <= 30 ? 'days-critical' : 'days-warning';
+            var isReval = entry.remark && /(ต่ออายุ|reval|extend)/i.test(entry.remark);
+            var lotHtml = entry.lotNo || '-';
+            if (isReval) lotHtml += ' <span class="badge-reval">🔄 ต่ออายุ</span>';
+
+            printContent += `
+                <tr>
+                    <td>${entry.date || '-'}</td>
+                    <td>${entry.type || '-'}</td>
+                    <td>${lotHtml}</td>
+                    <td>${entry.expDate || '-'}</td>
+                    <td class="${daysClass}">${entry.daysLeft || '-'} วัน</td>
+                    <td>${entry.lotBalance ? formatNumber(entry.lotBalance) : '-'} Kg</td>
+                    <td>${entry.supplier || '-'}</td>
+                </tr>
+            `;
+        });
+
+        printContent += '</tbody></table>';
+    });
+
+    printContent += `
+            <script>
+                window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+
+    showToast('กำลังพิมพ์รายการ ' + type + ' (' + items.length + ' รายการ)');
 }
 
 // ==================== DATE FILTER ====================

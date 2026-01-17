@@ -1,4 +1,4 @@
-/* Stock Card Web App - V.14 (Fixed Mobile Tab Switching + Print Styles) */
+/* Stock Card Web App - V.15 (Fixed Mobile Tab Switching - Nuclear Option) */
 
 // Global Error Handler
 window.onerror = function (msg, url, lineNo, columnNo, error) {
@@ -46,6 +46,9 @@ const SHEET_CONFIG = {
 // Current module state
 let currentModule = 'package';
 let isSwitchingModule = false; // Prevent double-tap on mobile
+
+// NUCLEAR: Track when we switched to RM - block ALL switches to package for 3 seconds
+let lastSwitchToRM = 0;
 
 // Data containers
 let stockData = [];
@@ -117,6 +120,12 @@ function switchModule(module, event) {
         return;
     }
 
+    // NUCLEAR LOCK: If switching to PACKAGE and we just switched to RM within 3 seconds, BLOCK IT
+    if (module === 'package' && Date.now() - lastSwitchToRM < 3000) {
+        console.log('NUCLEAR BLOCK: Blocking switch to package - too soon after RM switch (' + (Date.now() - lastSwitchToRM) + 'ms ago)');
+        return;
+    }
+
     // If already on this module, do nothing
     if (currentModule === module) {
         console.log('Already on module:', module);
@@ -126,9 +135,16 @@ function switchModule(module, event) {
     // Set lock immediately and keep it longer for mobile
     isSwitchingModule = true;
 
+    // Track RM switch time for nuclear lock
+    if (module === 'rm') {
+        lastSwitchToRM = Date.now();
+        console.log('RM switch timestamp recorded:', lastSwitchToRM);
+    }
+
     // Force the module change IMMEDIATELY and save it
     currentModule = module;
     console.log('Switching to module:', module, '- currentModule is now:', currentModule);
+
 
     // Save to sessionStorage to persist across any page refresh
     try {

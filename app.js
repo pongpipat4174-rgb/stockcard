@@ -1667,6 +1667,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // Track if we've handled an event recently (for any tab)
     var lastEventHandled = 0;
 
+    // Track touch start position to detect scroll vs tap
+    var touchStartX = 0;
+    var touchStartY = 0;
+    var isTouchMoved = false;
+    var SCROLL_THRESHOLD = 10; // If moved more than 10px, it's a scroll
+
     function safeTabSwitch(module, e) {
         var now = Date.now();
 
@@ -1685,25 +1691,54 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (isTouchDevice) {
-        // MOBILE: Use only touchend events
-        console.log('Using touch-only mode');
+        // MOBILE: Use touchstart/touchmove/touchend with scroll detection
+        console.log('Using touch-only mode with scroll detection');
 
-        if (tabPackage) {
-            tabPackage.addEventListener('touchend', function (e) {
+        function handleTouchStart(e) {
+            if (e.touches && e.touches.length > 0) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                isTouchMoved = false;
+            }
+        }
+
+        function handleTouchMove(e) {
+            if (e.touches && e.touches.length > 0) {
+                var dx = Math.abs(e.touches[0].clientX - touchStartX);
+                var dy = Math.abs(e.touches[0].clientY - touchStartY);
+                if (dx > SCROLL_THRESHOLD || dy > SCROLL_THRESHOLD) {
+                    isTouchMoved = true;
+                }
+            }
+        }
+
+        function createTouchEndHandler(module) {
+            return function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-                safeTabSwitch('package', e);
-            }, { passive: false, capture: true });
+
+                // If user was scrolling, don't switch
+                if (isTouchMoved) {
+                    console.log(module + ' touchend ignored - was scrolling');
+                    isTouchMoved = false;
+                    return;
+                }
+
+                safeTabSwitch(module, e);
+            };
+        }
+
+        if (tabPackage) {
+            tabPackage.addEventListener('touchstart', handleTouchStart, { passive: true });
+            tabPackage.addEventListener('touchmove', handleTouchMove, { passive: true });
+            tabPackage.addEventListener('touchend', createTouchEndHandler('package'), { passive: false, capture: true });
         }
 
         if (tabRM) {
-            tabRM.addEventListener('touchend', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                safeTabSwitch('rm', e);
-            }, { passive: false, capture: true });
+            tabRM.addEventListener('touchstart', handleTouchStart, { passive: true });
+            tabRM.addEventListener('touchmove', handleTouchMove, { passive: true });
+            tabRM.addEventListener('touchend', createTouchEndHandler('rm'), { passive: false, capture: true });
         }
 
         // Also block all click events on touch device to prevent ghost clicks
@@ -1738,6 +1773,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 });
+
 
 
 

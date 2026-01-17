@@ -782,75 +782,72 @@ function renderStockCardsRM(products) {
         var lotFirstDate = {};
         var lotExpDays = {}; // Store expiry days for FEFO
         var lotExpDate = {}; // Store expiry date for FEFO
-        var lotIsReval = {}; // Optimize: Track reval status per lot
-        var lotVendorLot = {}; // Fix: Declare missing variable
-        var lotMfgDate = {};   // Fix: Declare missing variable
 
+        // Fix: Use simple object maps to track reval and vendor info
+        var lotIsReval = {};
+        var lotVendorLot = {};
+        var lotMfgDate = {};
+
+        // Loop 1: Calculate Balances and Map Data
         prod.entries.forEach(function (entry) {
-            var type = entry.type ? entry.type.toString().trim().toLowerCase() : '';
-            var amount = parseFloat(entry.amount) || 0;
+            var type = entry.type ? entry.type.toString().trim() : '';
+            var amount = parseFloat(entry.inQty) > 0 ? parseFloat(entry.inQty) : 0;
+            var outAmount = parseFloat(entry.outQty) > 0 ? parseFloat(entry.outQty) : 0;
 
-            if (type === 'รับเข้า') {
-                prod.totalIn += amount;
-                if (!lotBalances[entry.lotNo]) {
-                    lotBalances[entry.lotNo] = 0;
-                    lotFirstDate[entry.lotNo] = entry.date; // Keep strict first date
-                }
-                lotBalances[entry.lotNo] += amount;
+            // Fix: Check type logic precisely based on sheet data
+            var isInbound = (amount > 0);
+            var isOutbound = (outAmount > 0);
 
-                // Track vendor info (only from Inbound)
-                if (entry.vendorLot) lotVendorLot[entry.lotNo] = entry.vendorLot;
-                if (entry.mfgDate) lotMfgDate[entry.lotNo] = entry.mfgDate;
-
-                // Update expiry days if this entry has a valid daysLeft
-                var days = parseInt(entry.daysLeft);
-                if (!isNaN(days) && (lotExpDays[entry.lotNo] === undefined || days < lotExpDays[entry.lotNo])) {
-                    lotExpDays[entry.lotNo] = days;
-                    lotExpDate[entry.lotNo] = entry.expDate || '';
-                }
-
-                // Check for Revalidate status
-                if (entry.remark && /(ต่ออายุ|reval|extend)/i.test(entry.remark)) {
-                    lotIsReval[entry.lotNo] = true;
-                }
-
-            } else if (type === 'เบิกออก' || type === 'adjust (-)') {
-                prod.totalOut += amount;
-
-                // Deduct from lots using FIFO logic for balance tracking
-                // (Simplified: Just deduct from the specific lot if user specified it, otherwise we don't know which lot was used.
-                // But in this sheet structure, usually Lot No IS specified. So we trust entry.lotNo)
-                if (entry.lotNo && lotBalances[entry.lotNo] !== undefined) {
-                    lotBalances[entry.lotNo] -= amount;
-                }
-            } else if (type === 'ยกยอดมา') {
-                // Treat as Inbound
-                prod.totalIn += amount;
+            if (isInbound) {
                 if (!lotBalances[entry.lotNo]) {
                     lotBalances[entry.lotNo] = 0;
                     lotFirstDate[entry.lotNo] = entry.date;
                 }
                 lotBalances[entry.lotNo] += amount;
 
-                // Check for Revalidate status
+                if (entry.vendorLot) lotVendorLot[entry.lotNo] = entry.vendorLot;
+                if (entry.mfgDate) lotMfgDate[entry.lotNo] = entry.mfgDate;
+
+                var days = parseInt(entry.daysLeft);
+                if (!isNaN(days)) {
+                    // Update expiry if valid (keep the smallest daysLeft if multiple entries provided)
+                    if (lotExpDays[entry.lotNo] === undefined || days < lotExpDays[entry.lotNo]) {
+                        lotExpDays[entry.lotNo] = days;
+                        lotExpDate[entry.lotNo] = entry.expDate || '';
+                    }
+                }
+
                 if (entry.remark && /(ต่ออายุ|reval|extend)/i.test(entry.remark)) {
                     lotIsReval[entry.lotNo] = true;
                 }
+
             }
+
+            if (isOutbound) {
+                if (entry.lotNo && lotBalances[entry.lotNo] !== undefined) {
+                    lotBalances[entry.lotNo] -= outAmount;
+                }
+            }
+
+            // Treat 'ยกยอดมา' specifically if needed, but usually it has inQty > 0 so it falls into isInbound
         });
 
-        // Find lots with positive balance
-        var lotsWithBalance = Object.keys(lotBalances)
-            .filter(function (lot) { return lotBalances[lot] > 0; });
+        // Loop 2: Find positive balances
+        var lotsWithBalance = [];
+        for (var lot in lotBalances) {
+            if (lotBalances.hasOwnProperty(lot) && lotBalances[lot] > 0.001) { // Tolerance for float
+                lotsWithBalance.push(lot);
+            }
+        }
 
-        // FIFO: Sort by first appearance date (oldest first) - using proper date comparison
+        // FIFO: Sort by date
         var fifoSorted = lotsWithBalance.slice().sort(function (a, b) {
             var dateA = parseDateThai(lotFirstDate[a]);
             var dateB = parseDateThai(lotFirstDate[b]);
             return dateA.getTime() - dateB.getTime();
         });
 
-        // FEFO: Sort by expiry days (soonest expiry first)
+        // FEFO: Sort by days left
         var fefoSorted = lotsWithBalance.slice()
             .filter(function (lot) { return lotExpDays[lot] !== undefined; })
             .sort(function (a, b) {
@@ -870,7 +867,7 @@ function renderStockCardsRM(products) {
         var fefoExpDate = fefoSorted.length > 0 ? lotExpDate[fefoLot] : '';
         var fefoBalance = fefoSorted.length > 0 ? lotBalances[fefoLot] : 0;
 
-        // Check for Revalidated Lots (Optimized)
+        // Reval Logic (Simple Filter)
         var revalLots = lotsWithBalance.filter(function (lot) {
             return lotIsReval[lot] === true;
         });
@@ -878,7 +875,6 @@ function renderStockCardsRM(products) {
         var isRevalPriority = revalLots.length > 0;
         var revalLot = revalLots.length > 0 ? revalLots[0] : '-';
         var revalBalance = revalLots.length > 0 ? lotBalances[revalLot] : 0;
-        // Try to get Exp Date for Reval Lot from our map, or look it up
         var revalExpDate = revalLot !== '-' ? (lotExpDate[revalLot] || '-') : '-';
 
         // Check if FEFO differs from FIFO (important to highlight)

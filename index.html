@@ -11,7 +11,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=17">
+    <link rel="stylesheet" href="styles.css?v=18">
 </head>
 
 <body>
@@ -47,14 +47,18 @@
             </div>
 
             <div class="header-actions">
-
-                <button class="btn btn-primary" id="printAllBtn" onclick="printAll()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="6 9 6 2 18 2 18 9" />
-                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                        <rect x="6" y="14" width="12" height="8" />
-                    </svg>
-                    พิมพ์ทั้งหมด
+                <button class="btn btn-primary" onclick="showAddModal()">
+                    <span class="icon">+</span> เพิ่มรายการ
+                </button>
+                <button class="btn btn-secondary" onclick="refreshData()">
+                    <span class="icon">🔄</span> รีเฟรชข้อมูล
+                </button>
+                <button class="btn btn-outline btn-print-all" onclick="printAllCards()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg> พิมพ์ทั้งหมด
                 </button>
             </div>
         </div>
@@ -73,8 +77,11 @@
 
     <!-- Alerts Section -->
     <div id="alertBannersContainer" class="alert-banners-section">
-        <div class="alert-banners-container"></div>
+        <div class="alert-banners-container">
+            <!-- Banners will be injected here -->
+        </div>
     </div>
+
 
     <!-- Stats Dashboard -->
     <section class="stats-section">
@@ -570,7 +577,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=52"></script>
+    <script src="app.js?v=53"></script>
 </body>
 
 </html>

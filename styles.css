@@ -3257,3 +3257,86 @@ mark.search-highlight {
         display: none;
     }
 }
+
+/* ==================== MOBILE ANTI-FLICKER FIX ==================== */
+/* Disable hover effects and transitions on touch devices to prevent flickering */
+
+@media (hover: none) and (pointer: coarse) {
+
+    /* Disable all hover transforms on mobile */
+    .stat-card,
+    .stock-card,
+    .alert-banner,
+    .btn,
+    .module-tab,
+    .dropdown-item {
+        transform: none !important;
+        transition: none !important;
+    }
+
+    .stat-card:hover,
+    .stock-card:hover,
+    .alert-banner:hover,
+    .btn:hover,
+    .module-tab:hover,
+    .dropdown-item:hover {
+        transform: none !important;
+        box-shadow: var(--shadow-md) !important;
+    }
+
+    /* Disable pulse/warning animations on mobile - prevents constant repaints */
+    .fifo-lot.has-warning,
+    .fefo-lot.fefo-urgent,
+    .alert-critical {
+        animation: none !important;
+    }
+
+    /* Use hardware acceleration for scrollable containers */
+    .cards-container,
+    .stock-table-container,
+    .modal-body {
+        -webkit-overflow-scrolling: touch;
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        will-change: scroll-position;
+    }
+
+    /* Prevent layout shifts on touch */
+    .loading-overlay {
+        transition: none !important;
+    }
+
+    /* Stabilize fixed/sticky elements */
+    .main-header {
+        transform: translateZ(0);
+        backface-visibility: hidden;
+    }
+
+    /* Prevent repaint on table scroll */
+    .stock-table,
+    .stock-table-rm {
+        transform: translateZ(0);
+    }
+}
+
+/* Also apply for general mobile screens as fallback */
+@media screen and (max-width: 768px) {
+
+    /* Reduce transitions to minimum on mobile */
+    .stat-card {
+        transition: box-shadow 0.15s ease !important;
+    }
+
+    .stat-card:hover {
+        transform: none !important;
+    }
+
+    /* Ensure stable rendering */
+    .cards-container {
+        contain: layout style;
+    }
+
+    .stock-card {
+        contain: layout style paint;
+    }
+}

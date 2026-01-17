@@ -2596,7 +2596,10 @@ mark.search-highlight {
 .reval-lot {
     animation: alert-pulse-purple 3s infinite;
     transform-origin: center;
-    /* Removed border override to match others */
+    border-radius: var(--radius-lg);
+    /* Rounded corners like others */
+    overflow: hidden;
+    /* Ensure content stays inside rounded corners */
 }
 
 /* Red FEFO Box */
@@ -2700,6 +2703,23 @@ mark.search-highlight {
 
     50% {
         box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.3);
+    }
+}
+
+/* Disable Animations on Mobile to Prevent Flickering */
+@media (max-width: 768px) {
+
+    .reval-lot,
+    .fefo-urgent,
+    .fifo-lot.has-warning,
+    .alert-critical,
+    .alert-warning-exp,
+    .alert-reval,
+    .alert-reval .alert-banner-icon {
+        animation: none !important;
+        transform: none !important;
+        box-shadow: none !important;
+        /* Optional: remove pulsing shadow too */
     }
 }
 

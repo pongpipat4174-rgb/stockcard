@@ -2299,6 +2299,27 @@ mark.search-highlight {
     display: block;
 }
 
+/* ==================== BOX ANIMATIONS (IN CARD) ==================== */
+
+/* Purple Reval Box - Heartbeat */
+.reval-lot {
+    animation: alert-pulse-purple 2s infinite;
+    transform-origin: center;
+    border-left-width: 6px !important;
+}
+
+/* Red FEFO Box - Pulse */
+.fefo-urgent {
+    animation: alert-pulse-red 2s infinite;
+    border-left-width: 6px !important;
+}
+
+/* Yellow FIFO Warning Box - Breathing */
+.fifo-lot.has-warning {
+    animation: alert-pulse-yellow 3s infinite;
+    border-left-width: 6px !important;
+}
+
 /* Reval Badge in Table */
 .badge-reval {
     display: inline-block;

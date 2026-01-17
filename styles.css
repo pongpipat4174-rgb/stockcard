@@ -2303,20 +2303,23 @@ mark.search-highlight {
 
 /* Purple Reval Box - Heartbeat */
 .reval-lot {
-    animation: alert-pulse-purple 2s infinite;
+    animation: alert-pulse-purple 3s infinite;
+    /* Slower */
     transform-origin: center;
     border-left-width: 6px !important;
 }
 
 /* Red FEFO Box - Pulse */
 .fefo-urgent {
-    animation: alert-pulse-red 2s infinite;
+    animation: alert-pulse-red 3s infinite;
+    /* Slower */
     border-left-width: 6px !important;
 }
 
 /* Yellow FIFO Warning Box - Breathing */
 .fifo-lot.has-warning {
-    animation: alert-pulse-yellow 3s infinite;
+    animation: alert-pulse-yellow 4s infinite;
+    /* Slower */
     border-left-width: 6px !important;
 }
 
@@ -2594,7 +2597,8 @@ mark.search-highlight {
     background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
     border-color: #fca5a5;
-    animation: alert-pulse-red 2s infinite;
+    animation: alert-pulse-red 3s infinite;
+    /* Slower 2s -> 3s */
     will-change: transform, box-shadow;
 }
 
@@ -2603,8 +2607,15 @@ mark.search-highlight {
     background: linear-gradient(135deg, #f59e0b, #d97706);
     color: white;
     border-color: #fcd34d;
-    animation: alert-pulse-yellow 3s infinite;
+    animation: alert-pulse-yellow 4s infinite;
+    /* Slower 3s -> 4s */
     will-change: transform, box-shadow;
+}
+
+/* Force text white for Yellow banner */
+.alert-warning-exp .alert-banner-title,
+.alert-warning-exp .alert-banner-count {
+    color: white !important;
 }
 
 /* Reval Alert (Purple) - Most Prominent */
@@ -2612,7 +2623,8 @@ mark.search-highlight {
     background: linear-gradient(135deg, #8b5cf6, #7c3aed);
     color: white;
     border-color: #c4b5fd;
-    animation: alert-pulse-purple 1.5s infinite;
+    animation: alert-pulse-purple 3s infinite;
+    /* Slower 1.5s -> 3s */
     transform-origin: center;
     will-change: transform, box-shadow;
     z-index: 10;
@@ -2623,7 +2635,8 @@ mark.search-highlight {
 .alert-reval .alert-banner-icon {
     background: rgba(255, 255, 255, 0.25);
     color: white;
-    animation: icon-shake 2.5s infinite;
+    animation: icon-shake 4s infinite;
+    /* Slower 2.5s -> 4s */
 }
 
 /* --- Keyframes --- */

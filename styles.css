@@ -2479,29 +2479,38 @@ mark.search-highlight {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    border: none;
-    background: rgba(255, 255, 255, 0.3);
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.25);
     color: white;
     cursor: pointer;
     transition: 0.2s;
     flex-shrink: 0;
 }
 
+.btn-print-alert svg {
+    width: 24px !important;
+    height: 24px !important;
+    stroke-width: 2.5;
+}
+
 .btn-print-alert:hover {
     background: rgba(255, 255, 255, 0.5);
     transform: scale(1.1);
+    border-color: white;
 }
 
 .btn-print-warning {
-    background: rgba(146, 64, 14, 0.3);
+    background: rgba(146, 64, 14, 0.25);
     color: #92400e;
+    border-color: rgba(146, 64, 14, 0.5);
 }
 
 .btn-print-warning:hover {
-    background: rgba(146, 64, 14, 0.5);
+    background: rgba(146, 64, 14, 0.4);
+    border-color: #92400e;
 }
 
 /* Print All Expiry Button */

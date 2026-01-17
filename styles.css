@@ -588,6 +588,11 @@ mark.search-highlight {
     border: 1px solid var(--gray-100);
     transition: 0.25s;
     page-break-inside: avoid;
+    /* Animation removed to prevent flash on tab switch */
+}
+
+/* Optional: Only animate on initial page load, not tab switch */
+.stock-card.animate-in {
     animation: fadeInUp 0.5s ease-out;
 }
 

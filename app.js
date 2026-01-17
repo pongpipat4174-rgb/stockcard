@@ -202,18 +202,20 @@ function switchModule(module, event) {
     updateExpiryAlerts();
 
     // Load data for the selected module
-    showLoading();
+    // ONLY show loading if we need to fetch data (no cache) - prevents flash
     if (module === 'package') {
         if (stockData.length > 0) {
+            // Cached data - NO loading overlay, instant switch
             updateStats();
             showAllProducts();
-            hideLoading();
-            // Delay unlock to prevent mobile double-tap issues - LONGER TIME
+            // Delay unlock to prevent mobile double-tap issues
             setTimeout(function () {
                 isSwitchingModule = false;
                 console.log('Module lock released after package cached load');
             }, 1500);
         } else {
+            // Need to fetch - show loading
+            showLoading();
             fetchPackageData().finally(function () {
                 setTimeout(function () {
                     isSwitchingModule = false;
@@ -223,15 +225,17 @@ function switchModule(module, event) {
         }
     } else {
         if (rmStockData.length > 0) {
+            // Cached data - NO loading overlay, instant switch
             updateStatsRM();
             showAllProductsRM();
-            hideLoading();
-            // Delay unlock to prevent mobile double-tap issues - LONGER TIME
+            // Delay unlock to prevent mobile double-tap issues
             setTimeout(function () {
                 isSwitchingModule = false;
                 console.log('Module lock released after RM cached load');
             }, 1500);
         } else {
+            // Need to fetch - show loading
+            showLoading();
             fetchRMData().finally(function () {
                 setTimeout(function () {
                     isSwitchingModule = false;

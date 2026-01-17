@@ -126,34 +126,33 @@ body {
     }
 }
 
-/* HEADER STYLES (MATCHING NEW HTML) */
-.stock-header {
+.main-header {
     background: linear-gradient(135deg, #667eea, #764ba2);
-    padding: 0.75rem 1.5rem;
+    padding: 1.5rem 2rem;
     position: sticky;
     top: 0;
     z-index: 100;
     box-shadow: var(--shadow-lg);
 }
 
-.header-container {
+.header-content {
     max-width: 1400px;
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 1.5rem;
 }
 
-.logo-area {
+.brand {
     display: flex;
     align-items: center;
     gap: 1rem;
 }
 
-.logo-placeholder {
-    width: 42px;
-    height: 42px;
+.brand-logo {
+    width: 52px;
+    height: 52px;
     background: white;
     border-radius: var(--radius-lg);
     display: flex;
@@ -163,89 +162,58 @@ body {
     overflow: hidden;
 }
 
-.logo-placeholder img {
+.brand-logo img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.logo-text {
-    display: flex;
-    flex-direction: column;
-}
-
-.logo-text h1 {
-    font-size: 1.25rem;
-    font-weight: 800;
-    color: white;
-    line-height: 1;
-}
-
-.logo-text span {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.85);
-    font-weight: 500;
-}
-
-/* Module Switcher */
-.module-switcher {
-    display: flex;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 4px;
+.brand-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.2);
     border-radius: var(--radius-lg);
-    gap: 4px;
-}
-
-.module-btn {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 16px;
-    border: none;
-    border-radius: var(--radius-md);
-    background: transparent;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    justify-content: center;
+    backdrop-filter: blur(10px);
 }
 
-.module-btn:hover {
+.brand-icon svg {
+    width: 28px;
+    height: 28px;
     color: white;
-    background: rgba(255, 255, 255, 0.1);
 }
 
-.module-btn.active {
-    background: white;
-    color: var(--primary-600);
-    box-shadow: var(--shadow-sm);
+.brand-text h1 {
+    font-size: 1.5rem;
     font-weight: 700;
+    color: white;
+    line-height: 1.2;
 }
 
-.module-btn .icon {
-    font-size: 1.1em;
+.brand-text span {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
 }
 
-/* Actions */
 .header-actions {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 .btn {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    padding: 0.625rem 1.25rem;
     font-size: 0.875rem;
     font-weight: 600;
     border-radius: var(--radius-lg);
     border: none;
     cursor: pointer;
-    transition: 0.2s;
+    transition: 0.25s;
     white-space: nowrap;
-    height: 40px;
 }
 
 .btn svg {
@@ -265,21 +233,10 @@ body {
     box-shadow: var(--shadow-lg);
 }
 
-.btn-secondary {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(255, 255, 255, 0.5);
-}
-
 .btn-outline {
     background: transparent;
     color: white;
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
 .btn-outline:hover {
@@ -2633,45 +2590,7 @@ mark.search-highlight {
     border-color: #fff;
 }
 
-/* ==================== BOX ANIMATIONS (IN CARD) ==================== */
-
-/* Purple Reval Box */
-.reval-lot {
-    animation: alert-pulse-purple 3s infinite;
-    transform-origin: center;
-    border-radius: var(--radius-lg);
-    /* Rounded corners like others */
-    overflow: hidden;
-    /* Ensure content stays inside rounded corners */
-}
-
-/* Red FEFO Box */
-.fefo-urgent {
-    animation: alert-pulse-red 3s infinite;
-    /* Removed border override to match others */
-}
-
-/* Yellow FIFO Warning Box */
-.fifo-lot.has-warning {
-    animation: alert-pulse-yellow 4s infinite;
-    /* Removed border override to match others */
-}
-
-/* Reval Badge in Table */
-.badge-reval {
-    display: inline-block;
-    background: #8b5cf6;
-    color: white;
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 600;
-    white-space: nowrap;
-    margin-left: 4px;
-    vertical-align: middle;
-}
-
-/* ==================== ALERT ANIMATIONS (Optimized for Mobile) ==================== */
+/* ==================== ALERT ANIMATIONS ==================== */
 
 /* Critical Alert (Red) */
 .alert-critical {
@@ -2679,7 +2598,8 @@ mark.search-highlight {
     color: white;
     border-color: #fca5a5;
     animation: alert-pulse-red 3s infinite;
-    /* Removed will-change to reduce memory usage */
+    /* Slower 2s -> 3s */
+    will-change: transform, box-shadow;
 }
 
 /* Warning Alert (Yellow) */
@@ -2688,6 +2608,8 @@ mark.search-highlight {
     color: white;
     border-color: #fcd34d;
     animation: alert-pulse-yellow 4s infinite;
+    /* Slower 3s -> 4s */
+    will-change: transform, box-shadow;
 }
 
 /* Force text white for Yellow banner */
@@ -2696,116 +2618,74 @@ mark.search-highlight {
     color: white !important;
 }
 
-/* Reval Alert (Purple) */
+/* Reval Alert (Purple) - Most Prominent */
 .alert-reval {
     background: linear-gradient(135deg, #8b5cf6, #7c3aed);
     color: white;
     border-color: #c4b5fd;
     animation: alert-pulse-purple 3s infinite;
+    /* Slower 1.5s -> 3s */
+    transform-origin: center;
+    will-change: transform, box-shadow;
     z-index: 10;
+    /* Put on top */
 }
 
+/* Reval Banner Icon Animation */
 .alert-reval .alert-banner-icon {
     background: rgba(255, 255, 255, 0.25);
     color: white;
-    /* Removed icon shake to reduce movement */
+    animation: icon-shake 4s infinite;
+    /* Slower 2.5s -> 4s */
 }
 
-/* --- Optimized Keyframes (No Scale/Transform) --- */
+/* --- Keyframes --- */
 
 @keyframes alert-pulse-red {
-
-    0%,
-    100% {
-        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5);
+        transform: scale(1);
     }
 
     50% {
-        box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.3);
+        box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+        transform: scale(1.01);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+        transform: scale(1);
     }
 }
 
 @keyframes alert-pulse-yellow {
-
-    0%,
-    100% {
-        box-shadow: 0 0 0 0 rgba(217, 119, 6, 0);
+    0% {
+        box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.5);
     }
 
     50% {
-        box-shadow: 0 0 0 6px rgba(217, 119, 6, 0.3);
+        box-shadow: 0 0 0 6px rgba(217, 119, 6, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(217, 119, 6, 0);
     }
 }
 
 @keyframes alert-pulse-purple {
-
-    0%,
-    100% {
-        box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
+    0% {
+        box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.6);
+        transform: scale(1);
     }
 
     50% {
-        box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.3);
-    }
-}
-
-/* CRITICAL FIX: Table Container for Mobile Scrolling */
-.stock-table-container {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-top: 0.5rem;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-lg);
-    background: white;
-}
-
-/* Disable Animations and Complex Styles on Mobile to Prevent Flickering (Safe Mode) */
-@media (max-width: 768px) {
-
-    /* Stack Banners Vertical on Mobile */
-    .alert-banners-container {
-        grid-template-columns: 1fr !important;
+        box-shadow: 0 0 0 12px rgba(124, 58, 237, 0);
+        transform: scale(1.02);
     }
 
-    .alert-banner {
-        margin-bottom: 0.5rem;
-    }
-
-    .reval-lot,
-    .fefo-urgent,
-    .fifo-lot.has-warning,
-    .alert-critical,
-    .alert-warning-exp,
-    .alert-reval,
-    .alert-reval .alert-banner-icon {
-        animation: none !important;
-        transform: none !important;
-        transition: none !important;
-        /* Disable transition too */
-        box-shadow: none !important;
-        will-change: auto !important;
-    }
-
-    /* Simplify Backgrounds on Mobile - Solid colors instead of gradients can help */
-    .alert-critical {
-        background: #ef4444 !important;
-    }
-
-    .alert-warning-exp {
-        background: #f59e0b !important;
-    }
-
-    .alert-reval {
-        background: #8b5cf6 !important;
-    }
-
-    /* Remove overflow hidden which causes flickering on some iOS versions with rounded corners */
-    .reval-lot {
-        overflow: visible !important;
-        transform: translateZ(0);
-        /* Force hardware acceleration */
-        /* Force hardware acceleration */
+    100% {
+        box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
+        transform: scale(1);
     }
 }
 
@@ -2834,39 +2714,27 @@ mark.search-highlight {
     }
 }
 
-/* Print All Expiry Button (Smaller) */
+/* Print All Expiry Button (Restored) */
 .btn-print-all-expiry {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    /* Reduced padding */
+    padding: 0.75rem 1.5rem;
     background: linear-gradient(135deg, #6366f1, #4f46e5);
     color: white;
     border: none;
-    border-radius: 8px;
-    /* Slightly smaller radius */
-    font-weight: 500;
-    font-size: 0.8125rem;
-    /* Reduced font size */
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.875rem;
     cursor: pointer;
     transition: 0.2s;
-    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
-    margin-top: 10px;
-    width: fit-content;
-    /* Don't stretch full width if in flex column */
-}
-
-.btn-print-all-expiry:hover {
-    transform: translateY(-1px);
     box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
 }
 
-.btn-print-all-expiry svg {
-    width: 18px;
-    /* Smaller icon */
-    height: 18px;
+.btn-print-all-expiry:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 10px rgba(99, 102, 241, 0.4);
 }
 
 /* Responsive */
@@ -3728,17 +3596,6 @@ mark.search-highlight {
     }
 }
 
-/* CRITICAL FIX: Table Container for Mobile Scrolling */
-.stock-table-container {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-top: 0.5rem;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-lg);
-    background: white;
-}
-
 /* Also apply for general mobile screens as fallback */
 @media screen and (max-width: 768px) {
 
@@ -3774,10 +3631,7 @@ mark.search-highlight {
     /* Disable pulse/warning animations */
     .fifo-lot.has-warning,
     .fefo-lot.fefo-urgent,
-    .alert-critical,
-    .reval-lot,
-    .alert-reval,
-    .alert-warning-exp {
+    .alert-critical {
         animation: none !important;
     }
 }

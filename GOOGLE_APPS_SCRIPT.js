@@ -54,10 +54,30 @@ function doPost(e) {
             return jsonResp(false, 'Not found');
         }
 
-        // ========== ADD LOGIC (ต่อท้ายรายการล่าสุดของ Sheet) ==========
+        // ========== ADD LOGIC (ต่อท้ายรายการสุดท้ายของข้อมูลธุรกรรม) ==========
         var d = data.entry || data;
-        sheet.appendRow([d.date, d.productCode, d.productName, d.type, d.inQty, d.outQty, d.balance, d.lotNo, d.pkId, '', d.docRef, '', d.remark]);
-        return jsonResp(true, 'Added');
+        var newRow = [d.date, d.productCode, d.productName, d.type, d.inQty, d.outQty, d.balance, d.lotNo, d.pkId, '', d.docRef, '', d.remark];
+
+        // Find the last row with transaction data (check column B for product code)
+        var lastRow = sheet.getLastRow();
+        var colB = sheet.getRange(1, 2, lastRow, 1).getValues(); // Column B = Product Code
+
+        var lastTransactionRow = 1; // Default to row 1 (header)
+        for (var i = colB.length - 1; i >= 0; i--) {
+            var val = String(colB[i][0]).trim();
+            // If this row has a product code that looks like transaction data
+            if (val && val !== '' && val !== 'code' && val !== 'รหัสสินค้า' && !val.startsWith('Product')) {
+                lastTransactionRow = i + 1;
+                break;
+            }
+        }
+
+        // Insert new row after the last transaction row
+        var insertRow = lastTransactionRow + 1;
+        sheet.insertRowAfter(lastTransactionRow);
+        sheet.getRange(insertRow, 1, 1, newRow.length).setValues([newRow]);
+
+        return jsonResp(true, 'Added at row ' + insertRow);
 
     } catch (err) {
         return jsonResp(false, 'Error: ' + err);

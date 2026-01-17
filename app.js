@@ -126,18 +126,19 @@ function switchModule(module, event) {
     // Set lock immediately and keep it longer for mobile
     isSwitchingModule = true;
 
-    // Force the module change
+    // Force the module change IMMEDIATELY and save it
     currentModule = module;
-    console.log('Switching to module:', module);
+    console.log('Switching to module:', module, '- currentModule is now:', currentModule);
 
     // Save to sessionStorage to persist across any page refresh
     try {
         sessionStorage.setItem('currentStockCardModule', module);
+        console.log('Saved module to sessionStorage:', module);
     } catch (e) {
         console.log('SessionStorage not available');
     }
 
-    // Update tab styles
+    // Update tab styles - force the visual update
     document.querySelectorAll('.module-tab').forEach(function (tab) {
         tab.classList.remove('active');
         if (tab.dataset.module === module) {
@@ -191,15 +192,17 @@ function switchModule(module, event) {
             updateStats();
             showAllProducts();
             hideLoading();
-            // Delay unlock to prevent mobile double-tap issues
+            // Delay unlock to prevent mobile double-tap issues - LONGER TIME
             setTimeout(function () {
                 isSwitchingModule = false;
-            }, 500);
+                console.log('Module lock released after package cached load');
+            }, 1500);
         } else {
             fetchPackageData().finally(function () {
                 setTimeout(function () {
                     isSwitchingModule = false;
-                }, 500);
+                    console.log('Module lock released after package fetch');
+                }, 1500);
             });
         }
     } else {
@@ -207,15 +210,17 @@ function switchModule(module, event) {
             updateStatsRM();
             showAllProductsRM();
             hideLoading();
-            // Delay unlock to prevent mobile double-tap issues
+            // Delay unlock to prevent mobile double-tap issues - LONGER TIME
             setTimeout(function () {
                 isSwitchingModule = false;
-            }, 500);
+                console.log('Module lock released after RM cached load');
+            }, 1500);
         } else {
             fetchRMData().finally(function () {
                 setTimeout(function () {
                     isSwitchingModule = false;
-                }, 500);
+                    console.log('Module lock released after RM fetch');
+                }, 1500);
             });
         }
     }
@@ -1571,17 +1576,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ==================== MODULE TAB EVENT HANDLERS ====================
     // Use a single unified approach for both touch and click
+    // CRITICAL: Prevent mobile double-tap and ghost click issues
     var tabPackage = document.getElementById('tabPackage');
     var tabRM = document.getElementById('tabRM');
     var isProcessingTab = false;
+    var lastTabSwitchTime = 0;
 
     function handleTabSwitch(module, e) {
+        var now = Date.now();
+
         if (e) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
         }
 
-        // Prevent multiple rapid calls
+        // Prevent multiple rapid calls with time-based lock (2 seconds)
+        if (now - lastTabSwitchTime < 2000) {
+            console.log('Tab switch blocked - too fast (within 2s)');
+            return;
+        }
+
+        // Prevent multiple rapid calls with flag lock
         if (isProcessingTab) {
             console.log('Tab switch blocked - already processing');
             return;
@@ -1593,30 +1609,87 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        // Set both locks
         isProcessingTab = true;
-        console.log('Handling tab switch to:', module);
+        lastTabSwitchTime = now;
+
+        console.log('Handling tab switch to:', module, 'at', now);
 
         // Call the actual switch function
         switchModule(module, e);
 
-        // Reset after delay
+        // Reset flag after longer delay for mobile
         setTimeout(function () {
             isProcessingTab = false;
-        }, 1000);
+            console.log('Tab switch lock released');
+        }, 2000);
     }
+
+    // Add CSS to prevent touch issues
+    var style = document.createElement('style');
+    style.textContent = '.module-tab { touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-touch-callout: none; }';
+    document.head.appendChild(style);
+
+    // Track last touch time to prevent ghost clicks
+    var lastTouchEndTime = 0;
 
     // Package tab handlers
     if (tabPackage) {
+        // Use touchstart to capture touch early and prevent default
+        tabPackage.addEventListener('touchstart', function (e) {
+            // Just mark that a touch is happening
+            lastTouchEndTime = Date.now();
+        }, { passive: true });
+
+        // For touch devices - use touchend
+        tabPackage.addEventListener('touchend', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            lastTouchEndTime = Date.now();
+            handleTabSwitch('package', e);
+        }, { passive: false });
+
+        // For desktop - regular click, but ignore if recent touch
         tabPackage.addEventListener('click', function (e) {
+            // If there was a recent touch event (within 500ms), ignore click
+            if (Date.now() - lastTouchEndTime < 500) {
+                console.log('Package click ignored - recent touch event');
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
             handleTabSwitch('package', e);
         });
     }
 
     // RM tab handlers
     if (tabRM) {
+        // Use touchstart to capture touch early
+        tabRM.addEventListener('touchstart', function (e) {
+            // Just mark that a touch is happening
+            lastTouchEndTime = Date.now();
+        }, { passive: true });
+
+        // For touch devices - use touchend
+        tabRM.addEventListener('touchend', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            lastTouchEndTime = Date.now();
+            handleTabSwitch('rm', e);
+        }, { passive: false });
+
+        // For desktop - regular click, but ignore if recent touch
         tabRM.addEventListener('click', function (e) {
+            // If there was a recent touch event (within 500ms), ignore click
+            if (Date.now() - lastTouchEndTime < 500) {
+                console.log('RM click ignored - recent touch event');
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
             handleTabSwitch('rm', e);
         });
     }
 });
+
 

@@ -3126,7 +3126,8 @@ mark.search-highlight {
         justify-content: flex-end;
     }
 
-    .stock-card-summary {
+    .stock-card-summary,
+    .stock-card-summary-rm {
         gap: 0.5rem;
         padding: 0.75rem;
         /* Force 2 columns on mobile for FIFO/FEFO side by side */
@@ -3177,6 +3178,7 @@ mark.search-highlight {
     .summary-label {
         font-size: 0.625rem;
     }
+
 
 
     /* Stock Table */

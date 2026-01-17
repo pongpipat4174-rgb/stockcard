@@ -2698,986 +2698,1005 @@ mark.search-highlight {
 
     0%,
     100% {
-        box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
+        50% {
+            box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.3);
+        }
     }
 
-    50% {
-        box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.3);
-    }
-}
+    /* Disable Animations and Complex Styles on Mobile to Prevent Flickering (Safe Mode) */
+    @media (max-width: 768px) {
 
-/* Disable Animations on Mobile to Prevent Flickering */
-@media (max-width: 768px) {
+        .reval-lot,
+        .fefo-urgent,
+        .fifo-lot.has-warning,
+        .alert-critical,
+        .alert-warning-exp,
+        .alert-reval,
+        .alert-reval .alert-banner-icon {
+            animation: none !important;
+            transform: none !important;
+            transition: none !important;
+            /* Disable transition too */
+            box-shadow: none !important;
+            will-change: auto !important;
+        }
 
-    .reval-lot,
-    .fefo-urgent,
-    .fifo-lot.has-warning,
-    .alert-critical,
-    .alert-warning-exp,
-    .alert-reval,
-    .alert-reval .alert-banner-icon {
-        animation: none !important;
-        transform: none !important;
-        box-shadow: none !important;
-        /* Optional: remove pulsing shadow too */
-    }
-}
+        /* Simplify Backgrounds on Mobile - Solid colors instead of gradients can help */
+        .alert-critical {
+            background: #ef4444 !important;
+        }
 
-@keyframes icon-shake {
+        .alert-warning-exp {
+            background: #f59e0b !important;
+        }
 
-    0%,
-    90%,
-    100% {
-        transform: rotate(0deg);
-    }
+        .alert-reval {
+            background: #8b5cf6 !important;
+        }
 
-    92% {
-        transform: rotate(-10deg);
-    }
-
-    94% {
-        transform: rotate(10deg);
-    }
-
-    96% {
-        transform: rotate(-10deg);
+        /* Remove overflow hidden which causes flickering on some iOS versions with rounded corners */
+        .reval-lot {
+            overflow: visible !important;
+            transform: translateZ(0);
+            /* Force hardware acceleration */
+        }
     }
 
-    98% {
-        transform: rotate(10deg);
-    }
-}
+    @keyframes icon-shake {
 
-/* Print All Expiry Button (Smaller) */
-.btn-print-all-expiry {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    /* Reduced padding */
-    background: linear-gradient(135deg, #6366f1, #4f46e5);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    /* Slightly smaller radius */
-    font-weight: 500;
-    font-size: 0.8125rem;
-    /* Reduced font size */
-    cursor: pointer;
-    transition: 0.2s;
-    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
-    margin-top: 10px;
-    width: fit-content;
-    /* Don't stretch full width if in flex column */
-}
+        0%,
+        90%,
+        100% {
+            transform: rotate(0deg);
+        }
 
-.btn-print-all-expiry:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
-}
+        92% {
+            transform: rotate(-10deg);
+        }
 
-.btn-print-all-expiry svg {
-    width: 18px;
-    /* Smaller icon */
-    height: 18px;
-}
+        94% {
+            transform: rotate(10deg);
+        }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .alert-banners-container {
-        grid-template-columns: 1fr;
+        96% {
+            transform: rotate(-10deg);
+        }
+
+        98% {
+            transform: rotate(10deg);
+        }
     }
 
-    .alert-banners-section {
-        padding: 0 1rem;
-    }
-
-    .date-filter-group {
-        width: 100%;
-    }
-
-    .date-filter-input {
-        width: 100%;
-    }
-}
-
-/* ==================== FIFO LOT WARNING ==================== */
-.fifo-lot {
-    position: relative;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-.fifo-lot.has-warning {
-    background: linear-gradient(135deg, #fef3c7, #fde68a);
-    border: 2px solid #f59e0b;
-    border-radius: var(--radius-lg);
-    padding: 0.75rem !important;
-    animation: pulse-warning 2s infinite;
-}
-
-.fifo-lot.has-warning .summary-label {
-    color: #92400e;
-    font-weight: 700;
-    font-size: 0.9rem;
-}
-
-.fifo-lot.has-warning .summary-value {
-    color: #b45309;
-    font-weight: 800;
-    font-size: 1.1rem;
-}
-
-.fifo-note {
-    font-size: 0.75rem;
-    color: #92400e;
-    margin-top: 0.25rem;
-    font-weight: 500;
-}
-
-.fifo-value {
-    word-break: break-all;
-}
-
-@keyframes pulse-warning {
-
-    0%,
-    100% {
-        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
-    }
-
-    50% {
-        box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
-    }
-}
-
-/* ==================== SUPPLIER COLUMN FIX ==================== */
-.stock-table-rm .col-supplier {
-    min-width: 100px;
-    max-width: 150px;
-    white-space: normal;
-    word-wrap: break-word;
-}
-
-/* Ensure table scrolls properly */
-.stock-table-rm {
-    min-width: 1500px;
-}
-
-/* ==================== PRINT STYLES ==================== */
-@media print {
-
-    /* Hide non-essential elements */
-    .main-header,
-    .module-banner,
-    .stats-section,
-    .filter-section,
-    .header-actions,
-    .print-btn,
-    .btn-delete,
-    .no-print,
-    .modal,
-    .toast,
-    .loading-overlay {
-        display: none !important;
-    }
-
-    /* Reset body styles */
-    body {
-        background: white !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        font-size: 10pt !important;
-        font-family: 'Sarabun', 'Inter', sans-serif !important;
-    }
-
-    /* Container adjustments */
-    .cards-container {
-        max-width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    /* Stock card print styles */
-    .stock-card,
-    .stock-card-rm {
-        box-shadow: none !important;
-        border: none !important;
-        border-radius: 0 !important;
-        page-break-inside: avoid !important;
-        margin: 0 !important;
-        break-inside: avoid !important;
-    }
-
-    /* Print Header styling */
-    .print-header {
-        display: flex !important;
+    /* Print All Expiry Button (Smaller) */
+    .btn-print-all-expiry {
+        display: flex;
         align-items: center;
-        gap: 15px;
-        padding: 15px 20px;
-        background: #f8f9fa !important;
-        border-bottom: 2px solid #e5e7eb;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        /* Reduced padding */
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        /* Slightly smaller radius */
+        font-weight: 500;
+        font-size: 0.8125rem;
+        /* Reduced font size */
+        cursor: pointer;
+        transition: 0.2s;
+        box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+        margin-top: 10px;
+        width: fit-content;
+        /* Don't stretch full width if in flex column */
     }
 
-    .print-header img {
-        height: 45px !important;
-        width: auto;
+    .btn-print-all-expiry:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
     }
 
-    .print-header h2 {
-        margin: 0 !important;
-        font-size: 14pt !important;
-        font-weight: 700 !important;
-        color: #1f2937 !important;
+    .btn-print-all-expiry svg {
+        width: 18px;
+        /* Smaller icon */
+        height: 18px;
     }
 
-    .print-header p {
-        margin: 0 !important;
-        font-size: 9pt !important;
-        color: #6b7280 !important;
+    /* Responsive */
+    @media (max-width: 768px) {
+        .alert-banners-container {
+            grid-template-columns: 1fr;
+        }
+
+        .alert-banners-section {
+            padding: 0 1rem;
+        }
+
+        .date-filter-group {
+            width: 100%;
+        }
+
+        .date-filter-input {
+            width: 100%;
+        }
     }
 
-    /* ========== STOCK CARD HEADER - UNIFIED STYLE ========== */
-    .stock-card-header,
-    .stock-card-header-rm {
-        background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        padding: 14px 20px !important;
-        display: flex !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-    }
-
-    /* RM uses green header */
-    .stock-card-header-rm {
-        background: linear-gradient(135deg, #10b981, #059669) !important;
-    }
-
-    .stock-card-title h3 {
-        font-size: 13pt !important;
-        font-weight: 700 !important;
-        margin: 0 !important;
-        color: white !important;
-    }
-
-    .stock-card-title .product-code {
-        font-size: 9pt !important;
-        font-weight: 500 !important;
-        color: rgba(255, 255, 255, 0.9) !important;
-        display: block !important;
-        margin-top: 2px !important;
-    }
-
-    /* ========== SUMMARY SECTION - UNIFIED STYLE ========== */
-    .stock-card-summary,
-    .stock-card-summary-rm {
-        display: grid !important;
-        grid-template-columns: repeat(4, 1fr) !important;
-        gap: 15px !important;
-        padding: 15px 20px !important;
-        background: #f3f4f6 !important;
-        border-bottom: 1px solid #e5e7eb !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    .summary-item {
-        text-align: center !important;
-        padding: 8px !important;
-    }
-
-    .summary-label {
-        font-size: 8pt !important;
-        font-weight: 600 !important;
-        color: #6b7280 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.03em !important;
-        display: block !important;
-        margin-bottom: 4px !important;
-    }
-
-    .summary-value {
-        font-size: 14pt !important;
-        font-weight: 700 !important;
-        color: #1f2937 !important;
-    }
-
-    .summary-value.positive {
-        color: #059669 !important;
-    }
-
-    .summary-value.negative {
-        color: #dc2626 !important;
-    }
-
-    /* FIFO warning for print */
+    /* ==================== FIFO LOT WARNING ==================== */
     .fifo-lot {
-        background: #ecfdf5 !important;
-        border-radius: 6px !important;
-        padding: 10px !important;
+        position: relative;
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .fifo-lot.has-warning {
-        background: #fef3c7 !important;
-        border: 2px solid #f59e0b !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        border: 2px solid #f59e0b;
+        border-radius: var(--radius-lg);
+        padding: 0.75rem !important;
+        animation: pulse-warning 2s infinite;
     }
 
-    .fifo-lot .summary-label {
-        font-size: 7pt !important;
-        color: #92400e !important;
+    .fifo-lot.has-warning .summary-label {
+        color: #92400e;
+        font-weight: 700;
+        font-size: 0.9rem;
     }
 
-    .fifo-lot .summary-value {
-        font-size: 11pt !important;
-        color: #b45309 !important;
+    .fifo-lot.has-warning .summary-value {
+        color: #b45309;
+        font-weight: 800;
+        font-size: 1.1rem;
     }
 
     .fifo-note {
-        font-size: 7pt !important;
-        color: #92400e !important;
-        display: block !important;
-        margin-top: 3px !important;
+        font-size: 0.75rem;
+        color: #92400e;
+        margin-top: 0.25rem;
+        font-weight: 500;
     }
 
-    /* ========== TABLE CONTAINER ========== */
-    .stock-table-container {
-        overflow: visible !important;
-        padding: 15px 20px 20px !important;
+    .fifo-value {
+        word-break: break-all;
     }
 
-    /* ========== TABLE STYLES - PACKAGE ========== */
-    .stock-table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-        font-size: 9pt !important;
+    @keyframes pulse-warning {
+
+        0%,
+        100% {
+            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+        }
+
+        50% {
+            box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+        }
     }
 
-    .stock-table th {
-        background: #4f46e5 !important;
-        color: white !important;
-        padding: 10px 8px !important;
-        font-size: 8pt !important;
-        font-weight: 600 !important;
-        text-align: center !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        border: none !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.02em !important;
+    /* ==================== SUPPLIER COLUMN FIX ==================== */
+    .stock-table-rm .col-supplier {
+        min-width: 100px;
+        max-width: 150px;
+        white-space: normal;
+        word-wrap: break-word;
     }
 
-    .stock-table th:first-child {
-        border-radius: 6px 0 0 6px !important;
-    }
-
-    .stock-table th:last-child {
-        border-radius: 0 6px 6px 0 !important;
-    }
-
-    .stock-table td {
-        padding: 10px 8px !important;
-        border-bottom: 1px solid #e5e7eb !important;
-        font-size: 9pt !important;
-        text-align: center !important;
-        color: #374151 !important;
-    }
-
-    .stock-table tbody tr:nth-child(even) {
-        background: #f9fafb !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    .stock-table tbody tr:hover {
-        background: #f3f4f6 !important;
-    }
-
-    /* ========== TABLE STYLES - RM (SAME AS PACKAGE BUT GREEN) ========== */
+    /* Ensure table scrolls properly */
     .stock-table-rm {
-        width: 100% !important;
-        min-width: unset !important;
-        border-collapse: collapse !important;
-        font-size: 8pt !important;
+        min-width: 1500px;
+    }
+
+    /* ==================== PRINT STYLES ==================== */
+    @media print {
+
+        /* Hide non-essential elements */
+        .main-header,
+        .module-banner,
+        .stats-section,
+        .filter-section,
+        .header-actions,
+        .print-btn,
+        .btn-delete,
+        .no-print,
+        .modal,
+        .toast,
+        .loading-overlay {
+            display: none !important;
+        }
+
+        /* Reset body styles */
+        body {
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 10pt !important;
+            font-family: 'Sarabun', 'Inter', sans-serif !important;
+        }
+
+        /* Container adjustments */
+        .cards-container {
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        /* Stock card print styles */
+        .stock-card,
+        .stock-card-rm {
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+            page-break-inside: avoid !important;
+            margin: 0 !important;
+            break-inside: avoid !important;
+        }
+
+        /* Print Header styling */
+        .print-header {
+            display: flex !important;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 20px;
+            background: #f8f9fa !important;
+            border-bottom: 2px solid #e5e7eb;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .print-header img {
+            height: 45px !important;
+            width: auto;
+        }
+
+        .print-header h2 {
+            margin: 0 !important;
+            font-size: 14pt !important;
+            font-weight: 700 !important;
+            color: #1f2937 !important;
+        }
+
+        .print-header p {
+            margin: 0 !important;
+            font-size: 9pt !important;
+            color: #6b7280 !important;
+        }
+
+        /* ========== STOCK CARD HEADER - UNIFIED STYLE ========== */
+        .stock-card-header,
+        .stock-card-header-rm {
+            background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            padding: 14px 20px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+        }
+
+        /* RM uses green header */
+        .stock-card-header-rm {
+            background: linear-gradient(135deg, #10b981, #059669) !important;
+        }
+
+        .stock-card-title h3 {
+            font-size: 13pt !important;
+            font-weight: 700 !important;
+            margin: 0 !important;
+            color: white !important;
+        }
+
+        .stock-card-title .product-code {
+            font-size: 9pt !important;
+            font-weight: 500 !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            display: block !important;
+            margin-top: 2px !important;
+        }
+
+        /* ========== SUMMARY SECTION - UNIFIED STYLE ========== */
+        .stock-card-summary,
+        .stock-card-summary-rm {
+            display: grid !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 15px !important;
+            padding: 15px 20px !important;
+            background: #f3f4f6 !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .summary-item {
+            text-align: center !important;
+            padding: 8px !important;
+        }
+
+        .summary-label {
+            font-size: 8pt !important;
+            font-weight: 600 !important;
+            color: #6b7280 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.03em !important;
+            display: block !important;
+            margin-bottom: 4px !important;
+        }
+
+        .summary-value {
+            font-size: 14pt !important;
+            font-weight: 700 !important;
+            color: #1f2937 !important;
+        }
+
+        .summary-value.positive {
+            color: #059669 !important;
+        }
+
+        .summary-value.negative {
+            color: #dc2626 !important;
+        }
+
+        /* FIFO warning for print */
+        .fifo-lot {
+            background: #ecfdf5 !important;
+            border-radius: 6px !important;
+            padding: 10px !important;
+        }
+
+        .fifo-lot.has-warning {
+            background: #fef3c7 !important;
+            border: 2px solid #f59e0b !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .fifo-lot .summary-label {
+            font-size: 7pt !important;
+            color: #92400e !important;
+        }
+
+        .fifo-lot .summary-value {
+            font-size: 11pt !important;
+            color: #b45309 !important;
+        }
+
+        .fifo-note {
+            font-size: 7pt !important;
+            color: #92400e !important;
+            display: block !important;
+            margin-top: 3px !important;
+        }
+
+        /* ========== TABLE CONTAINER ========== */
+        .stock-table-container {
+            overflow: visible !important;
+            padding: 15px 20px 20px !important;
+        }
+
+        /* ========== TABLE STYLES - PACKAGE ========== */
+        .stock-table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 9pt !important;
+        }
+
+        .stock-table th {
+            background: #4f46e5 !important;
+            color: white !important;
+            padding: 10px 8px !important;
+            font-size: 8pt !important;
+            font-weight: 600 !important;
+            text-align: center !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            border: none !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.02em !important;
+        }
+
+        .stock-table th:first-child {
+            border-radius: 6px 0 0 6px !important;
+        }
+
+        .stock-table th:last-child {
+            border-radius: 0 6px 6px 0 !important;
+        }
+
+        .stock-table td {
+            padding: 10px 8px !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            font-size: 9pt !important;
+            text-align: center !important;
+            color: #374151 !important;
+        }
+
+        .stock-table tbody tr:nth-child(even) {
+            background: #f9fafb !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .stock-table tbody tr:hover {
+            background: #f3f4f6 !important;
+        }
+
+        /* ========== TABLE STYLES - RM (SAME AS PACKAGE BUT GREEN) ========== */
+        .stock-table-rm {
+            width: 100% !important;
+            min-width: unset !important;
+            border-collapse: collapse !important;
+            font-size: 8pt !important;
+        }
+
+        .stock-table-rm th {
+            background: #f3f4f6 !important;
+            color: #4b5563 !important;
+            padding: 10px 6px !important;
+            font-size: 7pt !important;
+            font-weight: 700 !important;
+            text-align: center !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            border: 1px solid #e5e7eb !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.02em !important;
+            white-space: nowrap !important;
+        }
+
+        .stock-table-rm th:first-child {
+            border-radius: 6px 0 0 6px !important;
+        }
+
+        .stock-table-rm th:last-child {
+            border-radius: 0 6px 6px 0 !important;
+        }
+
+        .stock-table-rm td {
+            padding: 8px 5px !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            font-size: 8pt !important;
+            text-align: center !important;
+            color: #374151 !important;
+            white-space: nowrap !important;
+        }
+
+        .stock-table-rm tbody tr:nth-child(even) {
+            background: #f0fdf4 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* Hide less important RM columns for cleaner print */
+        .stock-table-rm .col-num:nth-child(3),
+        .stock-table-rm .col-num:nth-child(4),
+        .stock-table-rm .col-num:nth-child(5) {
+            display: none !important;
+        }
+
+        /* Type cells for print */
+        .type-cell {
+            padding: 4px 10px !important;
+            font-size: 7pt !important;
+            border-radius: 12px !important;
+            font-weight: 600 !important;
+        }
+
+        .type-in {
+            background: #d1fae5 !important;
+            color: #065f46 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .type-out {
+            background: #fef3c7 !important;
+            color: #92400e !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* Quantity colors for print */
+        .qty-in {
+            color: #059669 !important;
+            font-weight: 700 !important;
+        }
+
+        .qty-out {
+            color: #dc2626 !important;
+            font-weight: 700 !important;
+        }
+
+        /* Days left colors for print */
+        .days-critical {
+            color: #dc2626 !important;
+            background: #fef2f2 !important;
+            font-weight: 700 !important;
+            padding: 2px 6px !important;
+            border-radius: 4px !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .days-warning {
+            color: #d97706 !important;
+            background: #fffbeb !important;
+            font-weight: 600 !important;
+            padding: 2px 6px !important;
+            border-radius: 4px !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .days-ok {
+            color: #059669 !important;
+            font-weight: 500 !important;
+        }
+
+        /* Page setup */
+        @page {
+            size: A4 landscape;
+            margin: 8mm;
+        }
+
+        /* Ensure colors print */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+    }
+
+    /* ==================== MOBILE RESPONSIVE STYLES ==================== */
+
+    /* Tablet Styles */
+    @media screen and (max-width: 1024px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .header-content {
+            flex-wrap: wrap;
+        }
+
+        .module-tabs {
+            order: 3;
+            width: 100%;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+    }
+
+    /* Mobile Styles */
+    @media screen and (max-width: 768px) {
+
+        /* Header */
+        .main-header {
+            padding: 1rem;
+        }
+
+        .brand-title h1 {
+            font-size: 1.25rem;
+        }
+
+        .brand-title p {
+            font-size: 0.75rem;
+        }
+
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+        }
+
+        /* Button Group */
+        .btn-group {
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        /* Module Tabs */
+        .module-tabs {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .module-tab {
+            justify-content: center;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            padding: 1rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .stat-card {
+            padding: 0.75rem;
+            gap: 0.5rem;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .stat-icon {
+            width: 36px;
+            height: 36px;
+        }
+
+        .stat-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.625rem;
+        }
+
+        .stat-arrow {
+            display: none;
+        }
+
+        /* Alert Banners */
+        .alert-banners-section {
+            padding: 0 1rem;
+        }
+
+        .alert-banners-container {
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+
+        .alert-banner {
+            padding: 0.75rem 1rem;
+        }
+
+        .alert-banner-icon {
+            width: 36px;
+            height: 36px;
+        }
+
+        .alert-banner-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .alert-banner-title {
+            font-size: 0.75rem;
+        }
+
+        .alert-banner-count {
+            font-size: 1rem;
+        }
+
+        /* Filter Section */
+        .filter-container {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .rm-filter-group,
+        .date-filter-group,
+        .search-wrapper {
+            width: 100%;
+        }
+
+        .search-box {
+            padding: 0.625rem 0.75rem;
+        }
+
+        .rm-product-select,
+        .date-filter-input {
+            width: 100%;
+        }
+
+        .btn-clear-filter {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* Module Banner */
+        .module-banner {
+            padding: 1rem;
+        }
+
+        .module-banner-content {
+            flex-direction: column;
+            text-align: center;
+            gap: 0.75rem;
+        }
+
+        .module-icon {
+            font-size: 2rem;
+        }
+
+        .module-info h2 {
+            font-size: 1.25rem;
+        }
+
+        .module-info p {
+            font-size: 0.75rem;
+        }
+
+        /* Cards Container */
+        .cards-container {
+            padding: 1rem;
+            gap: 1rem;
+        }
+
+        /* Stock Card */
+        .stock-card-header {
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1rem;
+        }
+
+        .stock-card-title h2 {
+            font-size: 0.9375rem;
+        }
+
+        .stock-card-actions {
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .stock-card-summary,
+        .stock-card-summary-rm {
+            gap: 0.5rem;
+            padding: 0.75rem;
+            /* Force 2 columns on mobile for FIFO/FEFO side by side */
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+
+        /* Make FIFO and FEFO smaller and side-by-side */
+        .fifo-lot,
+        .fefo-lot {
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        .fifo-lot .summary-label,
+        .fefo-lot .summary-label {
+            font-size: 0.6rem;
+        }
+
+        .fifo-lot .summary-value,
+        .fefo-lot .summary-value,
+        .fifo-value,
+        .fefo-value {
+            font-size: 0.85rem;
+        }
+
+        .fifo-note,
+        .fefo-note {
+            font-size: 0.6rem;
+            margin-top: 0.15rem;
+        }
+
+        /* Lots badge smaller on mobile */
+        .lots-badge {
+            font-size: 0.55rem;
+            padding: 0.15rem 0.4rem;
+            top: -5px;
+            right: -5px;
+        }
+
+        .summary-item {
+            padding: 0.5rem;
+        }
+
+        .summary-value {
+            font-size: 1rem;
+        }
+
+        .summary-label {
+            font-size: 0.625rem;
+        }
+
+
+
+        /* Stock Table */
+        .stock-table-container {
+            padding: 0.75rem;
+        }
+
+        .stock-table th,
+        .stock-table td {
+            padding: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        /* Modal */
+        .modal-content {
+            width: 95%;
+            max-height: 90vh;
+        }
+
+        .modal-header {
+            padding: 1rem;
+        }
+
+        .modal-body {
+            padding: 1rem;
+        }
+
+        .modal-footer {
+            padding: 1rem;
+            flex-wrap: wrap;
+        }
+    }
+
+    /* Extra Small Mobile */
+    @media screen and (max-width: 480px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .stat-card {
+            padding: 0.5rem;
+        }
+
+        .stat-icon {
+            width: 28px;
+            height: 28px;
+        }
+
+        .stat-icon svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+        }
+
+        .stat-label {
+            font-size: 0.5625rem;
+        }
+
+        .btn-group .btn span {
+            display: none;
+        }
+
+        .btn-group .btn {
+            padding: 0.5rem;
+        }
+
+        .brand-title h1 {
+            font-size: 1rem;
+        }
+
+        .brand-title p {
+            display: none;
+        }
+    }
+
+    /* ==================== MOBILE ANTI-FLICKER FIX ==================== */
+    /* Aggressive fix for scroll flickering on mobile devices */
+
+    @media (hover: none) and (pointer: coarse) {
+
+        /* CRITICAL: Disable sticky header on mobile - main cause of scroll flicker */
+        .main-header {
+            position: relative !important;
+            background: #6366f1 !important;
+            /* Solid color instead of gradient */
+        }
+
+        /* Solid colors for all gradient elements */
+        .loading-overlay {
+            background: #667eea !important;
+        }
+
+        .module-banner {
+            background: #6366f1 !important;
+        }
+
+        .module-banner.rm-mode {
+            background: #10b981 !important;
+        }
+
+        .stock-card-header {
+            background: #4f46e5 !important;
+        }
+
+        /* Disable ALL transforms and transitions site-wide */
+        *,
+        *::before,
+        *::after {
+            transition: none !important;
+            animation: none !important;
+        }
+
+        /* Remove box-shadows which cause repaints */
+        .stat-card,
+        .stock-card,
+        .filter-container,
+        .alert-banner {
+            box-shadow: none !important;
+            border: 1px solid var(--gray-200) !important;
+        }
+
+        /* Disable all hover effects completely */
+        .stat-card:hover,
+        .stock-card:hover,
+        .alert-banner:hover,
+        .btn:hover,
+        .module-tab:hover,
+        .dropdown-item:hover {
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Force GPU layer for body to prevent full page repaints */
+        body {
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            overflow-x: hidden;
+        }
+
+        /* Optimize scrolling containers */
+        .cards-container,
+        .stock-table-container,
+        .modal-body {
+            -webkit-overflow-scrolling: touch;
+            -webkit-transform: translate3d(0, 0, 0);
+            transform: translate3d(0, 0, 0);
+        }
+
+        /* Prevent any layout shifts */
+        .loading-overlay {
+            display: none !important;
+        }
+    }
+
+    /* Also apply for general mobile screens as fallback */
+    @media screen and (max-width: 768px) {
+
+        /* CRITICAL: Non-sticky header on mobile */
+        .main-header {
+            position: relative !important;
+            background: #6366f1 !important;
+        }
+
+        /* Disable transitions on mobile */
+        .stat-card,
+        .stock-card,
+        .btn,
+        .module-tab {
+            transition: none !important;
+        }
+
+        /* Remove hover transforms */
+        .stat-card:hover {
+            transform: none !important;
+        }
+
+        /* Ensure stable rendering with containment */
+        .cards-container {
+            contain: layout style;
+        }
+
+        .stock-card {
+            contain: layout style paint;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        /* Disable pulse/warning animations */
+        .fifo-lot.has-warning,
+        .fefo-lot.fefo-urgent,
+        .alert-critical {
+            animation: none !important;
+        }
     }
-
-    .stock-table-rm th {
-        background: #f3f4f6 !important;
-        color: #4b5563 !important;
-        padding: 10px 6px !important;
-        font-size: 7pt !important;
-        font-weight: 700 !important;
-        text-align: center !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        border: 1px solid #e5e7eb !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.02em !important;
-        white-space: nowrap !important;
-    }
-
-    .stock-table-rm th:first-child {
-        border-radius: 6px 0 0 6px !important;
-    }
-
-    .stock-table-rm th:last-child {
-        border-radius: 0 6px 6px 0 !important;
-    }
-
-    .stock-table-rm td {
-        padding: 8px 5px !important;
-        border-bottom: 1px solid #e5e7eb !important;
-        font-size: 8pt !important;
-        text-align: center !important;
-        color: #374151 !important;
-        white-space: nowrap !important;
-    }
-
-    .stock-table-rm tbody tr:nth-child(even) {
-        background: #f0fdf4 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    /* Hide less important RM columns for cleaner print */
-    .stock-table-rm .col-num:nth-child(3),
-    .stock-table-rm .col-num:nth-child(4),
-    .stock-table-rm .col-num:nth-child(5) {
-        display: none !important;
-    }
-
-    /* Type cells for print */
-    .type-cell {
-        padding: 4px 10px !important;
-        font-size: 7pt !important;
-        border-radius: 12px !important;
-        font-weight: 600 !important;
-    }
-
-    .type-in {
-        background: #d1fae5 !important;
-        color: #065f46 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    .type-out {
-        background: #fef3c7 !important;
-        color: #92400e !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    /* Quantity colors for print */
-    .qty-in {
-        color: #059669 !important;
-        font-weight: 700 !important;
-    }
-
-    .qty-out {
-        color: #dc2626 !important;
-        font-weight: 700 !important;
-    }
-
-    /* Days left colors for print */
-    .days-critical {
-        color: #dc2626 !important;
-        background: #fef2f2 !important;
-        font-weight: 700 !important;
-        padding: 2px 6px !important;
-        border-radius: 4px !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    .days-warning {
-        color: #d97706 !important;
-        background: #fffbeb !important;
-        font-weight: 600 !important;
-        padding: 2px 6px !important;
-        border-radius: 4px !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    .days-ok {
-        color: #059669 !important;
-        font-weight: 500 !important;
-    }
-
-    /* Page setup */
-    @page {
-        size: A4 landscape;
-        margin: 8mm;
-    }
-
-    /* Ensure colors print */
-    * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-}
-
-/* ==================== MOBILE RESPONSIVE STYLES ==================== */
-
-/* Tablet Styles */
-@media screen and (max-width: 1024px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-    }
-
-    .header-content {
-        flex-wrap: wrap;
-    }
-
-    .module-tabs {
-        order: 3;
-        width: 100%;
-        justify-content: center;
-        margin-top: 1rem;
-    }
-}
-
-/* Mobile Styles */
-@media screen and (max-width: 768px) {
-
-    /* Header */
-    .main-header {
-        padding: 1rem;
-    }
-
-    .brand-title h1 {
-        font-size: 1.25rem;
-    }
-
-    .brand-title p {
-        font-size: 0.75rem;
-    }
-
-    .brand-logo {
-        width: 40px;
-        height: 40px;
-    }
-
-    /* Button Group */
-    .btn-group {
-        gap: 0.5rem;
-    }
-
-    .btn {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.75rem;
-    }
-
-    /* Module Tabs */
-    .module-tabs {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .module-tab {
-        justify-content: center;
-        padding: 0.75rem 1rem;
-        font-size: 0.875rem;
-    }
-
-    /* Stats Section */
-    .stats-section {
-        padding: 1rem;
-    }
-
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.75rem;
-    }
-
-    .stat-card {
-        padding: 0.75rem;
-        gap: 0.5rem;
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .stat-icon {
-        width: 36px;
-        height: 36px;
-    }
-
-    .stat-icon svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    .stat-value {
-        font-size: 1.25rem;
-    }
-
-    .stat-label {
-        font-size: 0.625rem;
-    }
-
-    .stat-arrow {
-        display: none;
-    }
-
-    /* Alert Banners */
-    .alert-banners-section {
-        padding: 0 1rem;
-    }
-
-    .alert-banners-container {
-        grid-template-columns: 1fr;
-        gap: 0.75rem;
-    }
-
-    .alert-banner {
-        padding: 0.75rem 1rem;
-    }
-
-    .alert-banner-icon {
-        width: 36px;
-        height: 36px;
-    }
-
-    .alert-banner-icon svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    .alert-banner-title {
-        font-size: 0.75rem;
-    }
-
-    .alert-banner-count {
-        font-size: 1rem;
-    }
-
-    /* Filter Section */
-    .filter-container {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .rm-filter-group,
-    .date-filter-group,
-    .search-wrapper {
-        width: 100%;
-    }
-
-    .search-box {
-        padding: 0.625rem 0.75rem;
-    }
-
-    .rm-product-select,
-    .date-filter-input {
-        width: 100%;
-    }
-
-    .btn-clear-filter {
-        width: 100%;
-        justify-content: center;
-    }
-
-    /* Module Banner */
-    .module-banner {
-        padding: 1rem;
-    }
-
-    .module-banner-content {
-        flex-direction: column;
-        text-align: center;
-        gap: 0.75rem;
-    }
-
-    .module-icon {
-        font-size: 2rem;
-    }
-
-    .module-info h2 {
-        font-size: 1.25rem;
-    }
-
-    .module-info p {
-        font-size: 0.75rem;
-    }
-
-    /* Cards Container */
-    .cards-container {
-        padding: 1rem;
-        gap: 1rem;
-    }
-
-    /* Stock Card */
-    .stock-card-header {
-        flex-direction: column;
-        gap: 0.75rem;
-        padding: 1rem;
-    }
-
-    .stock-card-title h2 {
-        font-size: 0.9375rem;
-    }
-
-    .stock-card-actions {
-        width: 100%;
-        justify-content: flex-end;
-    }
-
-    .stock-card-summary,
-    .stock-card-summary-rm {
-        gap: 0.5rem;
-        padding: 0.75rem;
-        /* Force 2 columns on mobile for FIFO/FEFO side by side */
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
-
-    /* Make FIFO and FEFO smaller and side-by-side */
-    .fifo-lot,
-    .fefo-lot {
-        padding: 0.5rem;
-        border-radius: 8px;
-    }
-
-    .fifo-lot .summary-label,
-    .fefo-lot .summary-label {
-        font-size: 0.6rem;
-    }
-
-    .fifo-lot .summary-value,
-    .fefo-lot .summary-value,
-    .fifo-value,
-    .fefo-value {
-        font-size: 0.85rem;
-    }
-
-    .fifo-note,
-    .fefo-note {
-        font-size: 0.6rem;
-        margin-top: 0.15rem;
-    }
-
-    /* Lots badge smaller on mobile */
-    .lots-badge {
-        font-size: 0.55rem;
-        padding: 0.15rem 0.4rem;
-        top: -5px;
-        right: -5px;
-    }
-
-    .summary-item {
-        padding: 0.5rem;
-    }
-
-    .summary-value {
-        font-size: 1rem;
-    }
-
-    .summary-label {
-        font-size: 0.625rem;
-    }
-
-
-
-    /* Stock Table */
-    .stock-table-container {
-        padding: 0.75rem;
-    }
-
-    .stock-table th,
-    .stock-table td {
-        padding: 0.5rem;
-        font-size: 0.75rem;
-    }
-
-    /* Modal */
-    .modal-content {
-        width: 95%;
-        max-height: 90vh;
-    }
-
-    .modal-header {
-        padding: 1rem;
-    }
-
-    .modal-body {
-        padding: 1rem;
-    }
-
-    .modal-footer {
-        padding: 1rem;
-        flex-wrap: wrap;
-    }
-}
-
-/* Extra Small Mobile */
-@media screen and (max-width: 480px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.5rem;
-    }
-
-    .stat-card {
-        padding: 0.5rem;
-    }
-
-    .stat-icon {
-        width: 28px;
-        height: 28px;
-    }
-
-    .stat-icon svg {
-        width: 14px;
-        height: 14px;
-    }
-
-    .stat-value {
-        font-size: 1rem;
-    }
-
-    .stat-label {
-        font-size: 0.5625rem;
-    }
-
-    .btn-group .btn span {
-        display: none;
-    }
-
-    .btn-group .btn {
-        padding: 0.5rem;
-    }
-
-    .brand-title h1 {
-        font-size: 1rem;
-    }
-
-    .brand-title p {
-        display: none;
-    }
-}
-
-/* ==================== MOBILE ANTI-FLICKER FIX ==================== */
-/* Aggressive fix for scroll flickering on mobile devices */
-
-@media (hover: none) and (pointer: coarse) {
-
-    /* CRITICAL: Disable sticky header on mobile - main cause of scroll flicker */
-    .main-header {
-        position: relative !important;
-        background: #6366f1 !important;
-        /* Solid color instead of gradient */
-    }
-
-    /* Solid colors for all gradient elements */
-    .loading-overlay {
-        background: #667eea !important;
-    }
-
-    .module-banner {
-        background: #6366f1 !important;
-    }
-
-    .module-banner.rm-mode {
-        background: #10b981 !important;
-    }
-
-    .stock-card-header {
-        background: #4f46e5 !important;
-    }
-
-    /* Disable ALL transforms and transitions site-wide */
-    *,
-    *::before,
-    *::after {
-        transition: none !important;
-        animation: none !important;
-    }
-
-    /* Remove box-shadows which cause repaints */
-    .stat-card,
-    .stock-card,
-    .filter-container,
-    .alert-banner {
-        box-shadow: none !important;
-        border: 1px solid var(--gray-200) !important;
-    }
-
-    /* Disable all hover effects completely */
-    .stat-card:hover,
-    .stock-card:hover,
-    .alert-banner:hover,
-    .btn:hover,
-    .module-tab:hover,
-    .dropdown-item:hover {
-        transform: none !important;
-        box-shadow: none !important;
-    }
-
-    /* Force GPU layer for body to prevent full page repaints */
-    body {
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
-        -webkit-backface-visibility: hidden;
-        backface-visibility: hidden;
-        overflow-x: hidden;
-    }
-
-    /* Optimize scrolling containers */
-    .cards-container,
-    .stock-table-container,
-    .modal-body {
-        -webkit-overflow-scrolling: touch;
-        -webkit-transform: translate3d(0, 0, 0);
-        transform: translate3d(0, 0, 0);
-    }
-
-    /* Prevent any layout shifts */
-    .loading-overlay {
-        display: none !important;
-    }
-}
-
-/* Also apply for general mobile screens as fallback */
-@media screen and (max-width: 768px) {
-
-    /* CRITICAL: Non-sticky header on mobile */
-    .main-header {
-        position: relative !important;
-        background: #6366f1 !important;
-    }
-
-    /* Disable transitions on mobile */
-    .stat-card,
-    .stock-card,
-    .btn,
-    .module-tab {
-        transition: none !important;
-    }
-
-    /* Remove hover transforms */
-    .stat-card:hover {
-        transform: none !important;
-    }
-
-    /* Ensure stable rendering with containment */
-    .cards-container {
-        contain: layout style;
-    }
-
-    .stock-card {
-        contain: layout style paint;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-    }
-
-    /* Disable pulse/warning animations */
-    .fifo-lot.has-warning,
-    .fefo-lot.fefo-urgent,
-    .alert-critical {
-        animation: none !important;
-    }
-}

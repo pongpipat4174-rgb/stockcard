@@ -878,11 +878,21 @@ function renderStockCardsRM(products) {
         html += '<button class="btn print-btn" onclick="printSingleCard(\'card-rm-' + idx + '\', \'' + prod.name + '\', \'' + prod.code + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> พิมพ์</button>';
         html += '</div>';
         html += '<div class="stock-card-summary stock-card-summary-rm">';
+
+        // Row 1: รับเข้า + เบิกออก
         html += '<div class="summary-item"><span class="summary-label">รับเข้าทั้งหมด (Kg)</span><span class="summary-value positive">+' + formatNumber(prod.totalIn) + '</span></div>';
         html += '<div class="summary-item"><span class="summary-label">เบิกออกทั้งหมด (Kg)</span><span class="summary-value negative">-' + formatNumber(prod.totalOut) + '</span></div>';
+
+        // Row 2: คงเหลือ + (empty or another stat)
         html += '<div class="summary-item"><span class="summary-label">คงเหลือปัจจุบัน (Kg)</span><span class="summary-value">' + formatNumber(prod.balance) + '</span></div>';
 
-        // FIFO Box
+        // If we have FEFO conflict, we need even number of items, so add placeholder for balance row
+        if (fefoConflict && fefoLot !== '-' && fefoExpDays !== null) {
+            // Row 2 second item: Empty placeholder to push FIFO and FEFO to Row 3
+            html += '<div class="summary-item" style="opacity: 0; visibility: hidden;"></div>';
+        }
+
+        // Row 3 (or 2 second half): FIFO Box
         html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
         if (hasMultipleLots) {
             html += '<span class="lots-badge">' + lotsWithBalance.length + ' Lots</span>';
@@ -896,7 +906,7 @@ function renderStockCardsRM(products) {
         html += '</span>';
         html += '</div>';
 
-        // FEFO Box (show ONLY if FIFO ≠ FEFO - when there's a conflict)
+        // FEFO Box (show ONLY if FIFO ≠ FEFO - when there's a conflict) - will be next to FIFO in Row 3
         if (fefoConflict && fefoLot !== '-' && fefoExpDays !== null) {
             var fefoClass = 'fefo-lot';
             if (fefoUrgent) fefoClass += ' fefo-urgent';

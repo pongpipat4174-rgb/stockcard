@@ -912,57 +912,63 @@ function renderStockCardsRM(products) {
         // Row 2: คงเหลือ + (empty or another stat)
         html += '<div class="summary-item"><span class="summary-label">คงเหลือปัจจุบัน (Kg)</span><span class="summary-value">' + formatNumber(prod.balance) + '</span></div>';
 
-        // If we have FEFO conflict, we need even number of items, so add placeholder for balance row
-        if (fefoConflict && fefoLot !== '-' && fefoExpDays !== null) {
-            // Row 2 second item: Empty placeholder to push FIFO and FEFO to Row 3
-            html += '<div class="summary-item" style="opacity: 0; visibility: hidden;"></div>';
-        }
+        // Row 3: Priority Boxes (Display ALL if applicable)
 
-        // Row 3: Priority Recommendation Box
+        // 1. REVAL BOX (Purple) - Highest Priority
         if (isRevalPriority) {
-            // REVAL BOX (Purple) - Highest Priority
             html += '<div class="summary-item reval-lot">';
             html += '<span class="summary-label">🔄 สารต่ออายุ: ต้องใช้ก่อน!</span>';
             html += '<span class="summary-value reval-value">' + revalLot + '</span>';
             html += '<span class="reval-note">เหลือ ' + formatNumber(revalBalance) + ' Kg · หมดอายุ ' + revalExpDate + '</span>';
             html += '</div>';
-
-            // Add FIFO box next to it (if space permits) or hidden if we want to focus on Reval
-            html += '<div class="summary-item fifo-lot">';
-            html += '<span class="summary-label">📦 FIFO ปกติ</span>';
-            html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
-            html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg</span>';
-            html += '</div>';
-
-        } else {
-            // Normal Logic (FIFO / FEFO)
-            html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
-            if (hasMultipleLots) {
-                html += '<span class="lots-badge">' + lotsWithBalance.length + ' Lots</span>';
-            }
-            html += '<span class="summary-label">' + (hasMultipleLots ? '📦 FIFO: ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
-            html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
-            html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg';
-            if (fifoExpDate && fifoExpDays !== null) {
-                html += ' · หมดอายุ ' + fifoExpDate + ' (' + fifoExpDays + ' วัน)';
-            }
-            html += '</span>';
-            html += '</div>';
-
-            // FEFO Box (show ONLY if FIFO ≠ FEFO - when there's a conflict)
-            if (fefoConflict && fefoLot !== '-' && fefoExpDays !== null) {
-                var fefoClass = 'fefo-lot';
-                if (fefoUrgent) fefoClass += ' fefo-urgent';
-                fefoClass += ' fefo-conflict';
-
-                html += '<div class="summary-item ' + fefoClass + '">';
-                html += '<span class="summary-label">' + (fefoUrgent ? '🚨 FEFO: หมดอายุเร็ว!' : '⏰ FEFO: หมดอายุก่อน') + '</span>';
-                html += '<span class="summary-value fefo-value">' + fefoLot + '</span>';
-                html += '<span class="fefo-note">เหลือ ' + formatNumber(fefoBalance) + ' Kg · หมดอายุ ' + fefoExpDate + ' (' + fefoExpDays + ' วัน)</span>';
-                html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
-                html += '</div>';
-            }
         }
+
+        // 2. FEFO Box (Red) - Urgent Expiry or Conflict
+        // Show if there is a conflict OR if it's urgent (and not same as Reval)
+        var showFefo = (fefoConflict && fefoLot !== '-' && fefoExpDays !== null) || (fefoUrgent && fefoLot !== '-');
+
+        // Avoid duplicate showing if Red box is exactly the same lot as Purple box
+        if (showFefo && isRevalPriority && fefoLot === revalLot) {
+            showFefo = false;
+        }
+
+        if (showFefo) {
+            var fefoClass = 'fefo-lot';
+            if (fefoUrgent) fefoClass += ' fefo-urgent'; // Red Pulse
+            if (fefoConflict) fefoClass += ' fefo-conflict';
+
+            html += '<div class="summary-item ' + fefoClass + '">';
+            html += '<span class="summary-label">' + (fefoUrgent ? '� FEFO: หมดอายุเร็ว!' : '⏰ FEFO: หมดอายุก่อน') + '</span>';
+            html += '<span class="summary-value fefo-value">' + fefoLot + '</span>';
+            html += '<span class="fefo-note">เหลือ ' + formatNumber(fefoBalance) + ' Kg · หมดอายุ ' + fefoExpDate + ' (' + fefoExpDays + ' วัน)</span>';
+            if (fefoConflict) {
+                html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
+            }
+            html += '</div>';
+        }
+
+        // 3. FIFO Box (Yellow/Green) - Standard
+        // Always show FIFO as a baseline reference
+        // Check if FIFO matches Reval or FEFO to avoid redundancy? 
+        // User wants to see ALL 3 boxes if possible. But if they are identical, it's redundant.
+        // Let's show it but maybe adjust styling if it's not the priority.
+
+        var isFifoRedundant = (isRevalPriority && fifoLot === revalLot) || (showFefo && fifoLot === fefoLot);
+        // Show anyway as requested ("Show 3 boxes"), but maybe logic implies "If meaningful"
+        // Let's standardise: FIFO box always shows.
+
+        html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
+        if (hasMultipleLots) {
+            html += '<span class="lots-badge">' + lotsWithBalance.length + ' Lots</span>';
+        }
+        html += '<span class="summary-label">' + (hasMultipleLots ? '� FIFO: ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
+        html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
+        html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg';
+        if (fifoExpDate && fifoExpDays !== null) {
+            html += ' · หมดอายุ ' + fifoExpDate + ' (' + fifoExpDays + ' วัน)';
+        }
+        html += '</span>';
+        html += '</div>';
 
         html += '</div>';
         html += '<div class="stock-table-container"><table class="stock-table stock-table-rm"><thead><tr>';

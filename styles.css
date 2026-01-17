@@ -3259,21 +3259,52 @@ mark.search-highlight {
 }
 
 /* ==================== MOBILE ANTI-FLICKER FIX ==================== */
-/* Disable hover effects and transitions on touch devices to prevent flickering */
+/* Aggressive fix for scroll flickering on mobile devices */
 
 @media (hover: none) and (pointer: coarse) {
 
-    /* Disable all hover transforms on mobile */
-    .stat-card,
-    .stock-card,
-    .alert-banner,
-    .btn,
-    .module-tab,
-    .dropdown-item {
-        transform: none !important;
-        transition: none !important;
+    /* CRITICAL: Disable sticky header on mobile - main cause of scroll flicker */
+    .main-header {
+        position: relative !important;
+        background: #6366f1 !important;
+        /* Solid color instead of gradient */
     }
 
+    /* Solid colors for all gradient elements */
+    .loading-overlay {
+        background: #667eea !important;
+    }
+
+    .module-banner {
+        background: #6366f1 !important;
+    }
+
+    .module-banner.rm-mode {
+        background: #10b981 !important;
+    }
+
+    .stock-card-header {
+        background: #4f46e5 !important;
+    }
+
+    /* Disable ALL transforms and transitions site-wide */
+    *,
+    *::before,
+    *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+
+    /* Remove box-shadows which cause repaints */
+    .stat-card,
+    .stock-card,
+    .filter-container,
+    .alert-banner {
+        box-shadow: none !important;
+        border: 1px solid var(--gray-200) !important;
+    }
+
+    /* Disable all hover effects completely */
     .stat-card:hover,
     .stock-card:hover,
     .alert-banner:hover,
@@ -3281,62 +3312,69 @@ mark.search-highlight {
     .module-tab:hover,
     .dropdown-item:hover {
         transform: none !important;
-        box-shadow: var(--shadow-md) !important;
+        box-shadow: none !important;
     }
 
-    /* Disable pulse/warning animations on mobile - prevents constant repaints */
-    .fifo-lot.has-warning,
-    .fefo-lot.fefo-urgent,
-    .alert-critical {
-        animation: none !important;
+    /* Force GPU layer for body to prevent full page repaints */
+    body {
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        overflow-x: hidden;
     }
 
-    /* Use hardware acceleration for scrollable containers */
+    /* Optimize scrolling containers */
     .cards-container,
     .stock-table-container,
     .modal-body {
         -webkit-overflow-scrolling: touch;
-        transform: translateZ(0);
-        backface-visibility: hidden;
-        will-change: scroll-position;
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
     }
 
-    /* Prevent layout shifts on touch */
+    /* Prevent any layout shifts */
     .loading-overlay {
-        transition: none !important;
-    }
-
-    /* Stabilize fixed/sticky elements */
-    .main-header {
-        transform: translateZ(0);
-        backface-visibility: hidden;
-    }
-
-    /* Prevent repaint on table scroll */
-    .stock-table,
-    .stock-table-rm {
-        transform: translateZ(0);
+        display: none !important;
     }
 }
 
 /* Also apply for general mobile screens as fallback */
 @media screen and (max-width: 768px) {
 
-    /* Reduce transitions to minimum on mobile */
-    .stat-card {
-        transition: box-shadow 0.15s ease !important;
+    /* CRITICAL: Non-sticky header on mobile */
+    .main-header {
+        position: relative !important;
+        background: #6366f1 !important;
     }
 
+    /* Disable transitions on mobile */
+    .stat-card,
+    .stock-card,
+    .btn,
+    .module-tab {
+        transition: none !important;
+    }
+
+    /* Remove hover transforms */
     .stat-card:hover {
         transform: none !important;
     }
 
-    /* Ensure stable rendering */
+    /* Ensure stable rendering with containment */
     .cards-container {
         contain: layout style;
     }
 
     .stock-card {
         contain: layout style paint;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Disable pulse/warning animations */
+    .fifo-lot.has-warning,
+    .fefo-lot.fefo-urgent,
+    .alert-critical {
+        animation: none !important;
     }
 }

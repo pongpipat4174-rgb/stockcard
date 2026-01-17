@@ -754,29 +754,62 @@ function renderStockCardsRM(products) {
         // Calculate FIFO - Find the oldest lot with remaining balance
         var lotBalances = {};
         var lotFirstDate = {};
+        var lotExpDays = {}; // Store expiry days for FEFO
+        var lotExpDate = {}; // Store expiry date for FEFO
 
         prod.entries.forEach(function (entry) {
             if (entry.lotNo) {
                 if (!lotBalances[entry.lotNo]) {
                     lotBalances[entry.lotNo] = 0;
                     lotFirstDate[entry.lotNo] = entry.date;
+                    // Store expiry info
+                    var days = parseInt(entry.daysLeft);
+                    if (!isNaN(days)) {
+                        lotExpDays[entry.lotNo] = days;
+                        lotExpDate[entry.lotNo] = entry.expDate || '';
+                    }
                 }
                 lotBalances[entry.lotNo] += entry.inQty - entry.outQty;
+
+                // Update expiry days if this entry has a valid daysLeft
+                var days = parseInt(entry.daysLeft);
+                if (!isNaN(days) && (lotExpDays[entry.lotNo] === undefined || days < lotExpDays[entry.lotNo])) {
+                    lotExpDays[entry.lotNo] = days;
+                    lotExpDate[entry.lotNo] = entry.expDate || '';
+                }
             }
         });
 
-        // Find lots with positive balance, sorted by first appearance (oldest first)
+        // Find lots with positive balance
         var lotsWithBalance = Object.keys(lotBalances)
-            .filter(function (lot) { return lotBalances[lot] > 0; })
+            .filter(function (lot) { return lotBalances[lot] > 0; });
+
+        // FIFO: Sort by first appearance date (oldest first)
+        var fifoSorted = lotsWithBalance.slice().sort(function (a, b) {
+            return lotFirstDate[a] < lotFirstDate[b] ? -1 : 1;
+        });
+
+        // FEFO: Sort by expiry days (soonest expiry first)
+        var fefoSorted = lotsWithBalance.slice()
+            .filter(function (lot) { return lotExpDays[lot] !== undefined; })
             .sort(function (a, b) {
-                // Sort by first date (oldest first)
-                return lotFirstDate[a] < lotFirstDate[b] ? -1 : 1;
+                return (lotExpDays[a] || 9999) - (lotExpDays[b] || 9999);
             });
 
-        // The first lot in sorted array is the one to use first (FIFO)
-        var fifoLot = lotsWithBalance.length > 0 ? lotsWithBalance[0] : '-';
-        var fifoBalance = lotsWithBalance.length > 0 ? lotBalances[fifoLot] : 0;
+        // FIFO recommendation
+        var fifoLot = fifoSorted.length > 0 ? fifoSorted[0] : '-';
+        var fifoBalance = fifoSorted.length > 0 ? lotBalances[fifoLot] : 0;
         var hasMultipleLots = lotsWithBalance.length > 1;
+
+        // FEFO recommendation
+        var fefoLot = fefoSorted.length > 0 ? fefoSorted[0] : '-';
+        var fefoExpDays = fefoSorted.length > 0 ? lotExpDays[fefoLot] : null;
+        var fefoExpDate = fefoSorted.length > 0 ? lotExpDate[fefoLot] : '';
+        var fefoBalance = fefoSorted.length > 0 ? lotBalances[fefoLot] : 0;
+
+        // Check if FEFO differs from FIFO (important to highlight)
+        var fefoConflict = hasMultipleLots && fefoLot !== fifoLot && fefoLot !== '-';
+        var fefoUrgent = fefoExpDays !== null && fefoExpDays <= 30;
 
         var entriesHtml = '';
         prod.entries.forEach(function (entry) {
@@ -819,13 +852,32 @@ function renderStockCardsRM(products) {
         html += '<div class="summary-item"><span class="summary-label">รับเข้าทั้งหมด (Kg)</span><span class="summary-value positive">+' + formatNumber(prod.totalIn) + '</span></div>';
         html += '<div class="summary-item"><span class="summary-label">เบิกออกทั้งหมด (Kg)</span><span class="summary-value negative">-' + formatNumber(prod.totalOut) + '</span></div>';
         html += '<div class="summary-item"><span class="summary-label">คงเหลือปัจจุบัน (Kg)</span><span class="summary-value">' + formatNumber(prod.balance) + '</span></div>';
+
+        // FIFO Box
         html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
-        html += '<span class="summary-label">' + (hasMultipleLots ? '⚠️ ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
+        html += '<span class="summary-label">' + (hasMultipleLots ? '📦 FIFO: ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
         html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
         if (hasMultipleLots) {
             html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg · มี ' + lotsWithBalance.length + ' Lots</span>';
         }
         html += '</div>';
+
+        // FEFO Box (show if there's expiry data)
+        if (fefoLot !== '-' && fefoExpDays !== null) {
+            var fefoClass = 'fefo-lot';
+            if (fefoUrgent) fefoClass += ' fefo-urgent';
+            if (fefoConflict) fefoClass += ' fefo-conflict';
+
+            html += '<div class="summary-item ' + fefoClass + '">';
+            html += '<span class="summary-label">' + (fefoUrgent ? '🚨 FEFO: หมดอายุเร็ว!' : '⏰ FEFO: หมดอายุก่อน') + '</span>';
+            html += '<span class="summary-value fefo-value">' + fefoLot + '</span>';
+            html += '<span class="fefo-note">หมดอายุ ' + fefoExpDate + ' · เหลือ ' + fefoExpDays + ' วัน</span>';
+            if (fefoConflict) {
+                html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
+            }
+            html += '</div>';
+        }
+
         html += '</div>';
         html += '<div class="stock-table-container"><table class="stock-table stock-table-rm"><thead><tr>';
         html += '<th>วันที่</th><th>ประเภท</th><th class="no-print">Cont.</th><th class="no-print">นน./Cont.</th><th class="no-print">เศษ(Kg)</th><th>รับเข้า</th><th>เบิกออก</th><th>คงเหลือ</th><th>Lot No.</th><th class="no-print">Vendor Lot</th><th class="no-print">MFD</th><th>EXP</th><th>Days Left</th><th>Lot Bal.</th><th>Supplier</th>';

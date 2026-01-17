@@ -704,6 +704,115 @@ mark.search-highlight {
     color: var(--danger-500);
 }
 
+/* FIFO & FEFO Styles */
+.fifo-lot,
+.fefo-lot {
+    background: #fef3c7;
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+    border-left: 4px solid #f59e0b;
+}
+
+.fifo-lot.has-warning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    animation: pulseWarning 2s ease-in-out infinite;
+}
+
+.fifo-value,
+.fefo-value {
+    color: #b45309;
+    font-family: 'Consolas', monospace;
+}
+
+.fifo-note,
+.fefo-note {
+    font-size: 0.7rem;
+    color: #92400e;
+    margin-top: 0.25rem;
+}
+
+/* FEFO Specific Styles */
+.fefo-lot {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-left-color: #3b82f6;
+}
+
+.fefo-lot .summary-label {
+    color: #1d4ed8;
+}
+
+.fefo-lot .fefo-value {
+    color: #1e40af;
+}
+
+.fefo-lot .fefo-note {
+    color: #1e3a8a;
+}
+
+/* FEFO Urgent - Expiring soon (within 30 days) */
+.fefo-lot.fefo-urgent {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-left-color: #ef4444;
+    animation: pulseUrgent 1.5s ease-in-out infinite;
+}
+
+.fefo-lot.fefo-urgent .summary-label {
+    color: #dc2626;
+}
+
+.fefo-lot.fefo-urgent .fefo-value {
+    color: #b91c1c;
+}
+
+.fefo-lot.fefo-urgent .fefo-note {
+    color: #991b1b;
+}
+
+/* FEFO Conflict - When FIFO ≠ FEFO */
+.fefo-lot.fefo-conflict {
+    border-width: 4px;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.fefo-conflict-note {
+    display: block;
+    font-size: 0.7rem;
+    color: #dc2626;
+    font-weight: 700;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #fca5a5;
+}
+
+@keyframes pulseWarning {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+    }
+}
+
+@keyframes pulseUrgent {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+}
+
+/* RM Summary Grid - Support 5-6 columns */
+.stock-card-summary-rm {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
 .stock-table-container {
     overflow-x: auto;
     padding: 1rem 2rem 2rem;

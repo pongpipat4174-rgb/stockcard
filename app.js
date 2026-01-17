@@ -1625,71 +1625,99 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 2000);
     }
 
-    // Add CSS to prevent touch issues
+    // Add CSS to prevent touch issues and make child elements not receive events
     var style = document.createElement('style');
-    style.textContent = '.module-tab { touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-touch-callout: none; }';
+    style.textContent = `
+        .module-tab { 
+            touch-action: manipulation; 
+            -webkit-tap-highlight-color: transparent; 
+            user-select: none; 
+            -webkit-touch-callout: none; 
+        }
+        .module-tab * { 
+            pointer-events: none; 
+        }
+    `;
     document.head.appendChild(style);
 
-    // Track last touch time to prevent ghost clicks
-    var lastTouchEndTime = 0;
+    // Detect if device supports touch
+    var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    console.log('Touch device detected:', isTouchDevice);
 
-    // Package tab handlers
-    if (tabPackage) {
-        // Use touchstart to capture touch early and prevent default
-        tabPackage.addEventListener('touchstart', function (e) {
-            // Just mark that a touch is happening
-            lastTouchEndTime = Date.now();
-        }, { passive: true });
+    // Track if we've handled an event recently (for any tab)
+    var lastEventHandled = 0;
 
-        // For touch devices - use touchend
-        tabPackage.addEventListener('touchend', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            lastTouchEndTime = Date.now();
-            handleTabSwitch('package', e);
-        }, { passive: false });
+    function safeTabSwitch(module, e) {
+        var now = Date.now();
 
-        // For desktop - regular click, but ignore if recent touch
-        tabPackage.addEventListener('click', function (e) {
-            // If there was a recent touch event (within 500ms), ignore click
-            if (Date.now() - lastTouchEndTime < 500) {
-                console.log('Package click ignored - recent touch event');
+        // Block if handled recently (within 1 second for any tab)
+        if (now - lastEventHandled < 1000) {
+            console.log('Tab event blocked - handled recently');
+            if (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                return;
             }
-            handleTabSwitch('package', e);
-        });
+            return;
+        }
+
+        lastEventHandled = now;
+        handleTabSwitch(module, e);
     }
 
-    // RM tab handlers
-    if (tabRM) {
-        // Use touchstart to capture touch early
-        tabRM.addEventListener('touchstart', function (e) {
-            // Just mark that a touch is happening
-            lastTouchEndTime = Date.now();
-        }, { passive: true });
+    if (isTouchDevice) {
+        // MOBILE: Use only touchend events
+        console.log('Using touch-only mode');
 
-        // For touch devices - use touchend
-        tabRM.addEventListener('touchend', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            lastTouchEndTime = Date.now();
-            handleTabSwitch('rm', e);
-        }, { passive: false });
-
-        // For desktop - regular click, but ignore if recent touch
-        tabRM.addEventListener('click', function (e) {
-            // If there was a recent touch event (within 500ms), ignore click
-            if (Date.now() - lastTouchEndTime < 500) {
-                console.log('RM click ignored - recent touch event');
+        if (tabPackage) {
+            tabPackage.addEventListener('touchend', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                return;
-            }
-            handleTabSwitch('rm', e);
-        });
+                e.stopImmediatePropagation();
+                safeTabSwitch('package', e);
+            }, { passive: false, capture: true });
+        }
+
+        if (tabRM) {
+            tabRM.addEventListener('touchend', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                safeTabSwitch('rm', e);
+            }, { passive: false, capture: true });
+        }
+
+        // Also block all click events on touch device to prevent ghost clicks
+        if (tabPackage) {
+            tabPackage.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Package click blocked on touch device');
+            }, { capture: true });
+        }
+        if (tabRM) {
+            tabRM.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('RM click blocked on touch device');
+            }, { capture: true });
+        }
+    } else {
+        // DESKTOP: Use only click events
+        console.log('Using click-only mode');
+
+        if (tabPackage) {
+            tabPackage.addEventListener('click', function (e) {
+                safeTabSwitch('package', e);
+            });
+        }
+
+        if (tabRM) {
+            tabRM.addEventListener('click', function (e) {
+                safeTabSwitch('rm', e);
+            });
+        }
     }
 });
+
 
 

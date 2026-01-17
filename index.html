@@ -11,7 +11,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=7">
 </head>
 
 <body>
@@ -74,7 +74,7 @@
                     </svg>
                     รีเฟรชข้อมูล
                 </button>
-                <button class="btn btn-primary" id="printAllBtn">
+                <button class="btn btn-primary" id="printAllBtn" onclick="printAll()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="6 9 6 2 18 2 18 9" />
                         <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
@@ -161,36 +161,65 @@
     <section class="alert-banners-section" id="alertBannersSection" style="display: none;">
         <div class="alert-banners-container">
             <!-- Critical Alert (Red) - Items expiring within 30 days -->
-            <div class="alert-banner alert-critical" id="alertCritical" onclick="showExpiryItems('critical')">
-                <div class="alert-banner-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path
-                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                        <line x1="12" y1="9" x2="12" y2="13" />
-                        <line x1="12" y1="17" x2="12.01" y2="17" />
+            <div class="alert-banner alert-critical" id="alertCritical">
+                <div class="alert-banner-main" onclick="showExpiryItems('critical')">
+                    <div class="alert-banner-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                            <line x1="12" y1="9" x2="12" y2="13" />
+                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                        </svg>
+                    </div>
+                    <div class="alert-banner-content">
+                        <span class="alert-banner-title">⚠️ วิกฤต! หมดอายุภายใน 30 วัน</span>
+                        <span class="alert-banner-count" id="criticalCount">0 รายการ</span>
+                    </div>
+                    <div class="alert-banner-arrow">→</div>
+                </div>
+                <button class="btn btn-print-alert" onclick="printExpiryItems('critical')" title="พิมพ์รายการวิกฤต">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
                     </svg>
-                </div>
-                <div class="alert-banner-content">
-                    <span class="alert-banner-title">⚠️ วิกฤต! หมดอายุภายใน 30 วัน</span>
-                    <span class="alert-banner-count" id="criticalCount">0 รายการ</span>
-                </div>
-                <div class="alert-banner-arrow">→</div>
+                </button>
             </div>
 
             <!-- Warning Alert (Yellow) - Items expiring within 90 days -->
-            <div class="alert-banner alert-warning-exp" id="alertWarning" onclick="showExpiryItems('warning')">
-                <div class="alert-banner-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
+            <div class="alert-banner alert-warning-exp" id="alertWarning">
+                <div class="alert-banner-main" onclick="showExpiryItems('warning')">
+                    <div class="alert-banner-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                    </div>
+                    <div class="alert-banner-content">
+                        <span class="alert-banner-title">⏰ เตือน! หมดอายุภายใน 90 วัน</span>
+                        <span class="alert-banner-count" id="warningCount">0 รายการ</span>
+                    </div>
+                    <div class="alert-banner-arrow">→</div>
+                </div>
+                <button class="btn btn-print-alert btn-print-warning" onclick="printExpiryItems('warning')"
+                    title="พิมพ์รายการเตือน">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
                     </svg>
-                </div>
-                <div class="alert-banner-content">
-                    <span class="alert-banner-title">⏰ เตือน! หมดอายุภายใน 90 วัน</span>
-                    <span class="alert-banner-count" id="warningCount">0 รายการ</span>
-                </div>
-                <div class="alert-banner-arrow">→</div>
+                </button>
             </div>
+
+            <!-- Print All Expiry Button -->
+            <button class="btn btn-print-all-expiry" onclick="printExpiryItems('all')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                พิมพ์รายการแจ้งเตือนทั้งหมด
+            </button>
         </div>
     </section>
 
@@ -533,7 +562,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=37"></script>
+    <script src="app.js?v=38"></script>
 </body>
 
 </html>

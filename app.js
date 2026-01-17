@@ -868,6 +868,7 @@ function renderStockCardsRM(products) {
             entriesHtml += '<td class="col-num ' + daysLeftClass + '">' + highlightText(entry.daysLeft || '-', q) + '</td>';
             entriesHtml += '<td class="col-num">' + (entry.lotBalance > 0 ? formatNumber(entry.lotBalance) : '-') + '</td>';
             entriesHtml += '<td class="col-supplier">' + highlightText(entry.supplier || '-', q) + '</td>';
+            entriesHtml += '<td class="no-print"><button class="btn btn-delete" onclick="deleteEntryRM(' + entry.rowIndex + ', \'' + prod.code + '\', \'' + entry.type + '\')">ลบ</button></td>';
             entriesHtml += '</tr>';
         });
 
@@ -922,7 +923,7 @@ function renderStockCardsRM(products) {
 
         html += '</div>';
         html += '<div class="stock-table-container"><table class="stock-table stock-table-rm"><thead><tr>';
-        html += '<th>วันที่</th><th>ประเภท</th><th class="no-print">Cont.</th><th class="no-print">นน./Cont.</th><th class="no-print">เศษ(Kg)</th><th>รับเข้า</th><th>เบิกออก</th><th>คงเหลือ</th><th>Lot No.</th><th class="no-print">Vendor Lot</th><th class="no-print">MFD</th><th>EXP</th><th>Days Left</th><th>Lot Bal.</th><th>Supplier</th>';
+        html += '<th>วันที่</th><th>ประเภท</th><th class="no-print">Cont.</th><th class="no-print">นน./Cont.</th><th class="no-print">เศษ(Kg)</th><th>รับเข้า</th><th>เบิกออก</th><th>คงเหลือ</th><th>Lot No.</th><th class="no-print">Vendor Lot</th><th class="no-print">MFD</th><th>EXP</th><th>Days Left</th><th>Lot Bal.</th><th>Supplier</th><th class="no-print">ลบ</th>';
         html += '</tr></thead>';
         html += '<tbody>' + entriesHtml + '</tbody></table></div>';
         html += '</div>';
@@ -1384,7 +1385,7 @@ function printSingleCard(cardId, productName, productCode) {
     document.querySelectorAll('.stock-card').forEach(function (c) { c.style.display = ''; });
 }
 
-// Delete Entry
+// Delete Entry (Package)
 function deleteEntry(rowIndex, productCode, type) {
     if (!confirm('ยืนยันการลบรายการนี้?')) return;
 
@@ -1407,6 +1408,195 @@ function deleteEntry(rowIndex, productCode, type) {
             hideLoading();
         }, 2000);
     }).catch(function (e) { alert(e); hideLoading(); });
+}
+
+// Delete Entry (RM)
+function deleteEntryRM(rowIndex, productCode, type) {
+    if (!confirm('ยืนยันการลบรายการวัตถุดิบนี้?')) return;
+
+    showLoading();
+    showToast('กำลังลบ...');
+
+    // Send delete request to RM sheet
+    fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'delete_rm',
+            rowIndex: rowIndex,
+            criteria: { productCode: productCode, type: type }
+        })
+    }).then(function () {
+        setTimeout(async function () {
+            showToast('ลบรายการวัตถุดิบเรียบร้อย!');
+            await fetchRMData();
+            hideLoading();
+        }, 2000);
+    }).catch(function (e) { alert(e); hideLoading(); });
+}
+
+// Print All Cards (Works for both Package and RM)
+function printAll() {
+    if (searchedProducts.length === 0) {
+        showToast('ไม่มีรายการที่จะพิมพ์');
+        return;
+    }
+
+    // Add print headers to all cards
+    var cards = document.querySelectorAll('.stock-card, .stock-card-rm');
+    var printHeaders = [];
+
+    cards.forEach(function (card, idx) {
+        var printHeader = document.createElement('div');
+        printHeader.className = 'print-header';
+        var moduleIcon = currentModule === 'rm' ? '🧪' : '📦';
+        var moduleText = currentModule === 'rm' ? 'Stock Card วัตถุดิบ' : 'Stock Card แพ็คเกจ';
+        printHeader.innerHTML = '<img src="logo.png" alt="Logo" style="height:50px;"><div><h2 style="margin:0;">' + moduleIcon + ' ' + moduleText + '</h2><p style="margin:0;color:#666;">TAN PRODUCTION | วันที่พิมพ์: ' + new Date().toLocaleDateString('th-TH') + '</p></div>';
+        card.insertBefore(printHeader, card.firstChild);
+        printHeaders.push(printHeader);
+    });
+
+    window.print();
+
+    // Remove print headers after printing
+    printHeaders.forEach(function (header) {
+        header.remove();
+    });
+
+    showToast('พิมพ์ทั้งหมด ' + cards.length + ' รายการ');
+}
+
+// Print Expiry Items (Critical + Warning)
+function printExpiryItems(type) {
+    if (currentModule !== 'rm') {
+        showToast('ฟังก์ชันนี้ใช้งานได้เฉพาะโหมดวัตถุดิบ (RM)');
+        return;
+    }
+
+    if (!window.expiryData) {
+        showToast('ไม่มีข้อมูลหมดอายุ');
+        return;
+    }
+
+    var items = [];
+    var title = '';
+
+    if (type === 'critical') {
+        items = window.expiryData.critical || [];
+        title = '⚠️ รายการหมดอายุภายใน 30 วัน (วิกฤต)';
+    } else if (type === 'warning') {
+        items = window.expiryData.warning || [];
+        title = '⏰ รายการหมดอายุภายใน 90 วัน (เตือน)';
+    } else if (type === 'all') {
+        items = (window.expiryData.critical || []).concat(window.expiryData.warning || []);
+        title = '🔔 รายการที่ต้องใช้ก่อน (หมดอายุภายใน 90 วัน)';
+    }
+
+    if (items.length === 0) {
+        showToast('ไม่มีรายการที่จะพิมพ์');
+        return;
+    }
+
+    // Group by product
+    var productMap = new Map();
+    items.forEach(function (item) {
+        if (!productMap.has(item.productCode)) {
+            productMap.set(item.productCode, {
+                code: item.productCode,
+                name: item.productName,
+                entries: []
+            });
+        }
+        productMap.get(item.productCode).entries.push(item);
+    });
+
+    // Build print content
+    var printWindow = window.open('', '_blank');
+    var printContent = `
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <title>${title}</title>
+            <style>
+                body { font-family: 'Sarabun', 'Inter', sans-serif; padding: 20px; }
+                .print-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb; }
+                .print-header img { height: 50px; }
+                .print-header h1 { margin: 0; font-size: 18px; }
+                .print-header p { margin: 5px 0 0; color: #666; font-size: 12px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
+                th { background: ${type === 'critical' ? '#dc2626' : '#f59e0b'}; color: white; padding: 8px; text-align: left; }
+                td { padding: 8px; border-bottom: 1px solid #e5e7eb; }
+                tr:nth-child(even) { background: #f9fafb; }
+                .product-header { background: #f3f4f6; padding: 10px; margin-top: 20px; border-radius: 8px; }
+                .product-header h3 { margin: 0; font-size: 14px; }
+                .days-critical { color: #dc2626; font-weight: bold; }
+                .days-warning { color: #d97706; font-weight: bold; }
+                @media print { @page { size: A4 landscape; margin: 10mm; } }
+            </style>
+        </head>
+        <body>
+            <div class="print-header">
+                <img src="logo.png" alt="Logo">
+                <div>
+                    <h1>🧪 ${title}</h1>
+                    <p>TAN PRODUCTION | พิมพ์เมื่อ: ${new Date().toLocaleDateString('th-TH')} ${new Date().toLocaleTimeString('th-TH')}</p>
+                    <p>จำนวน: ${items.length} รายการ จาก ${productMap.size} สินค้า</p>
+                </div>
+            </div>
+    `;
+
+    productMap.forEach(function (prod) {
+        printContent += `
+            <div class="product-header">
+                <h3>🧪 ${prod.name} (${prod.code})</h3>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>วันที่</th>
+                        <th>ประเภท</th>
+                        <th>Lot No.</th>
+                        <th>EXP Date</th>
+                        <th>Days Left</th>
+                        <th>Lot Balance</th>
+                        <th>Supplier</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        prod.entries.forEach(function (entry) {
+            var daysClass = parseInt(entry.daysLeft) <= 30 ? 'days-critical' : 'days-warning';
+            printContent += `
+                <tr>
+                    <td>${entry.date || '-'}</td>
+                    <td>${entry.type || '-'}</td>
+                    <td>${entry.lotNo || '-'}</td>
+                    <td>${entry.expDate || '-'}</td>
+                    <td class="${daysClass}">${entry.daysLeft || '-'} วัน</td>
+                    <td>${entry.lotBalance ? formatNumber(entry.lotBalance) : '-'} Kg</td>
+                    <td>${entry.supplier || '-'}</td>
+                </tr>
+            `;
+        });
+
+        printContent += '</tbody></table>';
+    });
+
+    printContent += `
+            <script>
+                window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+
+    showToast('กำลังพิมพ์รายการ ' + type + ' (' + items.length + ' รายการ)');
 }
 
 // ==================== MODAL FUNCTIONS ====================

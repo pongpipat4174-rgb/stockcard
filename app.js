@@ -830,15 +830,21 @@ function handleSearch() {
             }
         });
 
-        // 2. Check Transaction Data (Deep Search)
+        // 2. Deep Search in ALL Transaction Data Fields
         stockData.forEach(function (item) {
+            // Build search string from ALL displayed fields
             var searchStr = [
-                item.productCode,
-                item.productName,
-                item.date,
-                item.docNo,
-                item.lotNo,
-                item.remarks
+                item.productCode || '',
+                item.productName || '',
+                item.date || '',
+                item.type || '',           // ประเภท (รับเข้า/เบิกออก)
+                item.lotNo || '',          // Lot No.
+                item.pkId || '',           // เลขรับเข้า PK ID
+                item.docRef || '',         // เอกสารอ้างอิง
+                item.remark || '',         // หมายเหตุ
+                String(item.inQty || ''),  // จำนวนรับเข้า
+                String(item.outQty || ''), // จำนวนเบิกออก
+                String(item.balance || '') // คงเหลือ
             ].join(' ').toLowerCase();
 
             if (searchStr.includes(query)) {
@@ -871,8 +877,13 @@ function handleSearch() {
 
         renderStockCards(searchedProducts);
 
+        // Show search result count
+        if (searchedProducts.length > 0) {
+            showToast('พบ ' + searchedProducts.length + ' สินค้าที่ตรงกับ "' + query + '"');
+        }
+
     } else {
-        // RM Module - Deep Search
+        // RM Module - Deep Search ALL Fields
         if (!query) {
             showAllProductsRM();
             return;
@@ -887,18 +898,27 @@ function handleSearch() {
             }
         });
 
-        // 2. Check Transaction Data
+        // 2. Deep Search in ALL Transaction Data Fields
         rmStockData.forEach(function (item) {
+            // Build search string from ALL displayed fields
             var searchStr = [
-                item.productCode,
-                item.productName,
-                item.date,
-                item.docNo,
-                item.lotNo,
-                item.supplier,
-                item.vendorLot,
-                item.mfd,
-                item.exp
+                item.productCode || '',
+                item.productName || '',
+                item.date || '',
+                item.type || '',              // ประเภท
+                item.lotNo || '',             // Lot No.
+                item.vendorLot || '',         // Vendor Lot
+                item.mfgDate || '',           // MFD
+                item.expDate || '',           // EXP
+                String(item.daysLeft || ''),  // Days Left
+                item.supplier || '',          // Supplier
+                String(item.inQty || ''),     // รับเข้า
+                String(item.outQty || ''),    // เบิกออก
+                String(item.balance || ''),   // คงเหลือ
+                String(item.lotBalance || ''), // Lot Balance
+                String(item.containerQty || ''),    // จำนวน Container
+                String(item.containerWeight || ''), // นน. Container
+                String(item.remainder || '')        // เศษ
             ].join(' ').toLowerCase();
 
             if (searchStr.includes(query)) {
@@ -930,8 +950,14 @@ function handleSearch() {
         });
 
         renderStockCardsRM(searchedProducts);
+
+        // Show search result count
+        if (searchedProducts.length > 0) {
+            showToast('พบ ' + searchedProducts.length + ' วัตถุดิบที่ตรงกับ "' + query + '"');
+        }
     }
 }
+
 
 // ==================== CLEAR ALL FILTERS ====================
 

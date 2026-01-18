@@ -2100,132 +2100,20 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 2000);
     }
 
-    // Add CSS to prevent touch issues and make child elements not receive events
-    var style = document.createElement('style');
-    style.textContent = `
-        .module-tab { 
-            touch-action: manipulation; 
-            -webkit-tap-highlight-color: transparent; 
-            user-select: none; 
-            -webkit-touch-callout: none; 
-        }
-        .module-tab * { 
-            pointer-events: none; 
-        }
-    `;
-    document.head.appendChild(style);
+    // Unified Click Handler (Desktop & Mobile)
+    // We rely on standard click events which work reliably on both.
+    // 300ms delay on mobile is acceptable for stability.
 
-    // Detect if device supports touch
-    var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    console.log('Touch device detected:', isTouchDevice);
-
-    // Track if we've handled an event recently (for any tab)
-    var lastEventHandled = 0;
-
-    // Track touch start position to detect scroll vs tap
-    var touchStartX = 0;
-    var touchStartY = 0;
-    var isTouchMoved = false;
-    var SCROLL_THRESHOLD = 10; // If moved more than 10px, it's a scroll
-
-    function safeTabSwitch(module, e) {
-        var now = Date.now();
-
-        // Block if handled recently (within 1 second for any tab)
-        if (now - lastEventHandled < 1000) {
-            console.log('Tab event blocked - handled recently');
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            return;
-        }
-
-        lastEventHandled = now;
-        handleTabSwitch(module, e);
+    if (tabPackage) {
+        tabPackage.addEventListener('click', function (e) {
+            handleTabSwitch('package', e);
+        });
     }
 
-    if (isTouchDevice) {
-        // MOBILE: Use touchstart/touchmove/touchend with scroll detection
-        console.log('Using touch-only mode with scroll detection');
-
-        function handleTouchStart(e) {
-            if (e.touches && e.touches.length > 0) {
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-                isTouchMoved = false;
-            }
-        }
-
-        function handleTouchMove(e) {
-            if (e.touches && e.touches.length > 0) {
-                var dx = Math.abs(e.touches[0].clientX - touchStartX);
-                var dy = Math.abs(e.touches[0].clientY - touchStartY);
-                if (dx > SCROLL_THRESHOLD || dy > SCROLL_THRESHOLD) {
-                    isTouchMoved = true;
-                }
-            }
-        }
-
-        function createTouchEndHandler(module) {
-            return function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-
-                // If user was scrolling, don't switch
-                if (isTouchMoved) {
-                    console.log(module + ' touchend ignored - was scrolling');
-                    isTouchMoved = false;
-                    return;
-                }
-
-                safeTabSwitch(module, e);
-            };
-        }
-
-        if (tabPackage) {
-            tabPackage.addEventListener('touchstart', handleTouchStart, { passive: true });
-            tabPackage.addEventListener('touchmove', handleTouchMove, { passive: true });
-            tabPackage.addEventListener('touchend', createTouchEndHandler('package'), { passive: false, capture: true });
-        }
-
-        if (tabRM) {
-            tabRM.addEventListener('touchstart', handleTouchStart, { passive: true });
-            tabRM.addEventListener('touchmove', handleTouchMove, { passive: true });
-            tabRM.addEventListener('touchend', createTouchEndHandler('rm'), { passive: false, capture: true });
-        }
-
-        // Also block all click events on touch device to prevent ghost clicks
-        if (tabPackage) {
-            tabPackage.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Package click blocked on touch device');
-            }, { capture: true });
-        }
-        if (tabRM) {
-            tabRM.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('RM click blocked on touch device');
-            }, { capture: true });
-        }
-    } else {
-        // DESKTOP: Use only click events
-        console.log('Using click-only mode');
-
-        if (tabPackage) {
-            tabPackage.addEventListener('click', function (e) {
-                safeTabSwitch('package', e);
-            });
-        }
-
-        if (tabRM) {
-            tabRM.addEventListener('click', function (e) {
-                safeTabSwitch('rm', e);
-            });
-        }
+    if (tabRM) {
+        tabRM.addEventListener('click', function (e) {
+            handleTabSwitch('rm', e);
+        });
     }
 
     // Update Slider on Resize

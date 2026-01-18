@@ -3201,44 +3201,96 @@ mark.search-highlight {
 /* Mobile Styles */
 @media screen and (max-width: 768px) {
 
-    /* Header */
+    /* Header Layout - Mobile Centered Brand (User Reference) */
     .main-header {
-        padding: 1rem;
+        padding: 16px 12px;
     }
 
-    .brand-title h1 {
-        font-size: 1.25rem;
+    .header-content {
+        flex-direction: column;
+        gap: 16px;
     }
 
-    .brand-title p {
-        font-size: 0.75rem;
+    /* 1. Brand Centered */
+    .brand {
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        order: 0;
+        text-align: center;
+        gap: 8px;
     }
 
     .brand-logo {
-        width: 40px;
-        height: 40px;
+        width: 56px;
+        height: 56px;
+        margin: 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
-    /* Button Group */
-    .btn-group {
-        gap: 0.5rem;
-    }
-
-    .btn {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.75rem;
-    }
-
-    /* Module Tabs */
-    .module-tabs {
+    .brand-text {
+        display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .brand-text h1 {
+        font-size: 1.5rem;
+        /* Larger title */
+        margin-bottom: 2px;
+    }
+
+    .brand-text span {
+        font-size: 0.8rem;
+        opacity: 0.9;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+
+    /* 2. Actions (Middle - 3 Columns) */
+    .header-actions {
+        order: 1;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 4px;
+    }
+
+    .header-actions .btn {
+        justify-content: center;
+        padding: 0.75rem 0.25rem;
+        font-size: 0.8rem;
+        width: 100%;
+        flex-direction: row;
+        /* Ensure icon and text are inline */
+    }
+
+    .header-actions .btn svg {
+        width: 18px;
+        height: 18px;
+        margin-right: 6px;
+    }
+
+    /* 3. Tabs (Bottom - Full Width) */
+    .module-tabs {
+        order: 2;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin: 0;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 5px;
+        border-radius: 12px;
     }
 
     .module-tab {
+        width: 100%;
         justify-content: center;
-        padding: 0.75rem 1rem;
-        font-size: 0.875rem;
+        padding: 12px;
+        font-size: 0.95rem;
     }
 
     /* Stats Section */
@@ -3514,6 +3566,7 @@ mark.search-highlight {
         display: none;
     }
 }
+
 /* ==================== TAB SLIDER ANIMATION ==================== */
 .module-tabs {
     position: relative;
@@ -3521,7 +3574,8 @@ mark.search-highlight {
     border-radius: var(--radius-lg);
     padding: 4px;
     display: inline-flex;
-    gap: 0 !important; /* Remove gap, handle spacing via padding if needed, but flex handles it */
+    gap: 0 !important;
+    /* Remove gap, handle spacing via padding if needed, but flex handles it */
 }
 
 .module-tab {
@@ -3559,7 +3613,7 @@ mark.search-highlight {
         grid-template-columns: 1fr 1fr;
         padding: 4px;
     }
-    
+
     .module-tab {
         width: 100%;
         justify-content: center;

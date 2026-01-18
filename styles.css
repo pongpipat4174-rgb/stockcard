@@ -3602,7 +3602,6 @@ mark.search-highlight {
     padding: 4px;
     display: inline-flex;
     gap: 0 !important;
-    /* Remove gap, handle spacing via padding if needed, but flex handles it */
 }
 
 .module-tab {
@@ -3613,12 +3612,28 @@ mark.search-highlight {
     transition: color 0.3s ease;
     border-radius: var(--radius-md);
     margin: 0;
+    color: white;
+    /* Default text color on purple bg */
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    border: none;
+}
+
+.module-tab:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .module-tab.active {
-    color: var(--primary-600);
+    color: var(--primary-600) !important;
+    /* Active text color (purple) */
 }
 
+/* Slider Element (White Background) */
 .tab-slider {
     position: absolute;
     top: 4px;
@@ -3626,14 +3641,16 @@ mark.search-highlight {
     bottom: 4px;
     background: white;
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
     z-index: 1;
     pointer-events: none;
+    height: calc(100% - 8px);
+    /* Ensure height fits */
 }
 
 /* Ensure mobile header layout overrides don't break this */
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
     .module-tabs {
         width: 100%;
         display: grid;
@@ -3644,5 +3661,6 @@ mark.search-highlight {
     .module-tab {
         width: 100%;
         justify-content: center;
+        padding: 12px;
     }
 }

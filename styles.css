@@ -52,6 +52,8 @@ body {
     color: var(--gray-800);
     line-height: 1.6;
     min-height: 100vh;
+    /* Prevent pull-to-refresh on mobile which feels like flickering */
+    overscroll-behavior-y: none;
 }
 
 .loading-overlay {
@@ -2600,7 +2602,6 @@ mark.search-highlight {
     border-color: #fca5a5;
     animation: alert-pulse-red 3s infinite;
     /* Slower 2s -> 3s */
-    will-change: transform, box-shadow;
 }
 
 /* Warning Alert (Yellow) */
@@ -2610,7 +2611,6 @@ mark.search-highlight {
     border-color: #fcd34d;
     animation: alert-pulse-yellow 4s infinite;
     /* Slower 3s -> 4s */
-    will-change: transform, box-shadow;
 }
 
 /* Force text white for Yellow banner */
@@ -2627,7 +2627,6 @@ mark.search-highlight {
     animation: alert-pulse-purple 3s infinite;
     /* Slower 1.5s -> 3s */
     transform-origin: center;
-    will-change: transform, box-shadow;
     z-index: 10;
     /* Put on top */
 }
@@ -3589,7 +3588,7 @@ mark.search-highlight {
     .stock-table-container {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        transform: translateZ(0);
+        /* transform: translateZ(0); Removed to prevent flickering */
         /* Force GPU acceleration */
     }
 }

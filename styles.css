@@ -3514,124 +3514,54 @@ mark.search-highlight {
         display: none;
     }
 }
-
-/* ==================== MOBILE ANTI-FLICKER FIX ==================== */
-/* Aggressive fix for scroll flickering on mobile devices */
-
-@media (hover: none) and (pointer: coarse) {
-
-    /* CRITICAL: Disable sticky header on mobile - main cause of scroll flicker */
-    .main-header {
-        position: relative !important;
-        background: #6366f1 !important;
-        /* Solid color instead of gradient */
-    }
-
-    /* Solid colors for all gradient elements */
-    .loading-overlay {
-        background: #667eea !important;
-    }
-
-    .module-banner {
-        background: #6366f1 !important;
-    }
-
-    .module-banner.rm-mode {
-        background: #10b981 !important;
-    }
-
-    .stock-card-header {
-        background: #4f46e5 !important;
-    }
-
-    /* Disable ALL transforms and transitions site-wide */
-    *,
-    *::before,
-    *::after {
-        transition: none !important;
-        animation: none !important;
-    }
-
-    /* Remove box-shadows which cause repaints */
-    .stat-card,
-    .stock-card,
-    .filter-container,
-    .alert-banner {
-        box-shadow: none !important;
-        border: 1px solid var(--gray-200) !important;
-    }
-
-    /* Disable all hover effects completely */
-    .stat-card:hover,
-    .stock-card:hover,
-    .alert-banner:hover,
-    .btn:hover,
-    .module-tab:hover,
-    .dropdown-item:hover {
-        transform: none !important;
-        box-shadow: none !important;
-    }
-
-    /* Force GPU layer for body to prevent full page repaints */
-    body {
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
-        -webkit-backface-visibility: hidden;
-        backface-visibility: hidden;
-        overflow-x: hidden;
-    }
-
-    /* Optimize scrolling containers */
-    .cards-container,
-    .stock-table-container,
-    .modal-body {
-        -webkit-overflow-scrolling: touch;
-        -webkit-transform: translate3d(0, 0, 0);
-        transform: translate3d(0, 0, 0);
-    }
-
-    /* Prevent any layout shifts */
-    .loading-overlay {
-        display: none !important;
-    }
+/* ==================== TAB SLIDER ANIMATION ==================== */
+.module-tabs {
+    position: relative;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-lg);
+    padding: 4px;
+    display: inline-flex;
+    gap: 0 !important; /* Remove gap, handle spacing via padding if needed, but flex handles it */
 }
 
-/* Also apply for general mobile screens as fallback */
-@media screen and (max-width: 768px) {
+.module-tab {
+    position: relative;
+    z-index: 2;
+    background: transparent !important;
+    box-shadow: none !important;
+    transition: color 0.3s ease;
+    border-radius: var(--radius-md);
+    margin: 0;
+}
 
-    /* CRITICAL: Non-sticky header on mobile */
-    .main-header {
-        position: relative !important;
-        background: #6366f1 !important;
+.module-tab.active {
+    color: var(--primary-600);
+}
+
+.tab-slider {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    bottom: 4px;
+    background: white;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Ensure mobile header layout overrides don't break this */
+@media (max-width: 768px) {
+    .module-tabs {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 4px;
     }
-
-    /* Disable transitions on mobile */
-    .stat-card,
-    .stock-card,
-    .btn,
+    
     .module-tab {
-        transition: none !important;
-    }
-
-    /* Remove hover transforms */
-    .stat-card:hover {
-        transform: none !important;
-    }
-
-    /* Ensure stable rendering with containment */
-    .cards-container {
-        contain: layout style;
-    }
-
-    .stock-card {
-        contain: layout style paint;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-    }
-
-    /* Disable pulse/warning animations */
-    .fifo-lot.has-warning,
-    .fefo-lot.fefo-urgent,
-    .alert-critical {
-        animation: none !important;
+        width: 100%;
+        justify-content: center;
     }
 }

@@ -1,4 +1,4 @@
-/* Stock Card Web App - V.15 (Fixed Mobile Tab Switching - Nuclear Option) */
+/* Stock Card Web App - V.16 (Refined Mobile Tab Switching - Robust UI) */
 
 // Global Error Handler
 window.onerror = function (msg, url, lineNo, columnNo, error) {
@@ -46,9 +46,6 @@ const SHEET_CONFIG = {
 // Current module state
 let currentModule = 'package';
 let isSwitchingModule = false; // Prevent double-tap on mobile
-
-// NUCLEAR: Track when we switched to RM - block ALL switches to package for 3 seconds
-let lastSwitchToRM = 0;
 
 // Data containers
 let stockData = [];
@@ -107,142 +104,145 @@ function showToast(message) {
 
 // Switch Module (Package / RM)
 function switchModule(module, event) {
-    // Prevent default button behavior and stop propagation immediately
+    // Prevent default button behavior
     if (event) {
         event.preventDefault();
         event.stopPropagation();
-        event.stopImmediatePropagation();
     }
 
-    // Prevent double-tap on mobile - use longer timeout
-    if (isSwitchingModule) {
-        console.log('Module switch in progress, ignoring duplicate call');
+    if (isSwitchingModule && currentModule === module) {
         return;
     }
 
-    // NUCLEAR LOCK: If switching to PACKAGE and we just switched to RM within 3 seconds, BLOCK IT
-    if (module === 'package' && Date.now() - lastSwitchToRM < 3000) {
-        console.log('NUCLEAR BLOCK: Blocking switch to package - too soon after RM switch (' + (Date.now() - lastSwitchToRM) + 'ms ago)');
-        return;
-    }
-
-    // If already on this module, do nothing
-    if (currentModule === module) {
-        console.log('Already on module:', module);
-        return;
-    }
-
-    // Set lock immediately and keep it longer for mobile
+    // Set lock
     isSwitchingModule = true;
-
-    // Track RM switch time for nuclear lock
-    if (module === 'rm') {
-        lastSwitchToRM = Date.now();
-        console.log('RM switch timestamp recorded:', lastSwitchToRM);
-    }
-
-    // Force the module change IMMEDIATELY and save it
     currentModule = module;
-    console.log('Switching to module:', module, '- currentModule is now:', currentModule);
+    console.log('Switching to module:', module);
 
-
-    // Save to sessionStorage to persist across any page refresh
+    // Save to sessionStorage
     try {
         sessionStorage.setItem('currentStockCardModule', module);
-        console.log('Saved module to sessionStorage:', module);
     } catch (e) {
-        console.log('SessionStorage not available');
+        console.log('SessionStorage error');
     }
 
-    // Update tab styles - force the visual update
-    document.querySelectorAll('.module-tab').forEach(function (tab) {
-        tab.classList.remove('active');
-        if (tab.dataset.module === module) {
-            tab.classList.add('active');
-        }
-    });
+    // 1. VISUAL UPDATE (Immediate & Smooth)
+    const tabPackage = document.getElementById('tabPackage');
+    const tabRM = document.getElementById('tabRM');
+    const slider = document.getElementById('tabSlider');
 
-    // Update banner
-    var config = SHEET_CONFIG[module];
-    document.getElementById('moduleIcon').textContent = config.icon;
-    document.getElementById('moduleTitle').textContent = config.title;
-    document.getElementById('moduleSubtitle').textContent = config.subtitle;
+    // Remove active from both first
+    if (tabPackage) tabPackage.classList.remove('active');
+    if (tabRM) tabRM.classList.remove('active');
 
-    // Update banner color
-    var banner = document.getElementById('moduleBanner');
-    var rmFilterGroup = document.getElementById('rmFilterGroup');
-    var rmSupplierGroup = document.getElementById('rmSupplierGroup');
+    // Add active to current
+    let activeTab = null;
+    if (module === 'package' && tabPackage) {
+        tabPackage.classList.add('active');
+        activeTab = tabPackage;
+    } else if (module === 'rm' && tabRM) {
+        tabRM.classList.add('active');
+        activeTab = tabRM;
+    }
+
+    // Update Slider Position
+    if (slider && activeTab) {
+        // Calculate relative position: activeTab.offsetLeft is relative to parent (.module-tabs)
+        // because parent is position: relative
+        const left = activeTab.offsetLeft;
+        const width = activeTab.offsetWidth;
+        slider.style.transform = 'translateX(' + left + 'px)';
+        slider.style.width = width + 'px';
+    }
+
+    // Update Banner & Strings
+    const config = SHEET_CONFIG[module];
+    if (config) {
+        const iconEl = document.getElementById('moduleIcon');
+        const titleEl = document.getElementById('moduleTitle');
+        const subtitleEl = document.getElementById('moduleSubtitle');
+        if (iconEl) iconEl.textContent = config.icon;
+        if (titleEl) titleEl.textContent = config.title;
+        if (subtitleEl) subtitleEl.textContent = config.subtitle;
+    }
+
+    // Update Theme Colors & Filters
+    const banner = document.getElementById('moduleBanner');
+    const rmFilterGroup = document.getElementById('rmFilterGroup');
+    const rmSupplierGroup = document.getElementById('rmSupplierGroup');
+    const labelIn = document.getElementById('labelTotalIn');
+    const labelOut = document.getElementById('labelTotalOut');
 
     if (module === 'rm') {
-        banner.classList.add('rm-mode');
-        // Show RM filter dropdowns
+        if (banner) banner.classList.add('rm-mode');
         if (rmFilterGroup) rmFilterGroup.style.display = 'flex';
         if (rmSupplierGroup) rmSupplierGroup.style.display = 'flex';
-        document.getElementById('labelTotalIn').textContent = 'รับเข้าทั้งหมด (Kg)';
-        document.getElementById('labelTotalOut').textContent = 'เบิกออกทั้งหมด (Kg)';
+        if (labelIn) labelIn.textContent = 'รับเข้าทั้งหมด (Kg)';
+        if (labelOut) labelOut.textContent = 'เบิกออกทั้งหมด (Kg)';
     } else {
-        banner.classList.remove('rm-mode');
-        // Hide RM filter dropdowns
+        if (banner) banner.classList.remove('rm-mode');
         if (rmFilterGroup) rmFilterGroup.style.display = 'none';
         if (rmSupplierGroup) rmSupplierGroup.style.display = 'none';
-        document.getElementById('labelTotalIn').textContent = 'รับเข้าทั้งหมด';
-        document.getElementById('labelTotalOut').textContent = 'เบิกออกทั้งหมด';
+        if (labelIn) labelIn.textContent = 'รับเข้าทั้งหมด';
+        if (labelOut) labelOut.textContent = 'เบิกออกทั้งหมด';
     }
 
-    // Clear search and reset dropdowns
-    document.getElementById('searchInput').value = '';
-    var rmProductSelect = document.getElementById('rmProductSelect');
-    var rmSupplierSelect = document.getElementById('rmSupplierSelect');
-    var dateFilter = document.getElementById('dateFilter');
+    // Reset inputs
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+
+    const rmProductSelect = document.getElementById('rmProductSelect');
     if (rmProductSelect) rmProductSelect.value = '';
+
+    const rmSupplierSelect = document.getElementById('rmSupplierSelect');
     if (rmSupplierSelect) rmSupplierSelect.value = '';
+
+    const dateFilter = document.getElementById('dateFilter');
     if (dateFilter) dateFilter.value = '';
 
-    // Update expiry alert banners visibility
+    // Update Alerts
     updateExpiryAlerts();
 
-    // Load data for the selected module
-    // ONLY show loading if we need to fetch data (no cache) - prevents flash
-    if (module === 'package') {
-        if (stockData.length > 0) {
-            // Cached data - NO loading overlay, instant switch
-            updateStats();
-            showAllProducts();
-            // Delay unlock to prevent mobile double-tap issues
-            setTimeout(function () {
+    // 2. DATA LOAD
+    // Use setTimeout to allow UI to render first
+    setTimeout(() => {
+        if (module === 'package') {
+            if (stockData.length > 0) {
+                updateStats();
+                showAllProducts();
                 isSwitchingModule = false;
-                console.log('Module lock released after package cached load');
-            }, 1500);
-        } else {
-            // Need to fetch - show loading
-            showLoading();
-            fetchPackageData().finally(function () {
-                setTimeout(function () {
+            } else {
+                showLoading();
+                fetchPackageData().finally(() => {
                     isSwitchingModule = false;
-                    console.log('Module lock released after package fetch');
-                }, 1500);
-            });
+                });
+            }
+        } else {
+            if (rmStockData.length > 0) {
+                updateStatsRM();
+                showAllProductsRM();
+                isSwitchingModule = false;
+            } else {
+                showLoading();
+                fetchRMData().finally(() => {
+                    isSwitchingModule = false;
+                });
+            }
         }
+    }, 10);
+}
+
+// Refresh Data Function (Global to fix ReferenceError)
+function refreshData() {
+    console.log('Refreshing data for module:', currentModule);
+    if (currentModule === 'package') {
+        showLoading();
+        stockData = [];
+        fetchPackageData();
     } else {
-        if (rmStockData.length > 0) {
-            // Cached data - NO loading overlay, instant switch
-            updateStatsRM();
-            showAllProductsRM();
-            // Delay unlock to prevent mobile double-tap issues
-            setTimeout(function () {
-                isSwitchingModule = false;
-                console.log('Module lock released after RM cached load');
-            }, 1500);
-        } else {
-            // Need to fetch - show loading
-            showLoading();
-            fetchRMData().finally(function () {
-                setTimeout(function () {
-                    isSwitchingModule = false;
-                    console.log('Module lock released after RM fetch');
-                }, 1500);
-            });
-        }
+        showLoading();
+        rmStockData = [];
+        fetchRMData();
     }
 }
 
@@ -279,6 +279,26 @@ async function init() {
     }
 
     showLoading();
+
+    // Initial Slider Position
+    setTimeout(function () {
+        const tabPackage = document.getElementById('tabPackage');
+        const tabRM = document.getElementById('tabRM');
+        const slider = document.getElementById('tabSlider');
+        let activeTab = (savedModule === 'rm') ? tabRM : tabPackage;
+
+        if (slider && activeTab) {
+            const left = activeTab.offsetLeft;
+            const width = activeTab.offsetWidth;
+            slider.style.transform = 'translateX(' + left + 'px)';
+            slider.style.width = width + 'px';
+
+            // Set initial active class
+            if (tabPackage) tabPackage.classList.remove('active');
+            if (tabRM) tabRM.classList.remove('active');
+            activeTab.classList.add('active');
+        }
+    }, 100);
 
     try {
         // Load the appropriate module based on saved state

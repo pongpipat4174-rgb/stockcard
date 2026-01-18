@@ -592,8 +592,9 @@ mark.search-highlight {
 }
 
 /* Optional: Only animate on initial page load, not tab switch */
+/* Animation disabled to prevent flickering */
 .stock-card.animate-in {
-    animation: fadeInUp 0.5s ease-out;
+    /* animation: fadeInUp 0.5s ease-out; */
 }
 
 .stock-card:hover {
@@ -3224,10 +3225,18 @@ mark.search-highlight {
     }
 
     .brand-logo {
-        width: 56px;
-        height: 56px;
+        /* Remove fixed size to allow image to scale naturally or use max-width */
+        max-width: 80px;
+        /* Reasonable max width for mobile logo */
+        height: auto;
         margin: 0;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        /* box-shadow: 0 4px 6px rgba(0,0,0,0.1); -> Remove shadow from container if image has transparency */
+    }
+
+    .brand-logo img {
+        width: 100%;
+        height: auto;
+        display: block;
     }
 
     .brand-text {

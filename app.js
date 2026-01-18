@@ -2229,35 +2229,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Update Slider on Resize
-    // Update Slider on Resize (Debounced & Width Check for Mobile)
-    let resizeTimeout;
-    let lastWindowWidth = window.innerWidth;
-
-    window.addEventListener('resize', function () {
-        // Ignore vertical resize (mobile address bar)
-        if (window.innerWidth === lastWindowWidth) {
-            return;
-        }
-        lastWindowWidth = window.innerWidth;
-
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(function () {
-            const tabPackage = document.getElementById('tabPackage');
-            const tabRM = document.getElementById('tabRM');
-            const slider = document.getElementById('tabSlider');
-            let activeTab = null;
-
-            if (tabPackage && tabPackage.classList.contains('active')) activeTab = tabPackage;
-            else if (tabRM && tabRM.classList.contains('active')) activeTab = tabRM;
-
-            if (slider && activeTab) {
-                const left = activeTab.offsetLeft;
-                const width = activeTab.offsetWidth;
-                slider.style.transform = 'translateX(' + left + 'px)';
-                slider.style.width = width + 'px';
-            }
-        }, 100); // 100ms debounce
-    });
+    // Resize listener removed to prevent mobile refresh loops
+    // The slider will update position on tab switch automatically.
 
 });
 

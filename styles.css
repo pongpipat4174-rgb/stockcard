@@ -3577,41 +3577,41 @@ mark.search-highlight {
 }
 
 /* ==================== TAB SLIDER ANIMATION ==================== */
-
-/* Classic Tab Styles */
 .module-tabs {
-    display: inline-flex;
-    gap: 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    padding: 0.5rem;
+    position: relative;
+    background: rgba(255, 255, 255, 0.2);
     border-radius: var(--radius-lg);
-    backdrop-filter: blur(4px);
+    padding: 4px;
+    display: inline-flex;
+    gap: 0 !important;
+    /* Remove gap, handle spacing via padding if needed, but flex handles it */
 }
 
 .module-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border: none;
+    position: relative;
+    z-index: 2;
+    background: transparent !important;
+    box-shadow: none !important;
+    transition: color 0.3s ease;
     border-radius: var(--radius-md);
-    font-size: 1rem;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
-    background: transparent;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.module-tab:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    margin: 0;
 }
 
 .module-tab.active {
-    background: white;
     color: var(--primary-600);
+}
+
+.tab-slider {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    bottom: 4px;
+    background: white;
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-md);
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    z-index: 1;
+    pointer-events: none;
 }
 
 /* Ensure mobile header layout overrides don't break this */
@@ -3620,14 +3620,11 @@ mark.search-highlight {
         width: 100%;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        padding: 5px;
-        gap: 8px !important;
-        /* Restore gap */
+        padding: 4px;
     }
 
     .module-tab {
         width: 100%;
         justify-content: center;
-        padding: 12px;
     }
 }

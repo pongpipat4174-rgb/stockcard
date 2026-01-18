@@ -126,18 +126,33 @@ function switchModule(module, event) {
         console.log('SessionStorage error');
     }
 
-    // 1. VISUAL UPDATE (Immediate)
+    // 1. VISUAL UPDATE (Immediate & Smooth)
     const tabPackage = document.getElementById('tabPackage');
     const tabRM = document.getElementById('tabRM');
+    const slider = document.getElementById('tabSlider');
 
-    // Simple class toggle without slider
+    // Remove active from both first
     if (tabPackage) tabPackage.classList.remove('active');
     if (tabRM) tabRM.classList.remove('active');
 
+    // Add active to current
+    let activeTab = null;
     if (module === 'package' && tabPackage) {
         tabPackage.classList.add('active');
+        activeTab = tabPackage;
     } else if (module === 'rm' && tabRM) {
         tabRM.classList.add('active');
+        activeTab = tabRM;
+    }
+
+    // Update Slider Position
+    if (slider && activeTab) {
+        // Calculate relative position: activeTab.offsetLeft is relative to parent (.module-tabs)
+        // because parent is position: relative
+        const left = activeTab.offsetLeft;
+        const width = activeTab.offsetWidth;
+        slider.style.transform = 'translateX(' + left + 'px)';
+        slider.style.width = width + 'px';
     }
 
     // Update Banner & Strings

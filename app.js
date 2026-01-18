@@ -206,30 +206,41 @@ function switchModule(module, event) {
     // 2. DATA LOAD
     // Use setTimeout to allow UI to render first
     setTimeout(() => {
-        if (module === 'package') {
-            if (stockData.length > 0) {
-                updateStats();
-                showAllProducts();
-                isSwitchingModule = false;
-            } else {
-                showLoading();
-                fetchPackageData().finally(() => {
+        try {
+            if (module === 'package') {
+                if (stockData.length > 0) {
+                    updateStats();
+                    showAllProducts();
                     isSwitchingModule = false;
-                });
-            }
-        } else {
-            if (rmStockData.length > 0) {
-                updateStatsRM();
-                showAllProductsRM();
-                isSwitchingModule = false;
+                } else {
+                    showLoading();
+                    fetchPackageData().finally(() => {
+                        isSwitchingModule = false;
+                    });
+                }
             } else {
-                showLoading();
-                fetchRMData().finally(() => {
+                // RM Module
+                if (rmStockData.length > 0) {
+                    updateStatsRM();
+                    showAllProductsRM();
                     isSwitchingModule = false;
-                });
+                } else {
+                    showLoading();
+                    fetchRMData().then(() => {
+                        // Success
+                    }).catch(err => {
+                        console.error('RM Fetch Error during switch:', err);
+                    }).finally(() => {
+                        isSwitchingModule = false;
+                    });
+                }
             }
+        } catch (e) {
+            console.error('Error during module switch execution:', e);
+            isSwitchingModule = false;
+            hideLoading();
         }
-    }, 10);
+    }, 50); // Increased to 50ms for mobile stability
 }
 
 // Refresh Data Function (Global to fix ReferenceError)

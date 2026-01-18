@@ -3574,6 +3574,24 @@ mark.search-highlight {
     .brand-title p {
         display: none;
     }
+
+    /* DISABLE ANIMATIONS ON MOBILE TO PREVENT GLITCHES */
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Ensure smoother scrolling on mobile */
+@media screen and (max-width: 768px) {
+    .stock-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        transform: translateZ(0);
+        /* Force GPU acceleration */
+    }
 }
 
 /* ==================== TAB SLIDER ANIMATION ==================== */

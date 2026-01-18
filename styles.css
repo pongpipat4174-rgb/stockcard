@@ -3585,6 +3585,17 @@ mark.search-highlight {
 
 /* Ensure smoother scrolling on mobile */
 @media screen and (max-width: 768px) {
+
+    /* DISABLE ALL ANIMATIONS ON MOBILE to fix flickering/glitches */
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+        /* Also kill transforms just in case */
+    }
+
     .stock-table-container {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;

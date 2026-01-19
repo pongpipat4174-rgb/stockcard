@@ -904,8 +904,15 @@ function renderStockCardsRM(products) {
             var isReval = entry.remark && /(ต่ออายุ|reval|extend)/i.test(entry.remark);
 
             var q = currentSearchQuery;
+            // Short Date Helper
+            var toShortDate = function (d) {
+                return (d || '').replace(/\/(\d{4})$/, function (match, year) {
+                    return '/' + year.slice(2);
+                });
+            };
+
             entriesHtml += '<tr>';
-            entriesHtml += '<td class="col-date">' + highlightText(entry.date, q) + '</td>';
+            entriesHtml += '<td class="col-date"><span class="date-full">' + highlightText(entry.date, q) + '</span><span class="date-short">' + highlightText(toShortDate(entry.date), q) + '</span></td>';
             entriesHtml += '<td class="col-type"><span class="type-cell ' + (entry.type === 'รับเข้า' ? 'type-in' : 'type-out') + '">' + highlightText(entry.type, q) + '</span></td>';
             entriesHtml += '<td class="col-num no-print">' + (entry.containerQty > 0 ? formatNumber(entry.containerQty) : '-') + '</td>';
             entriesHtml += '<td class="col-num no-print">' + (entry.containerWeight > 0 ? formatNumber(entry.containerWeight) : '-') + '</td>';
@@ -922,8 +929,10 @@ function renderStockCardsRM(products) {
             entriesHtml += '<td class="col-lot">' + lotHtml + '</td>';
 
             entriesHtml += '<td class="col-vendor no-print">' + highlightText(entry.vendorLot || '-', q) + '</td>';
-            entriesHtml += '<td class="col-date no-print">' + highlightText(entry.mfgDate || '-', q) + '</td>';
-            entriesHtml += '<td class="col-date">' + highlightText(entry.expDate || '-', q) + '</td>';
+
+            // MFD & EXP with Short Date
+            entriesHtml += '<td class="col-date no-print"><span class="date-full">' + highlightText(entry.mfgDate || '-', q) + '</span><span class="date-short">' + highlightText(toShortDate(entry.mfgDate), q) + '</span></td>';
+            entriesHtml += '<td class="col-date"><span class="date-full">' + highlightText(entry.expDate || '-', q) + '</span><span class="date-short">' + highlightText(toShortDate(entry.expDate), q) + '</span></td>';
             entriesHtml += '<td class="col-num ' + daysLeftClass + '">' + highlightText(entry.daysLeft || '-', q) + '</td>';
             entriesHtml += '<td class="col-num">' + (entry.lotBalance > 0 ? formatNumber(entry.lotBalance) : '-') + '</td>';
             entriesHtml += '<td class="col-supplier">' + highlightText(entry.supplier || '-', q) + '</td>';

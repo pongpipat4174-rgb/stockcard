@@ -3685,37 +3685,71 @@ mark.search-highlight {
 
     /* Adjust layout for remaining columns to fit screen */
     .stock-card:not(.stock-card-rm) .stock-table {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
+        /* Reduced from 0.75rem */
         width: 100%;
         table-layout: fixed;
     }
 
     .stock-card:not(.stock-card-rm) .stock-table th,
     .stock-card:not(.stock-card-rm) .stock-table td {
-        padding: 0.5rem 0.25rem;
+        padding: 0.25rem 2px;
+        /* Very tight horizontal padding */
         white-space: normal;
         vertical-align: middle;
+        overflow-wrap: break-word;
     }
 
-    /* Reduce font size for Lot No (6) and Lot Bal (7) to prevent overlap */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(6),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(6),
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7) {
-        font-size: 0.65rem !important;
-        word-break: break-word !important;
-        white-space: normal !important;
-        line-height: 1.1;
-        letter-spacing: -0.02em;
+    /* Column Width Allocation (Total 100%) 
+       1. Date: 16%
+       2. In: 13%
+       3. Out: 13%
+       4. Bal: 14%
+       6. Lot No: 24%
+       7. Lot Bal: 20%
+    */
+
+    /* Date (1) */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(1),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(1) {
+        width: 16%;
+        letter-spacing: -0.5px;
     }
 
-    /* Allow In/Out/Bal columns to be slightly narrower to give space to Lot */
+    /* In (3) & Out (4) */
     .stock-card:not(.stock-card-rm) .stock-table th:nth-child(3),
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
     .stock-card:not(.stock-card-rm) .stock-table th:nth-child(4),
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4) {
+        width: 13%;
+        text-align: center;
+    }
+
+    /* Balance (5) */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(5),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5) {
         width: 14%;
         text-align: center;
+    }
+
+    /* Lot No (6) */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(6),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(6) {
+        width: 24%;
+        font-size: 0.65rem !important;
+        /* Keep small */
+        word-break: break-all !important;
+        /* Force break if needed */
+        line-height: 1.1;
+    }
+
+    /* Lot Bal (7) */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7) {
+        width: 20%;
+        font-size: 0.65rem !important;
+        text-align: center;
+        line-height: 1.1;
     }
 
     /* Center align numbers */

@@ -3665,7 +3665,9 @@ mark.search-highlight {
         justify-content: center;
         padding: 12px;
     }
-}@media (max-width: 768px) {
+}
+
+@media (max-width: 768px) {
     /* Package Module Mobile Optimization: Show only essential columns */
     /* Target tables inside stock-card but NOT stock-card-rm */
 
@@ -3684,31 +3686,43 @@ mark.search-highlight {
     /* Adjust layout for remaining columns to fit screen */
     .stock-card:not(.stock-card-rm) .stock-table {
         font-size: 0.75rem;
-        /* Smaller font */
         width: 100%;
         table-layout: fixed;
-        /* Force column widths if needed, or let auto flow */
     }
 
     .stock-card:not(.stock-card-rm) .stock-table th,
     .stock-card:not(.stock-card-rm) .stock-table td {
         padding: 0.5rem 0.25rem;
-        /* Tighter padding */
         white-space: normal;
-        /* Allow text wrap for Lot No if long */
+        vertical-align: middle;
+    }
+
+    /* Reduce font size for Lot No (6) and Lot Bal (7) to prevent overlap */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(6),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(6),
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7) {
+        font-size: 0.65rem !important;
+        word-break: break-word !important;
+        white-space: normal !important;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+    }
+
+    /* Allow In/Out/Bal columns to be slightly narrower to give space to Lot */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(3),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(4),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4) {
+        width: 14%;
+        text-align: center;
     }
 
     /* Center align numbers */
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
-    /* In */
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4),
-    /* Out */
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5),
-    /* Bal */
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7)
-
-    /* Lot Bal */
-        {
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7) {
         text-align: center;
     }
 }

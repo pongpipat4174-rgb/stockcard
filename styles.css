@@ -2280,8 +2280,11 @@ mark.search-highlight {
 /* ==================== REVAL / EXTENDED STYLES ==================== */
 /* Priority Box for Revalidated Items (Purple) */
 .reval-lot {
-    border-left-color: #8b5cf6 !important;
+    border-left: 4px solid #8b5cf6;
     background: linear-gradient(to right, #f5f3ff, #ede9fe);
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+    position: relative;
 }
 
 .reval-lot .summary-label {

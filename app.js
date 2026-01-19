@@ -757,8 +757,11 @@ function renderStockCards(products) {
                 lotBalance += lotEntries[i].inQty - lotEntries[i].outQty;
             }
             var q = currentSearchQuery;
+            var dateShort = entry.date.replace(/\/(\d{4})$/, function (match, year) {
+                return '/' + year.slice(2);
+            });
             entriesHtml += '<tr>';
-            entriesHtml += '<td>' + highlightText(entry.date, q) + '</td>';
+            entriesHtml += '<td><span class="date-full">' + highlightText(entry.date, q) + '</span><span class="date-short">' + highlightText(dateShort, q) + '</span></td>';
             entriesHtml += '<td><span class="type-cell ' + (entry.type === 'รับเข้า' ? 'type-in' : 'type-out') + '">' + highlightText(entry.type, q) + '</span></td>';
             entriesHtml += '<td class="qty-in">' + (entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-') + '</td>';
             entriesHtml += '<td class="qty-out">' + (entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-') + '</td>';

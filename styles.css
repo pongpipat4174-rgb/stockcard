@@ -3774,3 +3774,11 @@ mark.search-highlight {
         text-align: center;
     }
 }
+/* Responsive Date Display */
+.date-short { display: none; }
+.date-full { display: inline; }
+
+@media (max-width: 768px) {
+    .stock-card:not(.stock-card-rm) .date-short { display: inline; }
+    .stock-card:not(.stock-card-rm) .date-full { display: none; }
+}

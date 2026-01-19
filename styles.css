@@ -3782,3 +3782,46 @@ mark.search-highlight {
     .stock-card:not(.stock-card-rm) .date-short { display: inline; }
     .stock-card:not(.stock-card-rm) .date-full { display: none; }
 }
+
+/* --- MOBILE LAYOUT OVERRIDE (Fix Distortion) --- */
+@media (max-width: 768px) {
+    /* Date: 12% - No wrap */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(1),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(1) {
+        width: 12% !important;
+        white-space: nowrap !important;
+    }
+
+    /* In(3), Out(4), Bal(5): 15% - No wrap */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(3),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(4),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4),
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(5),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5) {
+        width: 15% !important;
+        white-space: nowrap !important;
+        text-align: center !important;
+        padding: 0.25rem 1px !important;
+        font-size: 0.65rem !important;
+    }
+
+    /* Lot No(6): 20% - Left Align, Break word */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(6),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(6) {
+        width: 20% !important;
+        text-align: left !important;
+        font-size: 0.65rem !important;
+        word-break: break-all !important;
+    }
+
+    /* Lot Bal(7): 23% - Right Align, No wrap */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7) {
+        width: 23% !important;
+        text-align: right !important;
+        white-space: nowrap !important;
+        font-size: 0.65rem !important;
+        padding-right: 4px !important;
+    }
+}

@@ -3701,18 +3701,18 @@ mark.search-highlight {
     }
 
     /* Column Width Allocation (Total 100%) 
-       1. Date: 16%
-       2. In: 13%
-       3. Out: 13%
-       4. Bal: 14%
-       6. Lot No: 24%
-       7. Lot Bal: 20%
+       1. Date: 15%
+       2. In: 12%
+       3. Out: 12%
+       4. Bal: 13%
+       6. Lot No: 22%
+       7. Lot Bal: 26%
     */
 
     /* Date (1) */
     .stock-card:not(.stock-card-rm) .stock-table th:nth-child(1),
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(1) {
-        width: 16%;
+        width: 15%;
         letter-spacing: -0.5px;
     }
 
@@ -3721,42 +3721,56 @@ mark.search-highlight {
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
     .stock-card:not(.stock-card-rm) .stock-table th:nth-child(4),
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4) {
-        width: 13%;
+        width: 12%;
         text-align: center;
     }
 
     /* Balance (5) */
     .stock-card:not(.stock-card-rm) .stock-table th:nth-child(5),
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5) {
-        width: 14%;
+        width: 13%;
         text-align: center;
     }
 
     /* Lot No (6) */
     .stock-card:not(.stock-card-rm) .stock-table th:nth-child(6),
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(6) {
-        width: 24%;
+        width: 22%;
         font-size: 0.65rem !important;
-        /* Keep small */
         word-break: break-all !important;
-        /* Force break if needed */
         line-height: 1.1;
+        text-align: left;
+        /* Ensure Left Align */
     }
 
     /* Lot Bal (7) */
     .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7),
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7) {
-        width: 20%;
+        width: 26%;
         font-size: 0.65rem !important;
-        text-align: center;
+        text-align: right;
+        /* Right Align to avoid overlap with Left LotNo */
+        padding-right: 4px;
+        /* Give a bit of breathing room from edge */
         line-height: 1.1;
     }
 
-    /* Center align numbers */
+    /* Trick: Shorten the Lot Bal Header on Mobile */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7) {
+        font-size: 0 !important;
+        /* Hide original text */
+    }
+
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7)::after {
+        content: "เหลือ(Lot)";
+        font-size: 0.6rem;
+        display: block;
+    }
+
+    /* Center align numbers for middle columns */
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7) {
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5) {
         text-align: center;
     }
 }

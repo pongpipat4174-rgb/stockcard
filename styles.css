@@ -3665,4 +3665,50 @@ mark.search-highlight {
         justify-content: center;
         padding: 12px;
     }
+}@media (max-width: 768px) {
+    /* Package Module Mobile Optimization: Show only essential columns */
+    /* Target tables inside stock-card but NOT stock-card-rm */
+
+    /* Hide: Type(2), Ref(8), Remark(9), Delete(10) */
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(2),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(2),
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(8),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(8),
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(9),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(9),
+    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(10),
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(10) {
+        display: none !important;
+    }
+
+    /* Adjust layout for remaining columns to fit screen */
+    .stock-card:not(.stock-card-rm) .stock-table {
+        font-size: 0.75rem;
+        /* Smaller font */
+        width: 100%;
+        table-layout: fixed;
+        /* Force column widths if needed, or let auto flow */
+    }
+
+    .stock-card:not(.stock-card-rm) .stock-table th,
+    .stock-card:not(.stock-card-rm) .stock-table td {
+        padding: 0.5rem 0.25rem;
+        /* Tighter padding */
+        white-space: normal;
+        /* Allow text wrap for Lot No if long */
+    }
+
+    /* Center align numbers */
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
+    /* In */
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4),
+    /* Out */
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5),
+    /* Bal */
+    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7)
+
+    /* Lot Bal */
+        {
+        text-align: center;
+    }
 }

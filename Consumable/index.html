@@ -63,40 +63,32 @@
         }
 
         @media (max-width: 768px) {
-
-            /* Force show all columns override */
             .mobile-hidden {
-                display: table-cell !important;
-            }
-
-            table#shrink-table th,
-            table#shrink-table td {
-                display: table-cell !important;
+                display: none !important;
             }
 
             /* Adjust font size for mobile table to fit */
             table#shrink-table th,
             table#shrink-table td {
-                font-size: 0.7rem;
-                /* Smaller font to fit more */
-                padding: 4px 2px;
+                font-size: 0.75rem;
+                padding: 6px 2px;
                 white-space: normal;
-                /* Allow wrapping */
+                line-height: 1.1;
+            }
+
+            /* Adjust column widths for better proportion */
+            table#shrink-table th:nth-child(2),
+            table#shrink-table td:nth-child(2) {
+                width: 30% !important;
+                /* Name column wider */
             }
 
             .status-badge {
                 padding: 2px 4px;
-                font-size: 0.6rem;
+                font-size: 0.65rem;
             }
 
-            .action-buttons button {
-                padding: 2px;
-                width: 24px;
-                height: 24px;
-                font-size: 0.7rem;
-            }
-
-            /* Hide Group Headers on mobile to save space/complexity */
+            /* Hide Group Headers on mobile */
             .header-group {
                 display: none;
             }
@@ -176,23 +168,22 @@
                                 <!-- Actions -->
                                 <th></th>
                             </tr>
-                            <tr>
-                                <th class="center" style="width: 50px;">สถานะ</th>
-                                <th style="min-width: 120px;">ชื่อสินค้า</th>
-                                <th class="center">สต็อก (ลัง)</th>
-                                <th class="center">กก./ลัง</th>
-                                <th class="center">รวม (กก.)</th>
-                                <th class="center">จุดสั่งซื้อ (กก.)</th>
-                                <th class="center">ชิ้น/กก.</th>
-                                <!-- Hidden: รวมถุง (ชิ้น) -->
+                            <th class="center" style="width: 50px;">สถานะ</th>
+                            <th style="min-width: 100px;">ชื่อสินค้า</th>
+                            <th class="center">สต็อก (ลัง)</th>
+                            <th class="center mobile-hidden">กก./ลัง</th>
+                            <th class="center">รวม (กก.)</th>
+                            <th class="center mobile-hidden">จุดสั่งซื้อ (กก.)</th>
+                            <th class="center">ชิ้น/กก.</th>
+                            <!-- Hidden: รวมถุง (ชิ้น) -->
 
-                                <!-- New FG Columns -->
-                                <th class="center text-blue">ชิ้นงาน/ถุง</th>
-                                <th class="center text-blue">ชิ้น FG/ลัง</th>
-                                <th class="center highlight-head">ผลิตได้ (ชิ้น)</th>
-                                <th class="center highlight-head">ผลิตได้ (ลัง)</th>
+                            <!-- New FG Columns -->
+                            <th class="center text-blue mobile-hidden">ชิ้นงาน/ถุง</th>
+                            <th class="center text-blue mobile-hidden">ชิ้น FG/ลัง</th>
+                            <th class="center highlight-head">ผลิตได้ (ชิ้น)</th>
+                            <th class="center highlight-head">ผลิตได้ (ลัง)</th>
 
-                                <th class="center">จัดการ</th>
+                            <th class="center mobile-hidden">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody id="table-body">

@@ -539,8 +539,9 @@ window.renderTable = () => {
             <!-- FG Yield (Cartons) -->
             <td class="center bg-fg" style="color: #16a34a; font-weight: 700;">${formatNumber(fgYield, 1)}</td>
 
-            <td class="center mobile-hidden">
-                <div class="action-buttons">
+            <td class="center">
+                <!-- Desktop Actions -->
+                <div class="action-buttons desktop-only">
                     <button class="btn icon-only secondary" onclick="openTransactionModal(${index})" title="ทำรายการ เบิก/จ่าย">
                         <i class="fa-solid fa-right-left"></i>
                     </button>
@@ -554,6 +555,10 @@ window.renderTable = () => {
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
+                <!-- Mobile Actions Trigger -->
+                <button class="btn icon-only secondary mobile-only" onclick="openActionSheet(${index})" style="background: transparent; border: 1px solid #ccc;">
+                     <i class="fa-solid fa-ellipsis-vertical"></i>
+                </button>
             </td>
         `;
 
@@ -937,3 +942,32 @@ window.switchTab = (tabId) => {
 
     console.log(`Switched to tab: ${tabId}`);
 };
+
+// Mobile Action Sheet Logic
+function openActionSheet(index) {
+    const item = items[index];
+    const modal = document.getElementById('action-sheet-modal');
+    if (!item || !modal) return;
+
+    document.getElementById('action-sheet-title').innerText = item.name.substring(0, 30) + (item.name.length > 30 ? '...' : '');
+
+    // Bind buttons
+    document.getElementById('sheet-btn-trans').onclick = function () {
+        closeModal('action-sheet-modal');
+        openTransactionModal(index);
+    };
+    document.getElementById('sheet-btn-hist').onclick = function () {
+        closeModal('action-sheet-modal');
+        openHistoryModal(index);
+    };
+    document.getElementById('sheet-btn-edit').onclick = function () {
+        closeModal('action-sheet-modal');
+        editItem(index);
+    };
+    document.getElementById('sheet-btn-del').onclick = function () {
+        closeModal('action-sheet-modal');
+        deleteItem(index);
+    };
+
+    modal.style.display = 'flex';
+}

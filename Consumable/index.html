@@ -93,6 +93,20 @@
             .header-group {
                 display: none;
             }
+
+            /* Action Buttons Visibility */
+            .desktop-only {
+                display: none !important;
+            }
+
+            .mobile-only {
+                display: inline-flex !important;
+            }
+        }
+
+        /* Default for desktop */
+        .mobile-only {
+            display: none;
         }
     </style>
 </head>
@@ -185,7 +199,7 @@
                             <th class="center highlight-head">ผลิตได้ (ชิ้น)</th>
                             <th class="center highlight-head">ผลิตได้ (ลัง)</th>
 
-                            <th class="center mobile-hidden">จัดการ</th>
+                            <th class="center" style="width: 40px !important;">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody id="table-body">
@@ -378,6 +392,48 @@
                 </div>
             </div>
         </div>
+
+        <!-- Mobile Action Sheet Modal -->
+        <div id="action-sheet-modal" class="modal" style="align-items: flex-end;">
+            <div class="modal-content"
+                style="width: 100%; border-radius: 20px 20px 0 0; margin: 0; max-width: none; animation: slideUp 0.3s ease;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 id="action-sheet-title" style="margin: 0; font-size: 1.1rem;">จัดการสินค้า</h3>
+                    <span class="close-btn" onclick="closeModal('action-sheet-modal')"
+                        style="position: static;">&times;</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn secondary" id="sheet-btn-trans"
+                        style="justify-content: center; padding: 12px; font-size: 1rem;">
+                        <i class="fa-solid fa-right-left"></i> ทำรายการ รับ/เบิก
+                    </button>
+                    <button class="btn secondary" id="sheet-btn-hist"
+                        style="justify-content: center; padding: 12px; font-size: 1rem;">
+                        <i class="fa-solid fa-clock-rotate-left"></i> ประวัติ
+                    </button>
+                    <button class="btn primary" id="sheet-btn-edit"
+                        style="justify-content: center; padding: 12px; font-size: 1rem;">
+                        <i class="fa-solid fa-pen"></i> แก้ไขข้อมูล
+                    </button>
+                    <button class="btn delete" id="sheet-btn-del"
+                        style="justify-content: center; padding: 12px; font-size: 1rem;">
+                        <i class="fa-solid fa-trash"></i> ลบสินค้า
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            @keyframes slideUp {
+                from {
+                    transform: translateY(100%);
+                }
+
+                to {
+                    transform: translateY(0);
+                }
+            }
+        </style>
 
 
         <script src="script.js?v=mobile_fix_2"></script>

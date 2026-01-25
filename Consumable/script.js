@@ -525,13 +525,13 @@ window.renderTable = () => {
                 </div>
             </td>
             <td class="center bg-shrink">${formatNumber(item.stockCartons, 1)}</td>
-            <td class="center dim bg-shrink mobile-hidden">${item.kgPerCarton}</td>
+            <td class="center dim bg-shrink">${item.kgPerCarton}</td>
             <td class="center bg-shrink">${formatNumber(totalKg, 2)}</td>
-            <td class="center dim bg-shrink mobile-hidden">${item.minThreshold}</td>
+            <td class="center dim bg-shrink">${item.minThreshold}</td>
             <td class="center dim bg-shrink">${formatNumber(item.pcsPerKg)}</td>
             <!-- Hidden Total Pcs -->
-            <td class="center dim bg-fg mobile-hidden">${item.pcsPerPack || 1}</td>
-            <td class="center dim bg-fg mobile-hidden">${item.fgPcsPerCarton || 1}</td>
+            <td class="center dim bg-fg">${item.pcsPerPack || 1}</td>
+            <td class="center dim bg-fg">${item.fgPcsPerCarton || 1}</td>
             
             <!-- FG Yield (Pieces) -->
              <td class="center bg-fg" style="color: #16a34a;">${formatNumber(totalPcs)}</td>
@@ -539,7 +539,7 @@ window.renderTable = () => {
             <!-- FG Yield (Cartons) -->
             <td class="center bg-fg" style="color: #16a34a; font-weight: 700;">${formatNumber(fgYield, 1)}</td>
 
-            <td class="center mobile-hidden">
+            <td class="center">
                 <div class="action-buttons">
                     <button class="btn icon-only secondary" onclick="openTransactionModal(${index})" title="ทำรายการ เบิก/จ่าย">
                         <i class="fa-solid fa-right-left"></i>

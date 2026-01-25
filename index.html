@@ -58,6 +58,13 @@
                     </svg>
                     🧪 วัตถุดิบ (RM)
                 </button>
+                <button class="module-tab" data-module="consumable" type="button" id="tabConsumable"
+                    onclick="toggleConsumableView(true)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    🧱 วัสดุสิ้นเปลือง
+                </button>
             </div>
 
             <div class="header-actions">
@@ -87,208 +94,243 @@
         </div>
     </header>
 
-    <!-- Module Title Banner -->
-    <div class="module-banner" id="moduleBanner">
-        <div class="module-banner-content">
-            <span class="module-icon" id="moduleIcon">📦</span>
-            <div class="module-info">
-                <h2 id="moduleTitle">Stock Card แพ็คเกจ</h2>
-                <p id="moduleSubtitle">ระบบจัดการสต็อกบรรจุภัณฑ์และแพ็คเกจ</p>
-            </div>
-        </div>
+    <!-- Consumable Module Iframe Container -->
+    <div id="consumable-view-container" style="display: none; width: 100%; height: calc(100vh - 100px); border: none;">
+        <iframe src="Consumable/index.html" style="width: 100%; height: 100%; border: none;"></iframe>
     </div>
 
-    <!-- Stats Dashboard -->
-    <section class="stats-section">
-        <div class="stats-grid">
-            <div class="stat-card stat-primary clickable" onclick="showStatDetail('products')"
-                title="คลิกเพื่อดูรายละเอียด">
-                <div class="stat-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-                        <line x1="7" y1="7" x2="7.01" y2="7" />
-                    </svg>
+    <!-- StockCard Main Wrapper for Toggling -->
+    <div id="stockcard-main-view">
+
+        <!-- Module Title Banner -->
+        <div class="module-banner" id="moduleBanner">
+            <div class="module-banner-content">
+                <span class="module-icon" id="moduleIcon">📦</span>
+                <div class="module-info">
+                    <h2 id="moduleTitle">Stock Card แพ็คเกจ</h2>
+                    <p id="moduleSubtitle">ระบบจัดการสต็อกบรรจุภัณฑ์และแพ็คเกจ</p>
                 </div>
-                <div class="stat-content">
-                    <span class="stat-value" id="totalProducts">0</span>
-                    <span class="stat-label">สินค้าทั้งหมด</span>
-                </div>
-                <div class="stat-arrow">→</div>
-            </div>
-            <div class="stat-card stat-success clickable" onclick="showStatDetail('in')" title="คลิกเพื่อดูรายละเอียด">
-                <div class="stat-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                    </svg>
-                </div>
-                <div class="stat-content">
-                    <span class="stat-value" id="totalIn">0</span>
-                    <span class="stat-label" id="labelTotalIn">รับเข้าทั้งหมด</span>
-                </div>
-                <div class="stat-arrow">→</div>
-            </div>
-            <div class="stat-card stat-warning clickable" onclick="showStatDetail('out')" title="คลิกเพื่อดูรายละเอียด">
-                <div class="stat-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="1" y="3" width="15" height="13" />
-                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                        <circle cx="5.5" cy="18.5" r="2.5" />
-                        <circle cx="18.5" cy="18.5" r="2.5" />
-                    </svg>
-                </div>
-                <div class="stat-content">
-                    <span class="stat-value" id="totalOut">0</span>
-                    <span class="stat-label" id="labelTotalOut">เบิกออกทั้งหมด</span>
-                </div>
-                <div class="stat-arrow">→</div>
-            </div>
-            <div class="stat-card stat-info clickable" onclick="showStatDetail('all')" title="คลิกเพื่อดูรายละเอียด">
-                <div class="stat-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-                    </svg>
-                </div>
-                <div class="stat-content">
-                    <span class="stat-value" id="totalTransactions">0</span>
-                    <span class="stat-label">รายการทั้งหมด</span>
-                </div>
-                <div class="stat-arrow">→</div>
             </div>
         </div>
-    </section>
 
-    <!-- Expiry Alert Banners (RM Only) -->
-    <section class="alert-banners-section" id="alertBannersSection" style="display: none;">
-        <div class="alert-banners-container">
-            <!-- Revalidated Alert (Purple) - Extended Items -->
-            <div class="alert-banner alert-reval" id="alertReval" style="display: none;">
-                <div class="alert-banner-main" onclick="showExpiryItems('reval')">
-                    <div class="alert-banner-icon">
+        <!-- Stats Dashboard -->
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card stat-primary clickable" onclick="showStatDetail('products')"
+                    title="คลิกเพื่อดูรายละเอียด">
+                    <div class="stat-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path
-                                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                            <line x1="7" y1="7" x2="7.01" y2="7" />
                         </svg>
                     </div>
-                    <div class="alert-banner-content">
-                        <span class="alert-banner-title">🔄 สารต่ออายุ (ต้องใช้ก่อน)</span>
-                        <span class="alert-banner-count" id="revalCount">0 รายการ</span>
+                    <div class="stat-content">
+                        <span class="stat-value" id="totalProducts">0</span>
+                        <span class="stat-label">สินค้าทั้งหมด</span>
                     </div>
-                    <div class="alert-banner-arrow">→</div>
+                    <div class="stat-arrow">→</div>
                 </div>
-                <!-- Print Reval Button -->
-                <button class="btn btn-print-alert btn-print-reval" onclick="printExpiryItems('reval')"
-                    title="พิมพ์รายการต่ออายุ">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24"
-                        height="24">
+                <div class="stat-card stat-success clickable" onclick="showStatDetail('in')"
+                    title="คลิกเพื่อดูรายละเอียด">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value" id="totalIn">0</span>
+                        <span class="stat-label" id="labelTotalIn">รับเข้าทั้งหมด</span>
+                    </div>
+                    <div class="stat-arrow">→</div>
+                </div>
+                <div class="stat-card stat-warning clickable" onclick="showStatDetail('out')"
+                    title="คลิกเพื่อดูรายละเอียด">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="1" y="3" width="15" height="13" />
+                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                            <circle cx="5.5" cy="18.5" r="2.5" />
+                            <circle cx="18.5" cy="18.5" r="2.5" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value" id="totalOut">0</span>
+                        <span class="stat-label" id="labelTotalOut">เบิกออกทั้งหมด</span>
+                    </div>
+                    <div class="stat-arrow">→</div>
+                </div>
+                <div class="stat-card stat-info clickable" onclick="showStatDetail('all')"
+                    title="คลิกเพื่อดูรายละเอียด">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value" id="totalTransactions">0</span>
+                        <span class="stat-label">รายการทั้งหมด</span>
+                    </div>
+                    <div class="stat-arrow">→</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Expiry Alert Banners (RM Only) -->
+        <section class="alert-banners-section" id="alertBannersSection" style="display: none;">
+            <div class="alert-banners-container">
+                <!-- Revalidated Alert (Purple) - Extended Items -->
+                <div class="alert-banner alert-reval" id="alertReval" style="display: none;">
+                    <div class="alert-banner-main" onclick="showExpiryItems('reval')">
+                        <div class="alert-banner-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path
+                                    d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                            </svg>
+                        </div>
+                        <div class="alert-banner-content">
+                            <span class="alert-banner-title">🔄 สารต่ออายุ (ต้องใช้ก่อน)</span>
+                            <span class="alert-banner-count" id="revalCount">0 รายการ</span>
+                        </div>
+                        <div class="alert-banner-arrow">→</div>
+                    </div>
+                    <!-- Print Reval Button -->
+                    <button class="btn btn-print-alert btn-print-reval" onclick="printExpiryItems('reval')"
+                        title="พิมพ์รายการต่ออายุ">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24"
+                            height="24">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Critical Alert (Red) - Items expiring within 30 days -->
+                <div class="alert-banner alert-critical" id="alertCritical">
+                    <div class="alert-banner-main" onclick="showExpiryItems('critical')">
+                        <div class="alert-banner-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path
+                                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                <line x1="12" y1="9" x2="12" y2="13" />
+                                <line x1="12" y1="17" x2="12.01" y2="17" />
+                            </svg>
+                        </div>
+                        <div class="alert-banner-content">
+                            <span class="alert-banner-title">⚠️ วิกฤต! หมดอายุภายใน 30 วัน</span>
+                            <span class="alert-banner-count" id="criticalCount">0 รายการ</span>
+                        </div>
+                        <div class="alert-banner-arrow">→</div>
+                    </div>
+                    <button class="btn btn-print-alert" onclick="printExpiryItems('critical')" title="พิมพ์รายการวิกฤต">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24"
+                            height="24">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Warning Alert (Yellow) - Items expiring within 90 days -->
+                <div class="alert-banner alert-warning-exp" id="alertWarning">
+                    <div class="alert-banner-main" onclick="showExpiryItems('warning')">
+                        <div class="alert-banner-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                        </div>
+                        <div class="alert-banner-content">
+                            <span class="alert-banner-title">⏰ เตือน! หมดอายุภายใน 90 วัน</span>
+                            <span class="alert-banner-count" id="warningCount">0 รายการ</span>
+                        </div>
+                        <div class="alert-banner-arrow">→</div>
+                    </div>
+                    <button class="btn btn-print-alert btn-print-warning" onclick="printExpiryItems('warning')"
+                        title="พิมพ์รายการเตือน">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24"
+                            height="24">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Print All Expiry Button -->
+                <button class="btn btn-print-all-expiry" onclick="printExpiryItems('all')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                         <polyline points="6 9 6 2 18 2 18 9"></polyline>
                         <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
                         <rect x="6" y="14" width="12" height="8"></rect>
                     </svg>
+                    พิมพ์รายการแจ้งเตือนทั้งหมด
                 </button>
             </div>
+        </section>
 
-            <!-- Critical Alert (Red) - Items expiring within 30 days -->
-            <div class="alert-banner alert-critical" id="alertCritical">
-                <div class="alert-banner-main" onclick="showExpiryItems('critical')">
-                    <div class="alert-banner-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path
-                                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                            <line x1="12" y1="9" x2="12" y2="13" />
-                            <line x1="12" y1="17" x2="12.01" y2="17" />
-                        </svg>
-                    </div>
-                    <div class="alert-banner-content">
-                        <span class="alert-banner-title">⚠️ วิกฤต! หมดอายุภายใน 30 วัน</span>
-                        <span class="alert-banner-count" id="criticalCount">0 รายการ</span>
-                    </div>
-                    <div class="alert-banner-arrow">→</div>
+        <!-- Filter Section -->
+        <section class="filter-section">
+            <div class="filter-container">
+                <!-- Product/Supplier Dropdown (RM mode) -->
+                <div class="rm-filter-group" id="rmFilterGroup" style="display: none;">
+                    <label class="filter-label">🔍 เลือกวัตถุดิบ:</label>
+                    <select id="rmProductSelect" class="rm-product-select">
+                        <option value="">-- แสดงทั้งหมด --</option>
+                        <!-- Options will be populated dynamically -->
+                    </select>
                 </div>
-                <button class="btn btn-print-alert" onclick="printExpiryItems('critical')" title="พิมพ์รายการวิกฤต">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24"
-                        height="24">
-                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                        <rect x="6" y="14" width="12" height="8"></rect>
-                    </svg>
-                </button>
-            </div>
 
-            <!-- Warning Alert (Yellow) - Items expiring within 90 days -->
-            <div class="alert-banner alert-warning-exp" id="alertWarning">
-                <div class="alert-banner-main" onclick="showExpiryItems('warning')">
-                    <div class="alert-banner-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                        </svg>
-                    </div>
-                    <div class="alert-banner-content">
-                        <span class="alert-banner-title">⏰ เตือน! หมดอายุภายใน 90 วัน</span>
-                        <span class="alert-banner-count" id="warningCount">0 รายการ</span>
-                    </div>
-                    <div class="alert-banner-arrow">→</div>
+                <div class="rm-filter-group" id="rmSupplierGroup" style="display: none;">
+                    <label class="filter-label">🏭 เลือก Supplier:</label>
+                    <select id="rmSupplierSelect" class="rm-product-select">
+                        <option value="">-- แสดงทั้งหมด --</option>
+                        <!-- Options will be populated dynamically -->
+                    </select>
                 </div>
-                <button class="btn btn-print-alert btn-print-warning" onclick="printExpiryItems('warning')"
-                    title="พิมพ์รายการเตือน">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24"
-                        height="24">
-                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                        <rect x="6" y="14" width="12" height="8"></rect>
+
+                <!-- Date Filter -->
+                <div class="date-filter-group">
+                    <label class="filter-label">📅 กรองตามวันที่:</label>
+                    <input type="date" id="dateFilter" class="date-filter-input">
+                </div>
+
+                <!-- Search Box (for text search) -->
+                <div class="search-wrapper">
+                    <div class="search-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="M21 21l-4.35-4.35" />
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="ค้นหาสินค้า / เลขที่เอกสาร / Lot No..."
+                            autocomplete="off">
+                        <button class="clear-search" id="clearSearch" style="display: none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Clear Filter Button -->
+                <button class="btn btn-clear-filter" id="clearFilterBtn" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path d="M3 6h18" />
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
                     </svg>
+                    ล้างตัวกรอง
                 </button>
-            </div>
 
-            <!-- Print All Expiry Button -->
-            <button class="btn btn-print-all-expiry" onclick="printExpiryItems('all')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                    <rect x="6" y="14" width="12" height="8"></rect>
-                </svg>
-                พิมพ์รายการแจ้งเตือนทั้งหมด
-            </button>
-        </div>
-    </section>
-
-    <!-- Filter Section -->
-    <section class="filter-section">
-        <div class="filter-container">
-            <!-- Product/Supplier Dropdown (RM mode) -->
-            <div class="rm-filter-group" id="rmFilterGroup" style="display: none;">
-                <label class="filter-label">🔍 เลือกวัตถุดิบ:</label>
-                <select id="rmProductSelect" class="rm-product-select">
-                    <option value="">-- แสดงทั้งหมด --</option>
-                    <!-- Options will be populated dynamically -->
-                </select>
-            </div>
-
-            <div class="rm-filter-group" id="rmSupplierGroup" style="display: none;">
-                <label class="filter-label">🏭 เลือก Supplier:</label>
-                <select id="rmSupplierSelect" class="rm-product-select">
-                    <option value="">-- แสดงทั้งหมด --</option>
-                    <!-- Options will be populated dynamically -->
-                </select>
-            </div>
-
-            <!-- Date Filter -->
-            <div class="date-filter-group">
-                <label class="filter-label">📅 กรองตามวันที่:</label>
-                <input type="date" id="dateFilter" class="date-filter-input">
-            </div>
-
-            <!-- Search Box (for text search) -->
-            <div class="search-wrapper">
-                <div class="search-box">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="M21 21l-4.35-4.35" />
-                    </svg>
-                    <input type="text" id="searchInput" placeholder="ค้นหาสินค้า / เลขที่เอกสาร / Lot No..."
-                        autocomplete="off">
-                    <button class="clear-search" id="clearSearch" style="display: none;">
+                <div class="selected-filter" id="selectedFilter" style="display: none;">
+                    <span class="selected-label">กรองตาม:</span>
+                    <span class="selected-value" id="selectedFilterValue"></span>
+                    <button class="remove-filter" id="removeFilter">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18" />
                             <line x1="6" y1="6" x2="18" y2="18" />
@@ -296,36 +338,13 @@
                     </button>
                 </div>
             </div>
+        </section>
 
-            <!-- Clear Filter Button -->
-            <button class="btn btn-clear-filter" id="clearFilterBtn" type="button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                    <path d="M3 6h18" />
-                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                    <line x1="10" y1="11" x2="10" y2="17" />
-                    <line x1="14" y1="11" x2="14" y2="17" />
-                </svg>
-                ล้างตัวกรอง
-            </button>
-
-            <div class="selected-filter" id="selectedFilter" style="display: none;">
-                <span class="selected-label">กรองตาม:</span>
-                <span class="selected-value" id="selectedFilterValue"></span>
-                <button class="remove-filter" id="removeFilter">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-    </section>
-
-    <!-- Stock Cards Container -->
-    <main class="cards-container" id="cardsContainer">
-        <!-- Stock cards will be dynamically generated -->
-    </main>
+        <!-- Stock Cards Container -->
+        <main class="cards-container" id="cardsContainer">
+            <!-- Stock cards will be dynamically generated -->
+        </main>
+    </div> <!-- End stockcard-main-view -->
 
     <!-- Print Preview Modal -->
     <div class="modal" id="printModal">
@@ -593,6 +612,40 @@
     </div>
 
     <script src="app.js?v=45"></script>
+
+    <script>
+        // Integrated Consumable Toggle Logic
+        function toggleConsumableView(show) {
+            const stockMain = document.getElementById('stockcard-main-view');
+            const consumView = document.getElementById('consumable-view-container');
+            const tabConsumable = document.getElementById('tabConsumable');
+            const otherTabs = document.querySelectorAll('.module-tab:not(#tabConsumable)');
+
+            if (show) {
+                stockMain.style.display = 'none';
+                consumView.style.display = 'block';
+
+                // Update Tab Styles
+                otherTabs.forEach(t => t.classList.remove('active'));
+                tabConsumable.classList.add('active');
+
+                // Hide Header Actions that are SC specific if needed, or keep them?
+                // SC actions like "Add Entry", "Refresh" belong to SC logic. 
+                // Consumable has its own buttons inside the iframe.
+                document.querySelector('.header-actions').style.display = 'none';
+            } else {
+                stockMain.style.display = 'block';
+                consumView.style.display = 'none';
+
+                tabConsumable.classList.remove('active');
+                document.querySelector('.header-actions').style.display = 'flex';
+            }
+        }
+
+        // Hook into existing tabs to switch back
+        document.getElementById('tabPackage').addEventListener('click', () => toggleConsumableView(false));
+        document.getElementById('tabRM').addEventListener('click', () => toggleConsumableView(false));
+    </script>
 </body>
 
 </html>

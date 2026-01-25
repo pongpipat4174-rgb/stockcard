@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบคำนวณวัสดุสิ้นเปลือง (Consumables Calculator)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Zone Backgrounds - Removed */
+        .bg-shrink {
+            background-color: transparent;
+        }
+
+        .bg-fg {
+            background-color: transparent;
+        }
+
+        /* Table Row Hover Override - Reset */
+        table#shrink-table tbody tr:hover td.bg-shrink {
+            background-color: inherit;
+            color: inherit;
+        }
+
+        table#shrink-table tbody tr:hover td.bg-fg {
+            background-color: inherit;
+            color: inherit;
+        }
+
+        /* Status Alert - High Visibility */
+        .status-badge.status-low {
+            background-color: #dc2626 !important;
+            /* Red-600 */
+            color: white !important;
+            font-weight: 700;
+            box-shadow: 0 4px 6px rgba(220, 38, 38, 0.5);
+            border: 2px solid #991b1b;
+            padding: 4px 12px;
+            border-radius: 20px;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 6px rgba(220, 38, 38, 0);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .mobile-hidden {
+                display: none !important;
+            }
+
+            /* Adjust font size for mobile table to fit */
+            table#shrink-table th,
+            table#shrink-table td {
+                font-size: 0.8rem;
+                padding: 4px 2px;
+            }
+
+            .status-badge {
+                padding: 2px 6px;
+                font-size: 0.7rem;
+            }
+
+            .action-buttons button {
+                padding: 4px;
+                font-size: 0.8rem;
+            }
+
+            /* Hide Group Headers on mobile to save space/complexity */
+            .header-group {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Loading Overlay -->
+    <div id="app-loader">
+        <div class="spinner"></div>
+        <div class="loader-text">กำลังเชื่อมต่อฐานข้อมูล...</div>
+    </div>
+
+    <div class="app-container">
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <div>
+                        <h1>Consumables Calculate</h1>
+                        <p>ระบบคำนวณการผลิตและสต็อกวัสดุสิ้นเปลือง</p>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button id="add-item-btn" class="btn primary"><i class="fa-solid fa-plus"></i> เพิ่มสินค้า</button>
+                    <button id="refresh-data-btn" class="btn secondary" onclick="initApp()"><i
+                            class="fa-solid fa-arrows-rotate"></i> รีเฟรช</button>
+                    <button id="calc-btn" class="btn secondary"
+                        style="color: #854d0e; border-color: #fcd34d; background-color: #fffbeb;"><i
+                            class="fa-solid fa-calculator"></i> เครื่องคิดเลข</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Navigation Tabs Removed -->
+            <!-- Tabs nav and placeholders removed as requested -->
+
+            <!-- Tab Content: Consumables (Current App) -->
+            <div id="tab-consumables" class="tab-content active" style="display:block;">
+                <div class="dashboard-stats">
+                    <div class="stat-card total">
+                        <div class="icon"><i class="fa-solid fa-layer-group"></i></div>
+                        <div class="info">
+                            <h3>รายการสินค้า</h3>
+                            <span id="total-items">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="info">
+                            <h3>ต้องสั่งซื้อ (Low Stock)</h3>
+                            <span id="low-stock-count">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card healthy">
+                        <div class="icon"><i class="fa-solid fa-check-circle"></i></div>
+                        <div class="info">
+                            <h3>พร้อมผลิต</h3>
+                            <span id="healthy-stock-count">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="shrink-table">
+                        <thead>
+                            <tr class="header-group">
+                                <!-- Status & Name -->
+                                <th colspan="2"></th>
+                                <!-- Shrink Group: Stock, Kg/Box, TotalKg, Min, Pcs/Kg -->
+                                <th colspan="5" class="group-shrink">ข้อมูลวัสดุสิ้นเปลือง (Consumables)</th>
+                                <!-- FG Group -->
+                                <th colspan="4" class="group-fg">การคำนวณสินค้าสำเร็จรูป (FG)</th>
+                                <!-- Actions -->
+                                <th></th>
+                            </tr>
+                            <tr>
+                                <th class="center" style="width: 80px;">สถานะ</th>
+                                <th style="min-width: 200px;">ชื่อสินค้า</th>
+                                <th class="center">สต็อก (ลัง)</th>
+                                <th class="center mobile-hidden">กก./ลัง</th>
+                                <th class="center">รวม (กก.)</th>
+                                <th class="center mobile-hidden">จุดสั่งซื้อ (กก.)</th>
+                                <th class="center">ชิ้น/กก.</th>
+                                <!-- Hidden: รวมถุง (ชิ้น) -->
+
+                                <!-- New FG Columns -->
+                                <th class="center text-blue mobile-hidden">ชิ้นงาน/ถุง</th>
+                                <th class="center text-blue mobile-hidden">ชิ้น FG/ลัง</th>
+                                <th class="center highlight-head">ผลิตได้ (ชิ้น)</th>
+                                <th class="center highlight-head">ผลิตได้ (ลัง)</th>
+
+                                <th class="center mobile-hidden">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Rows will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- Edit/Add Modal -->
+        <div id="item-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-btn" onclick="closeModal('item-modal')">&times;</span>
+                <h2 id="modal-title">เพิ่ม/แก้ไข สินค้า</h2>
+                <form id="item-form">
+                    <input type="hidden" id="edit-index">
+                    <div class="form-group">
+                        <label>ชื่อสินค้า</label>
+                        <input type="text" id="input-name" required placeholder="เช่น PVC Shrink film 125*185"
+                            list="product-history-list" oninput="checkProductHistory(this.value)">
+                        <datalist id="product-history-list"></datalist>
+                    </div>
+
+                    <h4 class="section-title">ข้อมูลวัสดุสิ้นเปลือง</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>น้ำหนักต่อลัง (kg)</label>
+                            <input type="number" id="input-kg-per-carton" step="0.01" required value="25">
+                        </div>
+                        <div class="form-group">
+                            <label>จำนวนซองต่อ กก.</label>
+                            <input type="number" id="input-pcs-per-kg" required placeholder="เช่น 554">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>คงเหลือปัจจุบัน (ลัง)</label>
+                            <input type="number" id="input-stock-cartons" required placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label>แจ้งเตือนเมื่อต่ำกว่า (กก.)</label>
+                            <input type="number" id="input-min-threshold" required value="100">
+                        </div>
+                    </div>
+
+                    <h4 class="section-title text-blue" style="margin-top: 15px;">ข้อมูลการผลิต (FG)</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>จำนวนชิ้นงาน ต่อ 1 ถุงชริ้ง</label>
+                            <input type="number" id="input-pcs-per-pack" required value="1" min="1">
+                            <span class="help-text">เช่น 6 ชิ้น/แพ็ค (ถ้า 1 ต่อ 1 ให้ใส่ 1)</span>
+                        </div>
+                        <div class="form-group">
+                            <label>จำนวนชิ้น FG ต่อลัง</label>
+                            <input type="number" id="input-fg-pcs-per-carton" required placeholder="เช่น 504">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn primary">บันทึกข้อมูล</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Transaction Modal (In/Out) -->
+        <div id="transaction-modal" class="modal">
+            <div class="modal-content" style="max-width: 500px">
+                <span class="close-btn" onclick="closeModal('transaction-modal')">&times;</span>
+                <h2 id="trans-modal-title"><i class="fa-solid fa-exchange-alt"></i> บันทึกรับ/เบิก</h2>
+                <form id="transaction-form">
+                    <input type="hidden" id="trans-item-index">
+
+                    <div class="form-group">
+                        <label>สินค้า</label>
+                        <input type="text" id="trans-item-name" readonly
+                            style="background-color: #f1f5f9; border: none; font-weight: 600;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>ประเภทรายการ</label>
+                        <div class="trans-type-selector" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <label
+                                style="flex: 1; cursor: pointer; padding: 10px; background: #dcfce7; border-radius: 8px; border: 1px solid #86efac; display: flex; align-items: center; justify-content: center; gap: 8px; color: #166534; font-weight: 600;">
+                                <input type="radio" name="trans-type" value="IN" checked>
+                                <span><i class="fa-solid fa-arrow-down"></i> รับของเข้า (IN)</span>
+                            </label>
+                            <label
+                                style="flex: 1; cursor: pointer; padding: 10px; background: #fee2e2; border-radius: 8px; border: 1px solid #fca5a5; display: flex; align-items: center; justify-content: center; gap: 8px; color: #991b1b; font-weight: 600;">
+                                <input type="radio" name="trans-type" value="OUT">
+                                <span><i class="fa-solid fa-arrow-up"></i> เบิกของออก (OUT)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>จำนวน (กิโลกรัม)</label>
+                            <input type="number" id="trans-qty-kg" required min="0.01" step="0.01" placeholder="0.00"
+                                class="large-input" style="font-size: 1.2em; border-color: #3b82f6;">
+                        </div>
+                        <div class="form-group">
+                            <label>วันที่</label>
+                            <input type="date" id="trans-date" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>เลขที่เอกสาร / Lot / หมายเหตุ</label>
+                        <input type="text" id="trans-note" placeholder="เช่น PO-67001, Lot A, เบิกผลิต...">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn primary full-width">บันทึกรายการ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- History Modal -->
+        <div id="history-modal" class="modal">
+            <div class="modal-content" style="max-width: 800px; height: 80vh; display: flex; flex-direction: column;">
+                <div style="flex-shrink: 0; margin-bottom: 20px;">
+                    <span class="close-btn" onclick="closeModal('history-modal')">&times;</span>
+                    <h2><i class="fa-solid fa-clock-rotate-left"></i> ประวัติความเคลื่อนไหว</h2>
+                    <p id="history-subtitle" style="color: var(--text-muted);"></p>
+                </div>
+
+                <div class="table-container"
+                    style="flex-grow: 1; overflow-y: auto; box-shadow: none; border: 1px solid var(--border-color);">
+                    <table id="history-table">
+                        <thead>
+                            <tr>
+                                <th>วันที่</th>
+                                <th>ประเภท</th>
+                                <th class="center">ปริมาณ (กก.)</th>
+                                <th class="center">เทียบเท่า (ลัง)</th>
+                                <th>คงเหลือ (ลัง)</th>
+                                <th>เอกสาร/หมายเหตุ</th>
+                                <th class="center" style="width: 50px;">ลบ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <!-- Logs go here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calculator Modal (Restored) -->
+        <div id="calc-modal" class="modal">
+            <div class="modal-content" style="max-width: 500px">
+                <span class="close-btn" onclick="closeModal('calc-modal')">&times;</span>
+                <h2 style="color: #854d0e;"><i class="fa-solid fa-calculator"></i> ทดลองคำนวณ</h2>
+
+                <div class="form-group">
+                    <label>เลือกสินค้า</label>
+                    <select id="calc-select-item"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); font-family: 'Sarabun';">
+                        <option value="">-- กรุณาเลือกสินค้า --</option>
+                    </select>
+                </div>
+
+                <div id="calc-area"
+                    style="display: none; background-color: #fffbeb; padding: 20px; border-radius: 12px; border: 1px solid #fcd34d;">
+                    <div class="form-group">
+                        <label style="color: #854d0e;">ระบุถุงชริ้ง (ลัง)</label>
+                        <input type="number" id="modal-calc-shrink" class="calc-input"
+                            style="width: 100%; text-align: left;"
+                            oninput="calculateModalSimulation('shrink', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #854d0e;">ระบุใช้ถุง (กก.)</label>
+                        <input type="number" id="modal-calc-kg" class="calc-input"
+                            style="width: 100%; text-align: left;" oninput="calculateModalSimulation('kg', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #854d0e;">ระบุงาน (ชิ้น)</label>
+                        <input type="number" id="modal-calc-pcs" class="calc-input"
+                            style="width: 100%; text-align: left;"
+                            oninput="calculateModalSimulation('pcs', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #854d0e;">ระบุงาน (ลัง)</label>
+                        <input type="number" id="modal-calc-fg" class="calc-input"
+                            style="width: 100%; text-align: left;" oninput="calculateModalSimulation('fg', this.value)">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <script src="script.js"></script>
+</body>
+
+</html>

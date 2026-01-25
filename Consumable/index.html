@@ -79,8 +79,9 @@
             /* Adjust column widths for better proportion */
             table#shrink-table th:nth-child(2),
             table#shrink-table td:nth-child(2) {
-                width: 30% !important;
+                min-width: 140px !important;
                 /* Name column wider */
+                max-width: 180px !important;
             }
 
             .status-badge {
@@ -168,8 +169,8 @@
                                 <!-- Actions -->
                                 <th></th>
                             </tr>
-                            <th class="center" style="width: 50px;">สถานะ</th>
-                            <th style="min-width: 100px;">ชื่อสินค้า</th>
+                            <th class="center" style="width: 40px;">สถานะ</th>
+                            <th style="min-width: 140px;">ชื่อสินค้า</th>
                             <th class="center">สต็อก (ลัง)</th>
                             <th class="center mobile-hidden">กก./ลัง</th>
                             <th class="center">รวม (กก.)</th>

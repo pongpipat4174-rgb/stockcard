@@ -3662,18 +3662,33 @@ mark.search-highlight {
 }
 
 /* Ensure mobile header layout overrides don't break this */
+/* Ensure mobile header layout overrides don't break this */
 @media screen and (max-width: 768px) {
     .module-tabs {
         width: 100%;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
         padding: 4px;
     }
 
     .module-tab {
-        width: 100%;
+        width: auto;
+        flex: 1 1 45%;
+        /* Allow 2 per row, but wrap if needed */
         justify-content: center;
-        padding: 12px;
+        padding: 10px;
+    }
+
+    /* Hide slider on mobile, use direct styling */
+    .tab-slider {
+        display: none !important;
+    }
+
+    .module-tab.active {
+        background: white !important;
+        color: var(--primary-600) !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
     }
 }
 

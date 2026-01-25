@@ -113,6 +113,51 @@
         .mobile-only {
             display: none;
         }
+
+        @media (max-width: 768px) {
+
+            /* Modal Fixes */
+            .modal-content {
+                width: 90% !important;
+                max-width: none !important;
+                margin: 20px auto !important;
+                padding: 20px !important;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+
+            /* Stack form rows on mobile */
+            .form-row {
+                flex-direction: column !important;
+                gap: 0 !important;
+            }
+
+            .form-group {
+                width: 100% !important;
+                margin-bottom: 12px;
+            }
+
+            /* Ensure inputs are easy to tap */
+            input,
+            select {
+                font-size: 16px !important;
+                /* Prevention zoom */
+                padding: 10px !important;
+            }
+
+            /* Further Table Tweaks */
+            table#shrink-table th {
+                font-size: 0.65rem !important;
+                /* Slightly smaller to ensure fit */
+                padding: 8px 1px !important;
+                /* Tight padding */
+            }
+
+            table#shrink-table td {
+                font-size: 0.7rem !important;
+                padding: 8px 1px !important;
+            }
+        }
     </style>
 </head>
 
@@ -441,7 +486,7 @@
         </style>
 
 
-        <script src="script.js?v=mobile_fix_2"></script>
+        <script src="script.js?v=mobile_fix_3"></script>
 </body>
 
 </html>

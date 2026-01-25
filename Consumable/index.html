@@ -79,9 +79,14 @@
             /* Adjust column widths for better proportion */
             table#shrink-table th:nth-child(2),
             table#shrink-table td:nth-child(2) {
-                min-width: 140px !important;
-                /* Name column wider */
-                max-width: 180px !important;
+                min-width: 120px !important;
+                max-width: 160px !important;
+            }
+
+            table#shrink-table th {
+                white-space: nowrap !important;
+                padding: 8px 2px !important;
+                font-size: 0.7rem !important;
             }
 
             .status-badge {
@@ -185,10 +190,10 @@
                                 <th></th>
                             </tr>
                             <th class="center" style="width: 40px;">สถานะ</th>
-                            <th style="min-width: 140px;">ชื่อสินค้า</th>
-                            <th class="center">สต็อก (ลัง)</th>
+                            <th style="min-width: 120px;">ชื่อสินค้า</th>
+                            <th class="center">คงเหลือ</th>
                             <th class="center mobile-hidden">กก./ลัง</th>
-                            <th class="center">รวม (กก.)</th>
+                            <th class="center">รวม(กก.)</th>
                             <th class="center mobile-hidden">จุดสั่งซื้อ (กก.)</th>
                             <th class="center">ชิ้น/กก.</th>
                             <!-- Hidden: รวมถุง (ชิ้น) -->
@@ -196,10 +201,10 @@
                             <!-- New FG Columns -->
                             <th class="center text-blue mobile-hidden">ชิ้นงาน/ถุง</th>
                             <th class="center text-blue mobile-hidden">ชิ้น FG/ลัง</th>
-                            <th class="center highlight-head">ผลิตได้ (ชิ้น)</th>
-                            <th class="center highlight-head">ผลิตได้ (ลัง)</th>
+                            <th class="center highlight-head">FG(ชิ้น)</th>
+                            <th class="center highlight-head">FG(ลัง)</th>
 
-                            <th class="center" style="width: 40px !important;">จัดการ</th>
+                            <th class="center" style="width: 40px !important;"></th>
                             </tr>
                         </thead>
                         <tbody id="table-body">

@@ -129,33 +129,28 @@ function switchModule(module, event) {
     // 1. VISUAL UPDATE (Immediate & Smooth)
     const tabPackage = document.getElementById('tabPackage');
     const tabRM = document.getElementById('tabRM');
-    const slider = document.getElementById('tabSlider');
+    const tabConsumable = document.getElementById('tabConsumable');
 
-    // Remove active from both first
+    // Explicitly hide consumable view and show main view (Safety)
+    const stockMain = document.getElementById('stockcard-main-view');
+    const consumView = document.getElementById('consumable-view-container');
+    if (stockMain) stockMain.style.display = 'block';
+    if (consumView) consumView.style.display = 'none';
+    if (document.querySelector('.header-actions')) document.querySelector('.header-actions').style.display = 'flex';
+
+    // Remove active from ALL tabs
     if (tabPackage) tabPackage.classList.remove('active');
     if (tabRM) tabRM.classList.remove('active');
+    if (tabConsumable) tabConsumable.classList.remove('active');
 
     // Add active to current
-    let activeTab = null;
     if (module === 'package' && tabPackage) {
         tabPackage.classList.add('active');
-        activeTab = tabPackage;
     } else if (module === 'rm' && tabRM) {
         tabRM.classList.add('active');
-        activeTab = tabRM;
     }
 
-    // Update Slider Position
-    if (slider && activeTab) {
-        // Calculate relative position: activeTab.offsetLeft is relative to parent (.module-tabs)
-        // because parent is position: relative
-        const left = activeTab.offsetLeft;
-        const width = activeTab.offsetWidth;
-        slider.style.transform = 'translateX(' + left + 'px)';
-        slider.style.width = width + 'px';
-    }
-
-    // Update Banner & Strings
+    // Update Strings
     const config = SHEET_CONFIG[module];
     if (config) {
         const iconEl = document.getElementById('moduleIcon');

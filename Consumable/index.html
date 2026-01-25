@@ -148,14 +148,42 @@
             /* Further Table Tweaks */
             table#shrink-table th {
                 font-size: 0.65rem !important;
-                /* Slightly smaller to ensure fit */
-                padding: 8px 1px !important;
-                /* Tight padding */
+                padding: 8px 3px !important;
+                /* Increased padding */
             }
 
             table#shrink-table td {
                 font-size: 0.7rem !important;
-                padding: 8px 1px !important;
+                padding: 8px 3px !important;
+                /* Increased padding */
+            }
+
+            /* Separate FG columns */
+            table#shrink-table td.bg-fg,
+            table#shrink-table th.highlight-head {
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+            }
+
+            /* Last column (Actions) padding to prevent cutoff */
+            table#shrink-table td:last-child,
+            table#shrink-table th:last-child {
+                padding-right: 10px !important;
+                padding-left: 10px !important;
+            }
+
+            /* Allow actions to wrap if needed */
+            .actions {
+                flex-wrap: wrap;
+                gap: 5px;
+                justify-content: center;
+            }
+
+            .actions button {
+                flex: 1 1 auto;
+                /* Allow buttons to shrink/grow */
+                padding: 8px 12px;
+                font-size: 0.85rem;
             }
         }
     </style>
@@ -486,7 +514,7 @@
         </style>
 
 
-        <script src="script.js?v=mobile_fix_4"></script>
+        <script src="script.js?v=mobile_fix_5"></script>
 </body>
 
 </html>

@@ -3640,25 +3640,16 @@ mark.search-highlight {
     background: rgba(255, 255, 255, 0.1) !important;
 }
 
-.module-tab.active {
-    color: var(--primary-600) !important;
-    /* Active text color (purple) */
+/* Slider Element - DISABLED GLOBALLY (Replaced by direct CSS active state for robustness) */
+.tab-slider {
+    display: none !important;
 }
 
-/* Slider Element (White Background) */
-.tab-slider {
-    position: absolute;
-    top: 4px;
-    left: 4px;
-    bottom: 4px;
-    background: white;
-    border-radius: var(--radius-md);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-    z-index: 1;
-    pointer-events: none;
-    height: calc(100% - 8px);
-    /* Ensure height fits */
+/* Global Active State (Works without JS slider) */
+.module-tab.active {
+    background: white !important;
+    color: var(--primary-600) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Ensure mobile header layout overrides don't break this */

@@ -185,6 +185,18 @@
                 padding: 8px 12px;
                 font-size: 0.85rem;
             }
+
+            /* Fix Transaction Type Selector shrinking on mobile */
+            .trans-type-selector {
+                flex-direction: column !important;
+            }
+
+            .trans-type-selector label {
+                width: 100% !important;
+                justify-content: flex-start !important;
+                /* Align left */
+                padding-left: 20px !important;
+            }
         }
     </style>
 </head>
@@ -514,7 +526,7 @@
         </style>
 
 
-        <script src="script.js?v=mobile_fix_5"></script>
+        <script src="script.js?v=mobile_fix_6"></script>
 </body>
 
 </html>

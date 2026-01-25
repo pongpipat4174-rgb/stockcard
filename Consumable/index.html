@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=mobile_fix_2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Zone Backgrounds - Removed */
@@ -63,25 +63,37 @@
         }
 
         @media (max-width: 768px) {
+
+            /* Force show all columns override */
             .mobile-hidden {
-                display: none !important;
+                display: table-cell !important;
+            }
+
+            table#shrink-table th,
+            table#shrink-table td {
+                display: table-cell !important;
             }
 
             /* Adjust font size for mobile table to fit */
             table#shrink-table th,
             table#shrink-table td {
-                font-size: 0.8rem;
+                font-size: 0.7rem;
+                /* Smaller font to fit more */
                 padding: 4px 2px;
+                white-space: normal;
+                /* Allow wrapping */
             }
 
             .status-badge {
-                padding: 2px 6px;
-                font-size: 0.7rem;
+                padding: 2px 4px;
+                font-size: 0.6rem;
             }
 
             .action-buttons button {
-                padding: 4px;
-                font-size: 0.8rem;
+                padding: 2px;
+                width: 24px;
+                height: 24px;
+                font-size: 0.7rem;
             }
 
             /* Hide Group Headers on mobile to save space/complexity */
@@ -109,13 +121,14 @@
                         <p>ระบบคำนวณการผลิตและสต็อกวัสดุสิ้นเปลือง</p>
                     </div>
                 </div>
+                <!-- Actions Buttons - Stacked on mobile -->
                 <div class="actions">
                     <button id="add-item-btn" class="btn primary"><i class="fa-solid fa-plus"></i> เพิ่มสินค้า</button>
                     <button id="refresh-data-btn" class="btn secondary" onclick="initApp()"><i
-                            class="fa-solid fa-arrows-rotate"></i> รีเฟรช</button>
+                            class="fa-solid fa-arrows-rotate"></i> รีีเฟรช</button>
                     <button id="calc-btn" class="btn secondary"
                         style="color: #854d0e; border-color: #fcd34d; background-color: #fffbeb;"><i
-                            class="fa-solid fa-calculator"></i> เครื่องคิดเลข</button>
+                            class="fa-solid fa-calculator"></i> คิดเลข</button>
                 </div>
             </div>
         </header>
@@ -164,8 +177,8 @@
                                 <th></th>
                             </tr>
                             <tr>
-                                <th class="center" style="width: 80px;">สถานะ</th>
-                                <th style="min-width: 200px;">ชื่อสินค้า</th>
+                                <th class="center" style="width: 50px;">สถานะ</th>
+                                <th style="min-width: 120px;">ชื่อสินค้า</th>
                                 <th class="center">สต็อก (ลัง)</th>
                                 <th class="center">กก./ลัง</th>
                                 <th class="center">รวม (กก.)</th>
@@ -374,7 +387,7 @@
         </div>
 
 
-        <script src="script.js"></script>
+        <script src="script.js?v=mobile_fix_2"></script>
 </body>
 
 </html>

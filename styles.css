@@ -250,7 +250,8 @@ body {
     max-width: 1400px;
     margin: 0 auto;
     padding: 2rem;
-    margin-top: -20px;
+    margin-top: 0;
+    /* Removing negative margin for cleaner layout */
 }
 
 .stats-grid {
@@ -3289,8 +3290,13 @@ mark.search-highlight {
     .module-tabs {
         order: 2;
         width: 100%;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: flex;
+        /* Changed from grid to flex for better wrapping of 3 items */
+        flex-wrap: wrap;
+        /* Key change */
+        justify-content: center;
+        gap: 8px;
+        /* Gap between items */
         margin: 0;
         background: rgba(255, 255, 255, 0.15);
         padding: 5px;
@@ -3602,8 +3608,12 @@ mark.search-highlight {
     background: rgba(255, 255, 255, 0.2);
     border-radius: var(--radius-lg);
     padding: 4px;
-    display: inline-flex;
-    gap: 0 !important;
+    display: flex;
+    flex-wrap: wrap;
+    /* Support wrapping */
+    justify-content: center;
+    gap: 0.5rem !important;
+    /* Add gap */
 }
 
 .module-tab {
@@ -3774,17 +3784,29 @@ mark.search-highlight {
         text-align: center;
     }
 }
+
 /* Responsive Date Display */
-.date-short { display: none; }
-.date-full { display: inline; }
+.date-short {
+    display: none;
+}
+
+.date-full {
+    display: inline;
+}
 
 @media (max-width: 768px) {
-    .stock-card:not(.stock-card-rm) .date-short { display: inline; }
-    .stock-card:not(.stock-card-rm) .date-full { display: none; }
+    .stock-card:not(.stock-card-rm) .date-short {
+        display: inline;
+    }
+
+    .stock-card:not(.stock-card-rm) .date-full {
+        display: none;
+    }
 }
 
 /* --- MOBILE LAYOUT OVERRIDE (Fix Distortion) --- */
 @media (max-width: 768px) {
+
     /* Date: 12% - No wrap */
     .stock-card:not(.stock-card-rm) .stock-table th:nth-child(1),
     .stock-card:not(.stock-card-rm) .stock-table td:nth-child(1) {
@@ -3828,28 +3850,54 @@ mark.search-highlight {
 
 /* --- MOBILE RM MODULE OPTIMIZATION --- */
 @media (max-width: 768px) {
+
     /* Toggle Short Dates for RM */
-    .stock-card-rm .date-short { display: inline !important; }
-    .stock-card-rm .date-full { display: none !important; }
+    .stock-card-rm .date-short {
+        display: inline !important;
+    }
+
+    .stock-card-rm .date-full {
+        display: none !important;
+    }
 
     /* HIDE unwanted columns for RM on Mobile */
     /* Columns: 1:Date, 2:Type, 3-5:Container(hidden), 6:In, 7:Out, 8:Bal, 9:Lot, 10:Vendor, 11:MFD, 12:EXP, 13:Days, 14:LotBal, 15:Supp, 16:Del */
-    
-    .stock-table-rm th:nth-child(2), .stock-table-rm td:nth-child(2),   /* Type */
-    .stock-table-rm th:nth-child(3), .stock-table-rm td:nth-child(3),   /* Container Qty */
-    .stock-table-rm th:nth-child(4), .stock-table-rm td:nth-child(4),   /* Container Weight */
-    .stock-table-rm th:nth-child(5), .stock-table-rm td:nth-child(5),   /* Remainder */
-    .stock-table-rm th:nth-child(10), .stock-table-rm td:nth-child(10), /* Vendor Lot */
-    .stock-table-rm th:nth-child(13), .stock-table-rm td:nth-child(13), /* Days Left */
-    .stock-table-rm th:nth-child(14), .stock-table-rm td:nth-child(14), /* Lot Balance */
-    .stock-table-rm th:nth-child(15), .stock-table-rm td:nth-child(15), /* Supplier */
-    .stock-table-rm th:nth-child(16), .stock-table-rm td:nth-child(16)  /* Delete */
-    {
+
+    .stock-table-rm th:nth-child(2),
+    .stock-table-rm td:nth-child(2),
+    /* Type */
+    .stock-table-rm th:nth-child(3),
+    .stock-table-rm td:nth-child(3),
+    /* Container Qty */
+    .stock-table-rm th:nth-child(4),
+    .stock-table-rm td:nth-child(4),
+    /* Container Weight */
+    .stock-table-rm th:nth-child(5),
+    .stock-table-rm td:nth-child(5),
+    /* Remainder */
+    .stock-table-rm th:nth-child(10),
+    .stock-table-rm td:nth-child(10),
+    /* Vendor Lot */
+    .stock-table-rm th:nth-child(13),
+    .stock-table-rm td:nth-child(13),
+    /* Days Left */
+    .stock-table-rm th:nth-child(14),
+    .stock-table-rm td:nth-child(14),
+    /* Lot Balance */
+    .stock-table-rm th:nth-child(15),
+    .stock-table-rm td:nth-child(15),
+    /* Supplier */
+    .stock-table-rm th:nth-child(16),
+    .stock-table-rm td:nth-child(16)
+
+    /* Delete */
+        {
         display: none !important;
     }
 
     /* FORCE SHOW MFD (Column 11) which might differ in index if hidden by JS/CSS elsewhere */
-    .stock-table-rm th:nth-child(11), .stock-table-rm td:nth-child(11) {
+    .stock-table-rm th:nth-child(11),
+    .stock-table-rm td:nth-child(11) {
         display: table-cell !important;
     }
 
@@ -3857,11 +3905,13 @@ mark.search-highlight {
     .stock-table-rm {
         table-layout: fixed !important;
         width: 100% !important;
-        min-width: 0 !important; /* Override min-width 1400px */
+        min-width: 0 !important;
+        /* Override min-width 1400px */
         font-size: 0.65rem !important;
     }
 
-    .stock-table-rm th, .stock-table-rm td {
+    .stock-table-rm th,
+    .stock-table-rm td {
         padding: 0.25rem 1px !important;
         white-space: normal !important;
         vertical-align: middle !important;
@@ -3870,12 +3920,20 @@ mark.search-highlight {
 
     /* Specific Column Widths (Total 7 Columns) */
     /* 1. Date */
-    .stock-table-rm th:nth-child(1), .stock-table-rm td:nth-child(1) { width: 12% !important; white-space: nowrap !important; letter-spacing: -0.5px; }
+    .stock-table-rm th:nth-child(1),
+    .stock-table-rm td:nth-child(1) {
+        width: 12% !important;
+        white-space: nowrap !important;
+        letter-spacing: -0.5px;
+    }
 
     /* 6. In, 7. Out, 8. Bal */
-    .stock-table-rm th:nth-child(6), .stock-table-rm td:nth-child(6),
-    .stock-table-rm th:nth-child(7), .stock-table-rm td:nth-child(7),
-    .stock-table-rm th:nth-child(8), .stock-table-rm td:nth-child(8) {
+    .stock-table-rm th:nth-child(6),
+    .stock-table-rm td:nth-child(6),
+    .stock-table-rm th:nth-child(7),
+    .stock-table-rm td:nth-child(7),
+    .stock-table-rm th:nth-child(8),
+    .stock-table-rm td:nth-child(8) {
         width: 11% !important;
         white-space: nowrap !important;
         text-align: center !important;
@@ -3883,7 +3941,8 @@ mark.search-highlight {
     }
 
     /* 9. Lot No */
-    .stock-table-rm th:nth-child(9), .stock-table-rm td:nth-child(9) {
+    .stock-table-rm th:nth-child(9),
+    .stock-table-rm td:nth-child(9) {
         width: 18% !important;
         word-break: break-all !important;
         text-align: left !important;
@@ -3892,8 +3951,10 @@ mark.search-highlight {
     }
 
     /* 11. MFD, 12. EXP */
-    .stock-table-rm th:nth-child(11), .stock-table-rm td:nth-child(11),
-    .stock-table-rm th:nth-child(12), .stock-table-rm td:nth-child(12) {
+    .stock-table-rm th:nth-child(11),
+    .stock-table-rm td:nth-child(11),
+    .stock-table-rm th:nth-child(12),
+    .stock-table-rm td:nth-child(12) {
         width: 12% !important;
         white-space: nowrap !important;
         text-align: center !important;

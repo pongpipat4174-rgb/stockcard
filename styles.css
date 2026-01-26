@@ -3311,9 +3311,12 @@ mark.search-highlight {
         /* 2x2 grid for 4 items */
         gap: 8px;
         margin: 0;
-        background: rgba(255, 255, 255, 0.15);
-        padding: 8px;
-        border-radius: 12px;
+        background: transparent;
+        /* Remove background */
+        padding: 0;
+        /* Remove padding */
+        border: none;
+        /* Remove border if any inherited */
     }
 
     .module-tab {

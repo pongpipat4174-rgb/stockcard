@@ -139,12 +139,11 @@ body {
 }
 
 .main-header {
-    background: #1e1b4b !important;
-    /* Solid fallback */
-    background: linear-gradient(135deg, var(--primary-800), var(--primary-900)) !important;
+    background: #6366f1 !important;
+    /* Solid fallback (Purple/Indigo) */
+    background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
     color: white !important;
     padding: 0.75rem 0;
-    /* Vertical spacing */
     position: sticky;
     top: 0;
     z-index: 100;
@@ -609,11 +608,7 @@ mark.search-highlight {
     /* Animation removed to prevent flash on tab switch */
 }
 
-/* Optional: Only animate on initial page load, not tab switch */
-/* Animation disabled to prevent flickering */
-.stock-card.animate-in {
-    /* animation: fadeInUp 0.5s ease-out; */
-}
+/* .stock-card.animate-in { animation: fadeInUp 0.5s ease-out; } */
 
 .stock-card:hover {
     box-shadow: var(--shadow-xl);
@@ -1880,13 +1875,11 @@ mark.search-highlight {
 /* ==================== MODULE NAVIGATION ==================== */
 .module-tabs {
     order: 3;
-    /* Push to bottom */
     width: 100%;
-    /* Force full width line */
     display: flex;
     gap: 0.5rem;
-    background: rgba(0, 0, 0, 0.2);
-    /* Darker contrast */
+    background: rgba(255, 255, 255, 0.15);
+    /* Light transparent white */
     padding: 0.4rem;
     border-radius: var(--radius-xl);
     backdrop-filter: blur(10px);

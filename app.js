@@ -2000,24 +2000,22 @@ function closeStatsModal() {
     if (modal) modal.style.display = 'none';
 }
 
-// Save Entry for RM
+
+// Save Entry for RM (Supports Multi-Split)
 function saveEntryRM() {
     var productCode = document.getElementById('entryProductCodeRM').value;
     var productName = document.getElementById('entryProductNameRM').value;
     var date = document.getElementById('entryDateRM').value;
     var type = document.getElementById('entryTypeRM').value;
+    var vendor = document.getElementById('entryVendorRM').value || '-';
 
-    // Container Info
-    var containerQty = parseFloat(document.getElementById('entryContainerQtyRM').value) || 0;
-    var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
-    var remainder = parseFloat(document.getElementById('entryRemainderRM').value) || 0;
+    // Check if we have a split plan
+    var splitPlan = window.currentSplitPlan; // [{lot, qty}, {lot, qty}]
+    var isSplit = splitPlan && splitPlan.length > 1;
 
-    // Calculated Totals
+    // Base info
     var inQty = parseFloat(document.getElementById('entryInQtyRM').value) || 0;
     var outQty = parseFloat(document.getElementById('entryOutQtyRM').value) || 0;
-
-    var lotNo = document.getElementById('entryLotNoRM').value || '-';
-    var vendor = document.getElementById('entryVendorRM').value || '-';
 
     if (!productCode || !date || !type) {
         alert('กรุณากรอกข้อมูลสำคัญ (รหัสสินค้า, วันที่, ประเภท) ให้ครบถ้วน');
@@ -2025,39 +2023,106 @@ function saveEntryRM() {
     }
 
     showLoading();
-    showToast('กำลังบันทึกข้อมูลวัตถุดิบ...');
+    showToast('กำลังบันทึกข้อมูลวัตถุดิบ...' + (isSplit ? ' (แยก ' + splitPlan.length + ' รายการ)' : ''));
 
-    fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'add_rm',
-            entry: {
+    var entriesToSave = [];
+
+    if (isSplit && outQty > 0) {
+        // Create multiple entries based on plan
+        splitPlan.forEach(function (item) {
+            // Recalculate container/remainder logic for this specific chunk if needed?
+            // User put total container in form, but we are splitting.
+            // It's hard to split containers exactly if they are integers.
+            // Let's just save the Weight (qty) accurately. 
+            // Containers: We can try to reverse calc for each chunk or just leave blank for split items?
+            // Let's reverse calc for standard weight.
+
+            var chunkQty = item.qty;
+            var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
+            var contQty = 0;
+            var rem = 0;
+
+            if (containerWeight > 0) {
+                contQty = Math.floor(chunkQty / containerWeight);
+                rem = chunkQty % containerWeight;
+                rem = Math.round(rem * 100) / 100;
+            } else {
+                rem = chunkQty;
+            }
+
+            entriesToSave.push({
                 date: formatDateThai(date),
                 productCode: productCode,
                 productName: productName,
                 type: type,
-                containerQty: containerQty,
+                containerQty: contQty,
                 containerWeight: containerWeight,
-                remainder: remainder,
-                inQty: inQty,
-                outQty: outQty,
-                lotNo: lotNo,
-                supplier: vendor // Map 'Vendor' input to Supplier field
-            }
-        })
-    }).then(function () {
+                remainder: rem,
+                inQty: 0,
+                outQty: chunkQty,
+                lotNo: item.lotNo,
+                supplier: item.supplier || vendor // Use specific supplier if known, else form vendor
+            });
+        });
+    } else {
+        // Normal Save (Single Entry)
+        var containerQty = parseFloat(document.getElementById('entryContainerQtyRM').value) || 0;
+        var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
+        var remainder = parseFloat(document.getElementById('entryRemainderRM').value) || 0;
+        var lotNo = document.getElementById('entryLotNoRM').value || '-';
+
+        entriesToSave.push({
+            date: formatDateThai(date),
+            productCode: productCode,
+            productName: productName,
+            type: type,
+            containerQty: containerQty,
+            containerWeight: containerWeight,
+            remainder: remainder,
+            inQty: inQty,
+            outQty: outQty,
+            lotNo: lotNo,
+            supplier: vendor
+        });
+    }
+
+    // Process all entries sequentially using Promise
+    var chain = Promise.resolve();
+
+    entriesToSave.forEach(function (entry, index) {
+        chain = chain.then(function () {
+            // Artificial delay between requests to be safe
+            return new Promise(function (resolve) {
+                setTimeout(resolve, index === 0 ? 0 : 500);
+            });
+        }).then(function () {
+            return fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'add_rm',
+                    entry: entry
+                })
+            });
+        });
+    });
+
+    chain.then(function () {
         setTimeout(async function () {
             showToast('บันทึกวัตถุดิบเรียบร้อย!');
             closeEntryModalRM();
             // Reset form
             document.getElementById('entryFormRM').reset();
+            window.currentSplitPlan = null; // Clear plan
+            document.getElementById('lotSplitWarning').style.display = 'none';
+
             await fetchRMData();
             hideLoading();
         }, 2000);
     }).catch(function (e) { alert(e); hideLoading(); });
 }
+
 
 // Auto-Calculate RM Totals
 function calculateRMTotal() {
@@ -2085,153 +2150,244 @@ function calculateRMTotal() {
     }
 }
 
-// Reverse Calculate: Total (Kg) -> Container Qty + Remainder
+// Reverse Calculate: Total (Kg) -> Container Qty + Remainder + Split Logic
 function reverseCalculateRM() {
     var inQty = parseFloat(document.getElementById('entryInQtyRM').value) || 0;
     var outQty = parseFloat(document.getElementById('entryOutQtyRM').value) || 0;
     var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
 
-    // Determine which total to use based on inputs
-    // If user is typing in OUT, use OUT. If IN, use IN.
     var total = (inQty > 0) ? inQty : outQty;
 
     if (total > 0 && containerWeight > 0) {
         var containers = Math.floor(total / containerWeight);
         var remainder = total % containerWeight;
-
-        // Handle floating point errors (e.g. 10 % 5 might be 0.00000001 or 4.999999)
-        // Round remainder to 2 decimals
         remainder = Math.round(remainder * 100) / 100;
 
-        // If remainder is very close to containerWeight, bump container count (optional, but math.floor handles logic)
-        // But if remainder is basically 0, it's good.
-
-        // Update Inputs
         document.getElementById('entryContainerQtyRM').value = containers;
         document.getElementById('entryRemainderRM').value = remainder;
     }
+
+    // Check Split Logic if Withdrawal
+    var type = document.getElementById('entryTypeRM').value;
+    var isWithdrawal = type && type.includes('เบิก');
+    var productCode = document.getElementById('entryProductCodeRM').value;
+
+    if (isWithdrawal && productCode && outQty > 0) {
+        checkLotSplit(productCode, outQty);
+    } else {
+        // Hide warning if not withdrawal or no qty
+        document.getElementById('lotSplitWarning').style.display = 'none';
+        window.currentSplitPlan = null;
+    }
 }
 
+// Logic to check if splitting is needed
+function checkLotSplit(productCode, requiredQty) {
+    var lots = getSortedActiveLots(productCode);
+    if (lots.length === 0) return;
 
+    // Check if first lot has enough
+    var firstLot = lots[0];
+
+    if (requiredQty > firstLot.balance) {
+        // SPLIT NEEDED
+        var plan = [];
+        var remainingNeeded = requiredQty;
+
+        // Loop through lots to fill order
+        for (var i = 0; i < lots.length; i++) {
+            if (remainingNeeded <= 0) break;
+
+            var lot = lots[i];
+            var take = Math.min(remainingNeeded, lot.balance);
+
+            plan.push({
+                lotNo: lot.lotNo,
+                qty: take,
+                supplier: lot.supplier,
+                balance: lot.balance
+            });
+
+            remainingNeeded -= take;
+            // Round to avoid float errors
+            remainingNeeded = Math.round(remainingNeeded * 100) / 100;
+        }
+
+        // If still need more but ran out of lots?
+        if (remainingNeeded > 0) {
+            // Just add remainder to the last lot or new entry?
+            // Let's add it to a "Generic/New" entry or warn user.
+            // Current behavior: Warn but allow?
+            // Let's create an "Out of Stock" entry or just append to the last used plan.
+            // Better to append to last plan to allow negative stock on that last lot.
+            if (plan.length > 0) {
+                plan[plan.length - 1].qty += remainingNeeded;
+            } else {
+                // No lots at all, just use input lot (handled by normal form)
+                // If normal form has lot, use it.
+            }
+        }
+
+        // Render Plan
+        renderSplitWarning(plan);
+        window.currentSplitPlan = plan;
+
+    } else {
+        // No split needed
+        document.getElementById('lotSplitWarning').style.display = 'none';
+        window.currentSplitPlan = null; // Clear plan
+
+        // Update Lot Input to the single best lot if not already
+        // (Optional: User might have changed it manually)
+    }
+}
+
+function renderSplitWarning(plan) {
+    var warningBox = document.getElementById('lotSplitWarning');
+    var list = document.getElementById('lotSplitList');
+    if (!warningBox || !list) return;
+
+    list.innerHTML = '';
+
+    plan.forEach(function (item, idx) {
+        var li = document.createElement('li');
+        li.innerHTML = '<strong>' + (idx + 1) + '. Lot ' + item.lotNo + '</strong>: ตัด ' + formatNumber(item.qty) + ' Kg (จากคงเหลือ ' + formatNumber(item.balance) + ')';
+        list.appendChild(li);
+    });
+
+    warningBox.style.display = 'block';
+
+    // Update main Lot Input to show it's mixed
+    var lotInput = document.getElementById('entryLotNoRM');
+    if (lotInput) {
+        lotInput.value = plan[0].lotNo; // Show first lot
+        // Maybe change color or border to indicate?
+    }
+}
+
+// Helper: Get Sorted Lots (Reused logic)
+function getSortedActiveLots(productCode) {
+    var entries = rmStockData.filter(function (d) { return d.productCode === productCode; });
+    var lotBalances = {};
+    var lotFirstDate = {};
+    var lotExpDays = {};
+    var lotVendor = {};
+
+    entries.forEach(function (e) {
+        if (!e.lotNo) return;
+        if (!lotBalances[e.lotNo]) {
+            lotBalances[e.lotNo] = 0;
+            lotFirstDate[e.lotNo] = e.date;
+            lotVendor[e.lotNo] = e.supplier || e.vendorLot;
+        }
+        lotBalances[e.lotNo] += e.inQty - e.outQty;
+
+        var days = parseInt(e.daysLeft);
+        if (!isNaN(days)) {
+            if (lotExpDays[e.lotNo] === undefined || days < lotExpDays[e.lotNo]) {
+                lotExpDays[e.lotNo] = days;
+            }
+        }
+    });
+
+    var activeLots = Object.keys(lotBalances)
+        .filter(function (lot) { return lotBalances[lot] > 0; })
+        .map(function (lot) {
+            return {
+                lotNo: lot,
+                balance: lotBalances[lot],
+                firstDate: lotFirstDate[lot],
+                expDays: lotExpDays[lot],
+                supplier: lotVendor[lot]
+            };
+        });
+
+    // Sort: Reval > FEFO > FIFO
+    // 1. Identify Reval
+    var revalLots = [];
+    var otherLots = [];
+
+    activeLots.forEach(function (lotObj) {
+        var isReval = entries.some(function (e) {
+            return e.lotNo === lotObj.lotNo && e.remark && /(ต่ออายุ|reval|extend)/i.test(e.remark);
+        });
+        if (isReval) revalLots.push(lotObj);
+        else otherLots.push(lotObj);
+    });
+
+    // Sort Others by FEFO (ExpDays) then FIFO (Date)
+    otherLots.sort(function (a, b) {
+        // FEFO: if expDays <= 90
+        var aUrgent = (a.expDays !== undefined && a.expDays <= 90);
+        var bUrgent = (b.expDays !== undefined && b.expDays <= 90);
+
+        if (aUrgent && !bUrgent) return -1;
+        if (!aUrgent && bUrgent) return 1;
+        if (aUrgent && bUrgent) return (a.expDays - b.expDays);
+
+        // FIFO fallback
+        return (a.firstDate || '') > (b.firstDate || '') ? 1 : -1;
+    });
+
+    return revalLots.concat(otherLots);
+}
 
 // Auto-Fill RM Entry Form (Suggest Best Lot + Vendor + Weight)
 function autoFillRMForm(productCode) {
     if (!productCode) return;
 
     var type = document.getElementById('entryTypeRM').value;
-    var isWithdrawal = type && type.includes('เบิก'); // e.g., เบิกผลิต
+    var isWithdrawal = type && type.includes('เบิก');
 
-    // 1. Always Auto-Fill Container Weight based on history (Latest entry)
+    // 1. Always Auto-Fill Container Weight based on history
     var foundWeight = null;
     var lastVendor = '-';
+    // ... (Keep existing weight find logic) ...
     for (var i = rmStockData.length - 1; i >= 0; i--) {
         var item = rmStockData[i];
         if (item.productCode === productCode) {
-            if (foundWeight === null && item.containerWeight > 0) {
-                foundWeight = item.containerWeight;
-            }
-            if (lastVendor === '-' && item.supplier) {
-                lastVendor = item.supplier;
-            }
+            if (foundWeight === null && item.containerWeight > 0) foundWeight = item.containerWeight;
+            if (lastVendor === '-' && item.supplier) lastVendor = item.supplier;
             if (foundWeight !== null && lastVendor !== '-') break;
         }
     }
 
-    // Fill Container Weight (Standard User Helper)
     var weightInput = document.getElementById('entryContainerWeightRM');
     if (weightInput && !weightInput.value && foundWeight !== null) {
         weightInput.value = foundWeight;
         calculateRMTotal();
     }
 
-
-    // 2. Intelligent Auto-Fill specific to Type
+    // 2. Intelligent Auto-Fill for Withdrawal
     if (isWithdrawal) {
-        // --- WITHDRAWAL LOGIC (Suggest Lot) ---
-        var entries = rmStockData.filter(function (d) { return d.productCode === productCode; });
-        var lotBalances = {};
+        var sortedLots = getSortedActiveLots(productCode);
 
-        // ... (existing helper logic for dates/expiry) ...
-        var lotFirstDate = {};
-        var lotExpDays = {};
-        var lotVendor = {};
+        if (sortedLots.length > 0) {
+            var bestLot = sortedLots[0];
+            var lotInput = document.getElementById('entryLotNoRM');
+            var vendorInput = document.getElementById('entryVendorRM');
 
-        entries.forEach(function (e) {
-            if (!e.lotNo) return;
-            if (!lotBalances[e.lotNo]) {
-                lotBalances[e.lotNo] = 0;
-                lotFirstDate[e.lotNo] = e.date;
-                lotVendor[e.lotNo] = e.supplier || e.vendorLot;
+            if (lotInput && !lotInput.value) {
+                lotInput.value = bestLot.lotNo;
+                // Reason text generation
+                var reason = '';
+                // (Simplification: Just show it works)
+                // We could check if it was Reval or FEFO again but getSortedActiveLots already did the work.
+                showToast('แนะนำ Lot: ' + bestLot.lotNo + ' (เหลือ ' + formatNumber(bestLot.balance) + ' Kg)');
             }
-            lotBalances[e.lotNo] += e.inQty - e.outQty;
-
-            var days = parseInt(e.daysLeft);
-            if (!isNaN(days)) {
-                if (lotExpDays[e.lotNo] === undefined || days < lotExpDays[e.lotNo]) {
-                    lotExpDays[e.lotNo] = days;
-                }
-            }
-        });
-
-        var activeLots = Object.keys(lotBalances).filter(function (lot) { return lotBalances[lot] > 0; });
-
-        if (activeLots.length > 0) {
-            var bestLot = null;
-            var reason = '';
-
-            // Priority: Reval > FEFO > FIFO
-            var revalLot = activeLots.find(function (lot) {
-                return entries.some(function (e) {
-                    return e.lotNo === lot && e.remark && /(ต่ออายุ|reval|extend)/i.test(e.remark);
-                });
-            });
-
-            if (revalLot) {
-                bestLot = revalLot;
-                reason = ' (ต่ออายุ)';
-            } else {
-                var sortedByExp = activeLots.slice().sort(function (a, b) {
-                    return (lotExpDays[a] || 9999) - (lotExpDays[b] || 9999);
-                });
-                var bestExpLot = sortedByExp[0];
-                if (lotExpDays[bestExpLot] !== undefined && lotExpDays[bestExpLot] <= 90) {
-                    bestLot = bestExpLot;
-                    reason = ' (FEFO/ใกล้หมดอายุ)';
-                } else {
-                    var sortedByDate = activeLots.slice().sort(function (a, b) {
-                        // Use string comparison for simple ISO-like dates or parse
-                        return (lotFirstDate[a] || '') > (lotFirstDate[b] || '') ? 1 : -1;
-                    });
-                    bestLot = sortedByDate[0];
-                    reason = ' (FIFO/เก่าสุด)';
-                }
-            }
-
-            if (bestLot) {
-                var lotInput = document.getElementById('entryLotNoRM');
-                var vendorInput = document.getElementById('entryVendorRM');
-                if (lotInput && !lotInput.value) {
-                    lotInput.value = bestLot;
-                    showToast('แนะนำ Lot: ' + bestLot + reason);
-                }
-                if (vendorInput && !vendorInput.value && lotVendor[bestLot]) {
-                    vendorInput.value = lotVendor[bestLot];
-                }
-                // Try to fill standard weight for this specific lot if possible? 
-                // We already filled standard weight above.
+            if (vendorInput && !vendorInput.value && bestLot.supplier) {
+                vendorInput.value = bestLot.supplier;
             }
         }
     } else {
-        // --- RECEIVE LOGIC ---
-        // 1. Vendor Hint (Last vendor used for this product)
+        // Receive logic ...
         var vendorInput = document.getElementById('entryVendorRM');
         if (vendorInput && !vendorInput.value && lastVendor !== '-') {
             vendorInput.value = lastVendor;
         }
-
-        // REMOVED: Auto-Generate Lot No. (User manages their own running numbers)
     }
 }
+
 
 
 // ==================== EVENT LISTENERS ====================

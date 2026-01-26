@@ -523,8 +523,8 @@ const loadData = async () => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-            // Add t parameter to avoid caching
-            const response = await fetch(`${API_URL}?t=${Date.now()}`, { signal: controller.signal });
+            // Add t parameter for cache busting and sheet parameter for data separation
+            const response = await fetch(`${API_URL}?action=load_all&sheet=Consumable&t=${Date.now()}`, { signal: controller.signal });
             clearTimeout(timeoutId);
 
             if (!response.ok) throw new Error("Network response was not ok");
@@ -697,6 +697,7 @@ window.saveData = async () => {
 
             const payload = {
                 action: 'save_all',
+                sheet: 'Consumable',
                 items: sheetItems,
                 transactions: sheetTransactions
             };

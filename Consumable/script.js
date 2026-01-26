@@ -293,10 +293,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 minThreshold: parseFloat(inputMinThreshold.value) || 0,
                 pcsPerPack: parseFloat(inputPcsPerPack.value) || 1,
                 fgPcsPerCarton: parseFloat(inputFgPcsPerCarton.value) || 0,
+                stockCode: document.getElementById('input-stock-code') ? document.getElementById('input-stock-code').value.trim() : '',
 
                 updated: new Date().toISOString(),
                 history: index >= 0 ? items[index].history : []
             };
+
+            // Link Stock Logic: If this item has a stockCode, we must sync its stock from existing peers OR update peers.
+            if (item.stockCode) {
+                const peers = items.filter(i => i.stockCode === item.stockCode && i.category === item.category);
+                if (index === -1 && peers.length > 0) {
+                    // Adding new: Inherit stock from existing peer
+                    const master = peers[0];
+                    item.stockCartons = master.stockCartons;
+                    item.stockPartialKg = master.stockPartialKg;
+                }
+            }
 
             // Save History
             try {
@@ -307,6 +319,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 items.push(item);
             } else {
                 items[index] = item;
+            }
+
+            // Post-Save Sync: Update ALL items with same stockCode to match this one
+            if (item.stockCode) {
+                items.forEach(i => {
+                    if (i.stockCode === item.stockCode && i.category === item.category) {
+                        i.stockCartons = item.stockCartons;
+                        i.stockPartialKg = item.stockPartialKg;
+                    }
+                });
             }
 
             // Optimistic Update
@@ -818,8 +840,13 @@ window.updateStats = () => {
 
     // Count Low Stock
     const lowStockCount = items.filter(item => {
-        const totalKg = (item.stockCartons * item.kgPerCarton) + (item.stockPartialKg || 0);
-        return totalKg < item.minThreshold;
+        const isRoll = item.category === 'unit';
+        if (isRoll) {
+            return item.stockCartons < item.minThreshold;
+        } else {
+            const totalKg = (item.stockCartons * item.kgPerCarton) + (item.stockPartialKg || 0);
+            return totalKg < item.minThreshold;
+        }
     }).length;
 
     lowStockCountEl.textContent = lowStockCount;
@@ -1141,6 +1168,10 @@ window.openModal = (isEdit = false, index = null) => {
         inputFgPcsPerCarton.value = item.fgPcsPerCarton || 1;
         editIndexInput.value = index;
 
+        // Populate Stock Code
+        const stockCodeInput = document.getElementById('input-stock-code');
+        if (stockCodeInput) stockCodeInput.value = item.stockCode || '';
+
         // Populate Roll Fields if they exist
         if (item.category === 'unit') {
             document.getElementById('input-roll-length').value = item.rollLength || '';
@@ -1177,6 +1208,10 @@ window.openModal = (isEdit = false, index = null) => {
         inputPcsPerPack.value = 1;
         inputFgPcsPerCarton.value = 1;
         editIndexInput.value = '-1';
+
+        // Reset Stock Code
+        const stockCodeInput = document.getElementById('input-stock-code');
+        if (stockCodeInput) stockCodeInput.value = '';
 
         // Reset Category
         if (inputCategory) {

@@ -521,6 +521,14 @@
                         <datalist id="product-history-list"></datalist>
                     </div>
 
+                    <div class="form-group"
+                        style="background-color: #f8fafc; padding: 10px; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                        <label style="color: #475569; font-size: 0.9em;">รหัสสต็อก (เชื่อมโยงสต็อก)</label>
+                        <input type="text" id="input-stock-code" placeholder="ใส่รหัสเดียวกันเพื่อแชร์สต็อก เช่น F450"
+                            style="background: #fff;">
+                        <div class="help-text">ถ้าใส่สินค้าหลายตัวรหัสเดียวกัน สต็อกจะตัดพร้อมกัน</div>
+                    </div>
+
                     <div class="form-group">
                         <label>ประเภทสินค้า</label>
                         <select id="input-category" class="input-field" onchange="toggleItemFormFields()"
@@ -855,7 +863,7 @@
         </style>
 
 
-        <script src="script.js?v=mobile_fix_17"></script>
+        <script src="script.js?v=mobile_fix_18"></script>
 </body>
 
 </html>

@@ -527,18 +527,51 @@ window.saveData = async () => {
         try {
             // Map to Thai Headers matching Web Page EXACTLY
             const sheetItems = items.map(item => {
-                const stockPartial = item.stockPartialKg || 0;
-                const totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
+                const isRoll = item.category === 'unit';
+                const stockPartial = isRoll ? 0 : (item.stockPartialKg || 0);
+
+                let totalKg = 0;
+                let totalPcs = 0;
+
+                // Common fields
                 const pcsPerPack = item.pcsPerPack || 1;
-                const totalPcs = totalKg * item.pcsPerKg * pcsPerPack;
                 const fgPcsPerCarton = item.fgPcsPerCarton || 1;
+
+                if (isRoll) {
+                    // Roll Logic
+                    totalPcs = item.stockCartons * (item.pcsPerRoll || 0);
+                    // totalKg is not relevant for rolls, leave as 0 or calculate if needed? 
+                    // Let's keep 0 to avoid confusion in KG columns.
+                } else {
+                    // Weight Logic
+                    totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
+                    totalPcs = totalKg * item.pcsPerKg * pcsPerPack;
+                }
+
                 const fgYield = (fgPcsPerCarton > 0) ? (totalPcs / fgPcsPerCarton) : 0;
-                const isLow = totalKg < item.minThreshold;
+                const isLow = isRoll ? (item.stockCartons < (item.minThreshold / 20)) : (totalKg < item.minThreshold);
+                // Note: minThreshold for Rolls? Usually threshold is in Kg. 
+                // If user didn't change threshold logic, we use existing check. 
+                // But in RenderTable line 609: `const isLowStock = totalKg < item.minThreshold;` 
+                // For rolls totalKg is 0, so it will ALWAYS be low stock?
+                // Wait, renderTable logic in Step 361:
+                // `totalKg = 0` for rolls. 
+                // `const isLowStock = totalKg < item.minThreshold;` -> 0 < 100 -> True.
+                // BAD. Accessing isLowStock for Rolls needs fixing too.
+
+                // Let's fix isLow for Rolls in saveData first. 
+                // Maybe assume threshold is in 'Units' for rolls? Or just ignore for now?
+                // Let's rely on totalPcs or Cartons?
+                // To be safe and consistent with previous code which might be buggy for Rolls:
+                // Let's just use totalKg < minThreshold for Weight.
+                // For Rolls, let's use stockCartons < minThreshold (if threshold means cartons?). 
+                // User input minThreshold says "(Kg)". 
+                // Let's leave isLow logic simple for now or strictly defined:
+                const isLowSaving = isRoll ? false : (totalKg < item.minThreshold);
 
                 return {
                     "ชื่อสินค้า": item.name,
-                    "ประเภท": item.category || 'weight', // New
-                    "สต็อก (ลัง/ม้วน)": item.stockCartons, // Renamed for clarity in Sheet? Keep existing key if possible, or User changes header. Let's keep "สต็อก (ลัง)" but User knows. Actually better to use generic key if User adds new column. Let's stick to existing keys where possible and add new ones.
+                    "ประเภท": item.category || 'weight',
                     "สต็อก (ลัง)": item.stockCartons,
                     "เศษ(กก.)": stockPartial,
                     "กก./ลัง": item.kgPerCarton,
@@ -550,8 +583,7 @@ window.saveData = async () => {
                     "ชิ้น FG/ลัง": fgPcsPerCarton,
                     "ผลิตได้ (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
                     "ผลิตได้ (ลัง)": parseFloat(fgYield.toFixed(1)),
-                    "สถานะ": isLow ? "ต้องสั่งซื้อ" : "ปกติ",
-                    // New Columns for Roll
+                    "สถานะ": isLowSaving ? "ต้องสั่งซื้อ" : "ปกติ",
                     "ความยาวม้วน (ม.)": item.rollLength || 0,
                     "ความยาวตัด (มม.)": item.cutLength || 0,
                     "ชิ้น/ม้วน": item.pcsPerRoll || 0

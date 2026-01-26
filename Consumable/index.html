@@ -343,9 +343,52 @@
                 font-size: 7.5pt !important;
             }
 
+            body:not(.printing-history-mode) tr {
+                height: 28px !important;
+                /* Force equal height */
+            }
+
             body:not(.printing-history-mode) th,
             body:not(.printing-history-mode) td {
                 padding: 3px 2px !important;
+                vertical-align: middle !important;
+                height: 28px !important;
+                /* Force cell height */
+            }
+
+            /* Compact Badges for Print */
+            body:not(.printing-history-mode) .status-badge {
+                padding: 1px 4px !important;
+                font-size: 7pt !important;
+                border-radius: 4px !important;
+                line-height: 1 !important;
+                display: inline-block !important;
+                margin: 0 !important;
+                border: 1px solid #ddd !important;
+                box-shadow: none !important;
+                animation: none !important;
+                /* Stop pulsing */
+            }
+
+            /* Force badge text color to be readable */
+            body:not(.printing-history-mode) .status-badge.status-low {
+                color: #dc2626 !important;
+                background-color: transparent !important;
+                border-color: #dc2626 !important;
+            }
+
+            /* Prevent cells from expanding */
+            body:not(.printing-history-mode) td {
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+            }
+
+            /* Name column exception for wrapping */
+            body:not(.printing-history-mode) td:nth-child(2) {
+                white-space: normal !important;
+                overflow: visible !important;
+                line-height: 1.2 !important;
             }
         }
     </style>

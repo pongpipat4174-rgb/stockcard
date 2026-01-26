@@ -3221,24 +3221,28 @@ mark.search-highlight {
     }
 
     /* 1. Brand Centered */
+    /* 1. Brand Compact Row */
     .brand {
         display: flex !important;
-        flex-direction: column;
+        flex-direction: row;
+        /* Horizontal */
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
+        /* Left align */
         width: 100%;
         order: 0;
-        text-align: center;
-        gap: 8px;
+        text-align: left;
+        gap: 12px;
+        margin-bottom: 0.5rem;
     }
 
     .brand-logo {
-        /* Remove fixed size to allow image to scale naturally or use max-width */
-        max-width: 80px;
-        /* Reasonable max width for mobile logo */
+        max-width: 48px;
+        /* Smaller Logo */
+        border-radius: 8px;
+        /* Soften */
         height: auto;
         margin: 0;
-        /* box-shadow: 0 4px 6px rgba(0,0,0,0.1); -> Remove shadow from container if image has transparency */
     }
 
     .brand-logo img {
@@ -3248,15 +3252,13 @@ mark.search-highlight {
     }
 
     .brand-text {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        align-items: flex-start;
+        /* Left align text */
     }
 
     .brand-text h1 {
-        font-size: 1.5rem;
-        /* Larger title */
-        margin-bottom: 2px;
+        font-size: 1.25rem;
+        margin-bottom: 0;
     }
 
     .brand-text span {
@@ -3271,375 +3273,393 @@ mark.search-highlight {
         order: 1;
         width: 100%;
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 10px;
-        margin-bottom: 4px;
-    }
-
-    .header-actions .btn {
-        justify-content: center;
-        padding: 0.75rem 0.25rem;
-        font-size: 0.8rem;
-        width: 100%;
-        flex-direction: row;
-        /* Ensure icon and text are inline */
-    }
-
-    .header-actions .btn svg {
-        width: 18px;
-        height: 18px;
-        margin-right: 6px;
-    }
-
-    /* 3. Tabs (Bottom - Full Width) */
-    .module-tabs {
-        order: 2;
-        width: 100%;
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        /* 2x2 grid for 4 items */
-        gap: 8px;
-        margin: 0;
-        background: rgba(255, 255, 255, 0.15);
-        padding: 8px;
-        border-radius: 12px;
-    }
-
-    .module-tab {
-        width: 100%;
-        justify-content: center;
-        padding: 10px 5px;
-        font-size: 0.85rem;
-    }
-
-    /* Stats Section */
-    .stats-section {
-        padding: 1rem;
-    }
-
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.75rem;
-    }
-
-    .stat-card {
-        padding: 0.75rem;
-        gap: 0.5rem;
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .stat-icon {
-        width: 36px;
-        height: 36px;
-    }
-
-    .stat-icon svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    .stat-value {
-        font-size: 1.25rem;
-    }
-
-    .stat-label {
-        font-size: 0.625rem;
-    }
-
-    .stat-arrow {
-        display: none;
-    }
-
-    /* Alert Banners */
-    .alert-banners-section {
-        padding: 0 1rem;
-    }
-
-    .alert-banners-container {
-        grid-template-columns: 1fr;
-        gap: 0.75rem;
-    }
-
-    .alert-banner {
-        padding: 0.75rem 1rem;
-    }
-
-    .alert-banner-icon {
-        width: 36px;
-        height: 36px;
-    }
-
-    .alert-banner-icon svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    .alert-banner-title {
-        font-size: 0.75rem;
-    }
-
-    .alert-banner-count {
-        font-size: 1rem;
-    }
-
-    /* Filter Section */
-    .filter-container {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .rm-filter-group,
-    .date-filter-group,
-    .search-wrapper {
-        width: 100%;
-    }
-
-    .search-box {
-        padding: 0.625rem 0.75rem;
-    }
-
-    .rm-product-select,
-    .date-filter-input {
-        width: 100%;
-    }
-
-    .btn-clear-filter {
-        width: 100%;
-        justify-content: center;
-    }
-
-    /* Module Banner */
-    .module-banner {
-        padding: 1rem;
-    }
-
-    .module-banner-content {
-        flex-direction: column;
-        text-align: center;
-        gap: 0.75rem;
-    }
-
-    .module-icon {
-        font-size: 2rem;
-    }
-
-    .module-info h2 {
-        font-size: 1.25rem;
-    }
-
-    .module-info p {
-        font-size: 0.75rem;
-    }
-
-    /* Cards Container */
-    .cards-container {
-        padding: 1rem;
-        gap: 1rem;
-    }
-
-    /* Stock Card */
-    .stock-card-header {
-        flex-direction: column;
-        gap: 0.75rem;
-        padding: 1rem;
-    }
-
-    .stock-card-title h2 {
-        font-size: 0.9375rem;
-    }
-
-    .stock-card-actions {
-        width: 100%;
-        justify-content: flex-end;
-    }
-
-    .stock-card-summary,
-    .stock-card-summary-rm {
-        gap: 0.5rem;
-        padding: 0.75rem;
-        /* Force 2 columns on mobile for FIFO/FEFO side by side */
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
-
-    /* Make FIFO and FEFO smaller and side-by-side */
-    .fifo-lot,
-    .fefo-lot {
-        padding: 0.5rem;
-        border-radius: 8px;
-    }
-
-    .fifo-lot .summary-label,
-    .fefo-lot .summary-label {
-        font-size: 0.6rem;
-    }
-
-    .fifo-lot .summary-value,
-    .fefo-lot .summary-value,
-    .fifo-value,
-    .fefo-value {
-        font-size: 0.85rem;
-    }
-
-    .fifo-note,
-    .fefo-note {
-        font-size: 0.6rem;
-        margin-top: 0.15rem;
-    }
-
-    /* Lots badge smaller on mobile */
-    .lots-badge {
-        font-size: 0.55rem;
-        padding: 0.15rem 0.4rem;
-        top: -5px;
-        right: -5px;
-    }
-
-    .summary-item {
-        padding: 0.5rem;
-    }
-
-    .summary-value {
-        font-size: 1rem;
-    }
-
-    .summary-label {
-        font-size: 0.625rem;
-    }
-
-
-
-    /* Stock Table */
-    .stock-table-container {
-        padding: 0.75rem;
-    }
-
-    .stock-table th,
-    .stock-table td {
-        padding: 0.5rem;
-        font-size: 0.75rem;
-    }
-
-    /* Modal */
-    .modal-content {
-        width: 95%;
-        max-height: 90vh;
-    }
-
-    .modal-header {
-        padding: 1rem;
-    }
-
-    .modal-body {
-        padding: 1rem;
-    }
-
-    .modal-footer {
-        padding: 1rem;
-        flex-wrap: wrap;
-    }
-}
-
-/* Extra Small Mobile */
-@media screen and (max-width: 480px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.5rem;
-    }
-
-    .stat-card {
-        padding: 0.5rem;
-    }
-
-    .stat-icon {
-        width: 28px;
-        height: 28px;
-    }
-
-    .stat-icon svg {
-        width: 14px;
-        height: 14px;
-    }
-
-    .stat-value {
-        font-size: 1rem;
-    }
-
-    .stat-label {
-        font-size: 0.5625rem;
-    }
-
-    .btn-group .btn span {
-        display: none;
-    }
-
-    .btn-group .btn {
-        padding: 0.5rem;
-    }
-
-    .brand-title h1 {
-        font-size: 1rem;
-    }
-
-    .brand-title p {
-        display: none;
-    }
-
-    /* DISABLE ANIMATIONS ON MOBILE TO PREVENT GLITCHES */
-    *,
-    *::before,
-    *::after {
-        animation: none !important;
-        transition: none !important;
-    }
-}
-
-/* Ensure smoother scrolling on mobile */
-@media screen and (max-width: 768px) {
-    .stock-table-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        /* transform: translateZ(0); Removed to prevent flickering */
-        /* Force GPU acceleration */
-    }
-}
-
-/* Cleaned up messy definitions at end of file */
-
-@media (max-width: 768px) {
-    /* Package Module Mobile Optimization: Show only essential columns */
-    /* Target tables inside stock-card but NOT stock-card-rm */
-
-    /* Hide: Type(2), Ref(8), Remark(9), Delete(10) */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(2),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(2),
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(8),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(8),
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(9),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(9),
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(10),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(10) {
-        display: none !important;
-    }
-
-    /* Adjust layout for remaining columns to fit screen */
-    .stock-card:not(.stock-card-rm) .stock-table {
-        font-size: 0.7rem;
-        /* Reduced from 0.75rem */
-        width: 100%;
-        table-layout: fixed;
-    }
-
-    .stock-card:not(.stock-card-rm) .stock-table th,
-    .stock-card:not(.stock-card-rm) .stock-table td {
-        padding: 0.25rem 2px;
-        /* Very tight horizontal padding */
-        white-space: normal;
-        vertical-align: middle;
-        overflow-wrap: break-word;
-    }
 
-    /* Column Width Allocation (Total 100%) 
+        /* 2. Actions (Scrollable horizontal or Grid) */
+        .header-actions {
+            order: 1;
+            width: 100%;
+            display: flex;
+            /* Flex for scroll or wrapping */
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            /* Allow scroll if needed on very small screens */
+            gap: 8px;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            /* Space for scrollbar if any */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .header-actions::-webkit-scrollbar {
+            display: none;
+        }
+
+        .header-actions .btn {
+            flex: 1;
+            /* Equal width */
+            white-space: nowrap;
+            padding: 0.6rem 0.5rem;
+            font-size: 0.75rem;
+            width: 100%;
+            flex-direction: row;
+            /* Ensure icon and text are inline */
+        }
+
+        .header-actions .btn svg {
+            width: 18px;
+            height: 18px;
+            margin-right: 6px;
+        }
+
+        /* 3. Tabs (Bottom - Full Width) */
+        .module-tabs {
+            order: 2;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            /* 2x2 grid for 4 items */
+            gap: 8px;
+            margin: 0;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px;
+            border-radius: 12px;
+        }
+
+        .module-tab {
+            width: 100%;
+            justify-content: center;
+            padding: 10px 5px;
+            font-size: 0.85rem;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            padding: 1rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .stat-card {
+            padding: 0.75rem;
+            gap: 0.5rem;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .stat-icon {
+            width: 36px;
+            height: 36px;
+        }
+
+        .stat-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.625rem;
+        }
+
+        .stat-arrow {
+            display: none;
+        }
+
+        /* Alert Banners */
+        .alert-banners-section {
+            padding: 0 1rem;
+        }
+
+        .alert-banners-container {
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+
+        .alert-banner {
+            padding: 0.75rem 1rem;
+        }
+
+        .alert-banner-icon {
+            width: 36px;
+            height: 36px;
+        }
+
+        .alert-banner-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .alert-banner-title {
+            font-size: 0.75rem;
+        }
+
+        .alert-banner-count {
+            font-size: 1rem;
+        }
+
+        /* Filter Section */
+        .filter-container {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .rm-filter-group,
+        .date-filter-group,
+        .search-wrapper {
+            width: 100%;
+        }
+
+        .search-box {
+            padding: 0.625rem 0.75rem;
+        }
+
+        .rm-product-select,
+        .date-filter-input {
+            width: 100%;
+        }
+
+        .btn-clear-filter {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* Module Banner */
+        .module-banner {
+            padding: 1rem;
+        }
+
+        .module-banner-content {
+            flex-direction: column;
+            text-align: center;
+            gap: 0.75rem;
+        }
+
+        .module-icon {
+            font-size: 2rem;
+        }
+
+        .module-info h2 {
+            font-size: 1.25rem;
+        }
+
+        .module-info p {
+            font-size: 0.75rem;
+        }
+
+        /* Cards Container */
+        .cards-container {
+            padding: 1rem;
+            gap: 1rem;
+        }
+
+        /* Stock Card */
+        .stock-card-header {
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1rem;
+        }
+
+        .stock-card-title h2 {
+            font-size: 0.9375rem;
+        }
+
+        .stock-card-actions {
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .stock-card-summary,
+        .stock-card-summary-rm {
+            gap: 0.5rem;
+            padding: 0.75rem;
+            /* Force 2 columns on mobile for FIFO/FEFO side by side */
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+
+        /* Make FIFO and FEFO smaller and side-by-side */
+        .fifo-lot,
+        .fefo-lot {
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        .fifo-lot .summary-label,
+        .fefo-lot .summary-label {
+            font-size: 0.6rem;
+        }
+
+        .fifo-lot .summary-value,
+        .fefo-lot .summary-value,
+        .fifo-value,
+        .fefo-value {
+            font-size: 0.85rem;
+        }
+
+        .fifo-note,
+        .fefo-note {
+            font-size: 0.6rem;
+            margin-top: 0.15rem;
+        }
+
+        /* Lots badge smaller on mobile */
+        .lots-badge {
+            font-size: 0.55rem;
+            padding: 0.15rem 0.4rem;
+            top: -5px;
+            right: -5px;
+        }
+
+        .summary-item {
+            padding: 0.5rem;
+        }
+
+        .summary-value {
+            font-size: 1rem;
+        }
+
+        .summary-label {
+            font-size: 0.625rem;
+        }
+
+
+
+        /* Stock Table */
+        .stock-table-container {
+            padding: 0.75rem;
+        }
+
+        .stock-table th,
+        .stock-table td {
+            padding: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        /* Modal */
+        .modal-content {
+            width: 95%;
+            max-height: 90vh;
+        }
+
+        .modal-header {
+            padding: 1rem;
+        }
+
+        .modal-body {
+            padding: 1rem;
+        }
+
+        .modal-footer {
+            padding: 1rem;
+            flex-wrap: wrap;
+        }
+    }
+
+    /* Extra Small Mobile */
+    @media screen and (max-width: 480px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .stat-card {
+            padding: 0.5rem;
+        }
+
+        .stat-icon {
+            width: 28px;
+            height: 28px;
+        }
+
+        .stat-icon svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+        }
+
+        .stat-label {
+            font-size: 0.5625rem;
+        }
+
+        .btn-group .btn span {
+            display: none;
+        }
+
+        .btn-group .btn {
+            padding: 0.5rem;
+        }
+
+        .brand-title h1 {
+            font-size: 1rem;
+        }
+
+        .brand-title p {
+            display: none;
+        }
+
+        /* DISABLE ANIMATIONS ON MOBILE TO PREVENT GLITCHES */
+        *,
+        *::before,
+        *::after {
+            animation: none !important;
+            transition: none !important;
+        }
+    }
+
+    /* Ensure smoother scrolling on mobile */
+    @media screen and (max-width: 768px) {
+        .stock-table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            /* transform: translateZ(0); Removed to prevent flickering */
+            /* Force GPU acceleration */
+        }
+    }
+
+    /* Cleaned up messy definitions at end of file */
+
+    @media (max-width: 768px) {
+        /* Package Module Mobile Optimization: Show only essential columns */
+        /* Target tables inside stock-card but NOT stock-card-rm */
+
+        /* Hide: Type(2), Ref(8), Remark(9), Delete(10) */
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(2),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(2),
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(8),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(8),
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(9),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(9),
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(10),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(10) {
+            display: none !important;
+        }
+
+        /* Adjust layout for remaining columns to fit screen */
+        .stock-card:not(.stock-card-rm) .stock-table {
+            font-size: 0.7rem;
+            /* Reduced from 0.75rem */
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .stock-card:not(.stock-card-rm) .stock-table th,
+        .stock-card:not(.stock-card-rm) .stock-table td {
+            padding: 0.25rem 2px;
+            /* Very tight horizontal padding */
+            white-space: normal;
+            vertical-align: middle;
+            overflow-wrap: break-word;
+        }
+
+        /* Column Width Allocation (Total 100%) 
        1. Date: 15%
        2. In: 12%
        3. Out: 12%
@@ -3648,246 +3668,246 @@ mark.search-highlight {
        7. Lot Bal: 26%
     */
 
-    /* Date (1) */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(1),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(1) {
-        width: 15%;
-        letter-spacing: -0.5px;
+        /* Date (1) */
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(1),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(1) {
+            width: 15%;
+            letter-spacing: -0.5px;
+        }
+
+        /* In (3) & Out (4) */
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(3),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(4),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4) {
+            width: 12%;
+            text-align: center;
+        }
+
+        /* Balance (5) */
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(5),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5) {
+            width: 13%;
+            text-align: center;
+        }
+
+        /* Lot No (6) */
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(6),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(6) {
+            width: 22%;
+            font-size: 0.65rem !important;
+            word-break: break-all !important;
+            line-height: 1.1;
+            text-align: left;
+            /* Ensure Left Align */
+        }
+
+        /* Lot Bal (7) */
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7) {
+            width: 26%;
+            font-size: 0.65rem !important;
+            text-align: right;
+            /* Right Align to avoid overlap with Left LotNo */
+            padding-right: 4px;
+            /* Give a bit of breathing room from edge */
+            line-height: 1.1;
+        }
+
+        /* Trick: Shorten the Lot Bal Header on Mobile */
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7) {
+            font-size: 0 !important;
+            /* Hide original text */
+        }
+
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7)::after {
+            content: "เหลือ(Lot)";
+            font-size: 0.6rem;
+            display: block;
+        }
+
+        /* Center align numbers for middle columns */
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5) {
+            text-align: center;
+        }
     }
 
-    /* In (3) & Out (4) */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(3),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(4),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4) {
-        width: 12%;
-        text-align: center;
+    /* Responsive Date Display */
+    .date-short {
+        display: none;
     }
 
-    /* Balance (5) */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(5),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5) {
-        width: 13%;
-        text-align: center;
-    }
-
-    /* Lot No (6) */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(6),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(6) {
-        width: 22%;
-        font-size: 0.65rem !important;
-        word-break: break-all !important;
-        line-height: 1.1;
-        text-align: left;
-        /* Ensure Left Align */
-    }
-
-    /* Lot Bal (7) */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7) {
-        width: 26%;
-        font-size: 0.65rem !important;
-        text-align: right;
-        /* Right Align to avoid overlap with Left LotNo */
-        padding-right: 4px;
-        /* Give a bit of breathing room from edge */
-        line-height: 1.1;
-    }
-
-    /* Trick: Shorten the Lot Bal Header on Mobile */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7) {
-        font-size: 0 !important;
-        /* Hide original text */
-    }
-
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7)::after {
-        content: "เหลือ(Lot)";
-        font-size: 0.6rem;
-        display: block;
-    }
-
-    /* Center align numbers for middle columns */
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5) {
-        text-align: center;
-    }
-}
-
-/* Responsive Date Display */
-.date-short {
-    display: none;
-}
-
-.date-full {
-    display: inline;
-}
-
-@media (max-width: 768px) {
-    .stock-card:not(.stock-card-rm) .date-short {
+    .date-full {
         display: inline;
     }
 
-    .stock-card:not(.stock-card-rm) .date-full {
-        display: none;
-    }
-}
+    @media (max-width: 768px) {
+        .stock-card:not(.stock-card-rm) .date-short {
+            display: inline;
+        }
 
-/* --- MOBILE LAYOUT OVERRIDE (Fix Distortion) --- */
-@media (max-width: 768px) {
-
-    /* Date: 12% - No wrap */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(1),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(1) {
-        width: 12% !important;
-        white-space: nowrap !important;
+        .stock-card:not(.stock-card-rm) .date-full {
+            display: none;
+        }
     }
 
-    /* In(3), Out(4), Bal(5): 15% - No wrap */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(3),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(4),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4),
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(5),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5) {
-        width: 15% !important;
-        white-space: nowrap !important;
-        text-align: center !important;
-        padding: 0.25rem 1px !important;
-        font-size: 0.65rem !important;
+    /* --- MOBILE LAYOUT OVERRIDE (Fix Distortion) --- */
+    @media (max-width: 768px) {
+
+        /* Date: 12% - No wrap */
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(1),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(1) {
+            width: 12% !important;
+            white-space: nowrap !important;
+        }
+
+        /* In(3), Out(4), Bal(5): 15% - No wrap */
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(3),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(3),
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(4),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(4),
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(5),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(5) {
+            width: 15% !important;
+            white-space: nowrap !important;
+            text-align: center !important;
+            padding: 0.25rem 1px !important;
+            font-size: 0.65rem !important;
+        }
+
+        /* Lot No(6): 20% - Left Align, Break word */
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(6),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(6) {
+            width: 20% !important;
+            text-align: left !important;
+            font-size: 0.65rem !important;
+            word-break: break-all !important;
+        }
+
+        /* Lot Bal(7): 23% - Right Align, No wrap */
+        .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7),
+        .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7) {
+            width: 23% !important;
+            text-align: right !important;
+            white-space: nowrap !important;
+            font-size: 0.65rem !important;
+            padding-right: 4px !important;
+        }
     }
 
-    /* Lot No(6): 20% - Left Align, Break word */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(6),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(6) {
-        width: 20% !important;
-        text-align: left !important;
-        font-size: 0.65rem !important;
-        word-break: break-all !important;
+    /* --- MOBILE RM MODULE OPTIMIZATION --- */
+    @media (max-width: 768px) {
+
+        /* Toggle Short Dates for RM */
+        .stock-card-rm .date-short {
+            display: inline !important;
+        }
+
+        .stock-card-rm .date-full {
+            display: none !important;
+        }
+
+        /* HIDE unwanted columns for RM on Mobile */
+        /* Columns: 1:Date, 2:Type, 3-5:Container(hidden), 6:In, 7:Out, 8:Bal, 9:Lot, 10:Vendor, 11:MFD, 12:EXP, 13:Days, 14:LotBal, 15:Supp, 16:Del */
+
+        .stock-table-rm th:nth-child(2),
+        .stock-table-rm td:nth-child(2),
+        /* Type */
+        .stock-table-rm th:nth-child(3),
+        .stock-table-rm td:nth-child(3),
+        /* Container Qty */
+        .stock-table-rm th:nth-child(4),
+        .stock-table-rm td:nth-child(4),
+        /* Container Weight */
+        .stock-table-rm th:nth-child(5),
+        .stock-table-rm td:nth-child(5),
+        /* Remainder */
+        .stock-table-rm th:nth-child(10),
+        .stock-table-rm td:nth-child(10),
+        /* Vendor Lot */
+        .stock-table-rm th:nth-child(13),
+        .stock-table-rm td:nth-child(13),
+        /* Days Left */
+        .stock-table-rm th:nth-child(14),
+        .stock-table-rm td:nth-child(14),
+        /* Lot Balance */
+        .stock-table-rm th:nth-child(15),
+        .stock-table-rm td:nth-child(15),
+        /* Supplier */
+        .stock-table-rm th:nth-child(16),
+        .stock-table-rm td:nth-child(16)
+
+        /* Delete */
+            {
+            display: none !important;
+        }
+
+        /* FORCE SHOW MFD (Column 11) which might differ in index if hidden by JS/CSS elsewhere */
+        .stock-table-rm th:nth-child(11),
+        .stock-table-rm td:nth-child(11) {
+            display: table-cell !important;
+        }
+
+        /* Reset Table Layout for RM */
+        .stock-table-rm {
+            table-layout: fixed !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            /* Override min-width 1400px */
+            font-size: 0.65rem !important;
+        }
+
+        .stock-table-rm th,
+        .stock-table-rm td {
+            padding: 0.25rem 1px !important;
+            white-space: normal !important;
+            vertical-align: middle !important;
+            overflow-wrap: break-word !important;
+        }
+
+        /* Specific Column Widths (Total 7 Columns) */
+        /* 1. Date */
+        .stock-table-rm th:nth-child(1),
+        .stock-table-rm td:nth-child(1) {
+            width: 12% !important;
+            white-space: nowrap !important;
+            letter-spacing: -0.5px;
+        }
+
+        /* 6. In, 7. Out, 8. Bal */
+        .stock-table-rm th:nth-child(6),
+        .stock-table-rm td:nth-child(6),
+        .stock-table-rm th:nth-child(7),
+        .stock-table-rm td:nth-child(7),
+        .stock-table-rm th:nth-child(8),
+        .stock-table-rm td:nth-child(8) {
+            width: 11% !important;
+            white-space: nowrap !important;
+            text-align: center !important;
+            font-weight: 700;
+        }
+
+        /* 9. Lot No */
+        .stock-table-rm th:nth-child(9),
+        .stock-table-rm td:nth-child(9) {
+            width: 18% !important;
+            word-break: break-all !important;
+            text-align: left !important;
+            font-size: 0.6rem !important;
+            line-height: 1.1;
+        }
+
+        /* 11. MFD, 12. EXP */
+        .stock-table-rm th:nth-child(11),
+        .stock-table-rm td:nth-child(11),
+        .stock-table-rm th:nth-child(12),
+        .stock-table-rm td:nth-child(12) {
+            width: 12% !important;
+            white-space: nowrap !important;
+            text-align: center !important;
+            font-size: 0.6rem !important;
+            letter-spacing: -0.5px;
+        }
     }
-
-    /* Lot Bal(7): 23% - Right Align, No wrap */
-    .stock-card:not(.stock-card-rm) .stock-table th:nth-child(7),
-    .stock-card:not(.stock-card-rm) .stock-table td:nth-child(7) {
-        width: 23% !important;
-        text-align: right !important;
-        white-space: nowrap !important;
-        font-size: 0.65rem !important;
-        padding-right: 4px !important;
-    }
-}
-
-/* --- MOBILE RM MODULE OPTIMIZATION --- */
-@media (max-width: 768px) {
-
-    /* Toggle Short Dates for RM */
-    .stock-card-rm .date-short {
-        display: inline !important;
-    }
-
-    .stock-card-rm .date-full {
-        display: none !important;
-    }
-
-    /* HIDE unwanted columns for RM on Mobile */
-    /* Columns: 1:Date, 2:Type, 3-5:Container(hidden), 6:In, 7:Out, 8:Bal, 9:Lot, 10:Vendor, 11:MFD, 12:EXP, 13:Days, 14:LotBal, 15:Supp, 16:Del */
-
-    .stock-table-rm th:nth-child(2),
-    .stock-table-rm td:nth-child(2),
-    /* Type */
-    .stock-table-rm th:nth-child(3),
-    .stock-table-rm td:nth-child(3),
-    /* Container Qty */
-    .stock-table-rm th:nth-child(4),
-    .stock-table-rm td:nth-child(4),
-    /* Container Weight */
-    .stock-table-rm th:nth-child(5),
-    .stock-table-rm td:nth-child(5),
-    /* Remainder */
-    .stock-table-rm th:nth-child(10),
-    .stock-table-rm td:nth-child(10),
-    /* Vendor Lot */
-    .stock-table-rm th:nth-child(13),
-    .stock-table-rm td:nth-child(13),
-    /* Days Left */
-    .stock-table-rm th:nth-child(14),
-    .stock-table-rm td:nth-child(14),
-    /* Lot Balance */
-    .stock-table-rm th:nth-child(15),
-    .stock-table-rm td:nth-child(15),
-    /* Supplier */
-    .stock-table-rm th:nth-child(16),
-    .stock-table-rm td:nth-child(16)
-
-    /* Delete */
-        {
-        display: none !important;
-    }
-
-    /* FORCE SHOW MFD (Column 11) which might differ in index if hidden by JS/CSS elsewhere */
-    .stock-table-rm th:nth-child(11),
-    .stock-table-rm td:nth-child(11) {
-        display: table-cell !important;
-    }
-
-    /* Reset Table Layout for RM */
-    .stock-table-rm {
-        table-layout: fixed !important;
-        width: 100% !important;
-        min-width: 0 !important;
-        /* Override min-width 1400px */
-        font-size: 0.65rem !important;
-    }
-
-    .stock-table-rm th,
-    .stock-table-rm td {
-        padding: 0.25rem 1px !important;
-        white-space: normal !important;
-        vertical-align: middle !important;
-        overflow-wrap: break-word !important;
-    }
-
-    /* Specific Column Widths (Total 7 Columns) */
-    /* 1. Date */
-    .stock-table-rm th:nth-child(1),
-    .stock-table-rm td:nth-child(1) {
-        width: 12% !important;
-        white-space: nowrap !important;
-        letter-spacing: -0.5px;
-    }
-
-    /* 6. In, 7. Out, 8. Bal */
-    .stock-table-rm th:nth-child(6),
-    .stock-table-rm td:nth-child(6),
-    .stock-table-rm th:nth-child(7),
-    .stock-table-rm td:nth-child(7),
-    .stock-table-rm th:nth-child(8),
-    .stock-table-rm td:nth-child(8) {
-        width: 11% !important;
-        white-space: nowrap !important;
-        text-align: center !important;
-        font-weight: 700;
-    }
-
-    /* 9. Lot No */
-    .stock-table-rm th:nth-child(9),
-    .stock-table-rm td:nth-child(9) {
-        width: 18% !important;
-        word-break: break-all !important;
-        text-align: left !important;
-        font-size: 0.6rem !important;
-        line-height: 1.1;
-    }
-
-    /* 11. MFD, 12. EXP */
-    .stock-table-rm th:nth-child(11),
-    .stock-table-rm td:nth-child(11),
-    .stock-table-rm th:nth-child(12),
-    .stock-table-rm td:nth-child(12) {
-        width: 12% !important;
-        white-space: nowrap !important;
-        text-align: center !important;
-        font-size: 0.6rem !important;
-        letter-spacing: -0.5px;
-    }
-}

@@ -1273,6 +1273,8 @@ window.openModal = (isEdit = false, index = null) => {
             document.getElementById('input-fg-yield-per-roll').value = '';
         }
 
+        // Disable logic removed to allow editing spec
+        /*
         baseFields.forEach(field => {
             if (field) {
                 field.disabled = true;
@@ -1281,6 +1283,7 @@ window.openModal = (isEdit = false, index = null) => {
                 field.style.cursor = 'not-allowed';
             }
         });
+        */
 
     } else {
         modalTitle.textContent = 'เพิ่มสินค้าใหม่';

@@ -603,6 +603,10 @@ window.openTransactionModal = (index) => {
     const day = String(now.getDate()).padStart(2, '0');
     transDateInput.value = `${year}-${month}-${day}`;
 
+    // Reset Inputs
+    document.getElementById('trans-qty-cartons').value = '';
+    document.getElementById('trans-qty-partial').value = '';
+
     // Reset Radio
     document.querySelector('input[name="trans-type"][value="IN"]').checked = true;
 
@@ -615,21 +619,41 @@ transForm.addEventListener('submit', async (e) => {
     const item = items[index];
 
     const type = document.querySelector('input[name="trans-type"]:checked').value;
-    const qtyKg = parseFloat(document.getElementById('trans-qty-kg').value);
+    const inputCartons = parseFloat(document.getElementById('trans-qty-cartons').value) || 0;
+    const inputPartial = parseFloat(document.getElementById('trans-qty-partial').value) || 0;
     const date = document.getElementById('trans-date').value;
     const note = document.getElementById('trans-note').value;
 
-    if (!qtyKg || qtyKg <= 0) return;
-
-    const qtyCartons = qtyKg / item.kgPerCarton;
-
-    let newStock = parseFloat(item.stockCartons);
-    if (type === 'IN') {
-        newStock += qtyCartons;
-    } else {
-        newStock -= qtyCartons;
+    if (inputCartons === 0 && inputPartial === 0) {
+        alert("กรุณาระบุจำนวน (ลัง หรือ กก.)");
+        return;
     }
-    item.stockCartons = newStock;
+
+    // Direct Update Logic
+    let newStockCartons = parseFloat(item.stockCartons);
+    let newStockPartial = parseFloat(item.stockPartialKg || 0);
+
+    if (type === 'IN') {
+        newStockCartons += inputCartons;
+        newStockPartial += inputPartial;
+    } else {
+        newStockCartons -= inputCartons;
+        newStockPartial -= inputPartial;
+    }
+
+    item.stockCartons = newStockCartons;
+    item.stockPartialKg = newStockPartial;
+
+    // --- AUTO-BREAK LOGIC (ตัดลังอัตโนมัติ) ---
+    // ถ้าเศษติดลบ แต่มีลังเหลือ ให้ระเบิดลังมาโปะเศษ
+    while (item.stockPartialKg < 0 && item.stockCartons > 0) {
+        item.stockCartons -= 1;
+        item.stockPartialKg += item.kgPerCarton;
+    }
+    // -----------------------------------------
+
+    // Calculate approx total Kg for reference
+    const totalKgMoved = (inputCartons * item.kgPerCarton) + inputPartial;
 
     const newTrans = {
         id: Date.now().toString(),
@@ -637,9 +661,12 @@ transForm.addEventListener('submit', async (e) => {
         itemName: item.name,
         date: date,
         type: type,
-        qtyKg: qtyKg,
-        qtyCartons: qtyCartons,
-        remainingStock: newStock,
+        qtyKg: totalKgMoved, // Keeping legacy field for simpler history list
+        qtyCartons: inputCartons + (inputPartial / item.kgPerCarton), // Approx cartons for legacy
+        movedCartons: inputCartons, // New specific field
+        movedPartial: inputPartial, // New specific field
+        remainingStock: item.stockCartons, // Use normalized value
+        stockPartialKg: item.stockPartialKg, // Use normalized value
         note: note
     };
 
@@ -730,10 +757,29 @@ window.deleteTransaction = async (transId, itemIndex) => {
     const item = items[itemIndex];
     // If it was IN, we added stock -> so now we deduct it
     // If it was OUT, we deducted stock -> so now we add it back
-    if (trans.type === 'IN') {
-        item.stockCartons -= trans.qtyCartons;
+    // Check for new fields (movedCartons/movedPartial) or fallback to legacy logic
+    const tCartons = trans.movedCartons !== undefined ? trans.movedCartons : trans.qtyCartons;
+    const tPartial = trans.movedPartial !== undefined ? trans.movedPartial : 0;
+
+    // Legacy fallback: if old record, tCartons was 'qtyCartons' which was float total.
+    // If we want perfection on legacy delete, we just stick to total cartons revert if new fields absent.
+
+    if (trans.movedCartons !== undefined) {
+        // New Logic Revert
+        if (trans.type === 'IN') {
+            item.stockCartons -= tCartons;
+            item.stockPartialKg = (item.stockPartialKg || 0) - tPartial;
+        } else {
+            item.stockCartons += tCartons;
+            item.stockPartialKg = (item.stockPartialKg || 0) + tPartial;
+        }
     } else {
-        item.stockCartons += trans.qtyCartons;
+        // Old Logic Revert
+        if (trans.type === 'IN') {
+            item.stockCartons -= trans.qtyCartons;
+        } else {
+            item.stockCartons += trans.qtyCartons;
+        }
     }
 
     // 3. Remove transaction and Save

@@ -12,6 +12,51 @@ const loader = document.getElementById('app-loader');
 const itemForm = document.getElementById('item-form');
 const transForm = document.getElementById('trans-form');
 
+// --- HELPER: Resize Image to Base64 ---
+function resizeImage(file, maxWidth, maxHeight, callback) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > maxWidth) {
+                    height *= maxWidth / width;
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width *= maxHeight / height;
+                    height = maxHeight;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            callback(canvas.toDataURL('image/jpeg', 0.7)); // Compress to 70% quality
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// Image Input Listener
+document.getElementById('input-image').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (file) {
+        resizeImage(file, 300, 300, (base64) => {
+            document.getElementById('image-preview').src = base64;
+            document.getElementById('image-preview').style.display = 'block';
+            document.getElementById('input-image-base64').value = base64;
+        });
+    }
+});
+
 // --- INITIALIZATION ---
 async function initApp() {
     showLoading();
@@ -88,9 +133,15 @@ function renderTable() {
                 </span>
             </td>
             <td>
-                <div class="product-info">
-                    <span class="product-name">${item.name}</span>
-                    <span class="product-spec">${item.spec || '-'}</span>
+                <div class="product-info" style="display: flex; flex-direction: row; align-items: center; gap: 12px;">
+                    ${item.image ? `<img src="${item.image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;">` : ''}
+                    <div>
+                        <span class="product-name">${item.name}</span>
+                        <div class="product-spec" style="font-size: 0.8rem; color: #64748b;">
+                            ${item.spec || '-'} 
+                            ${item.leadTime ? ` | 🚚 ${item.leadTime}` : ''}
+                        </div>
+                    </div>
                 </div>
             </td>
             <td class="center"><span class="cat-badge">${item.category}</span></td>
@@ -158,6 +209,22 @@ window.openModal = (index = null) => {
         document.getElementById('input-leadtime').value = item.leadTime || '';
         document.getElementById('input-supplier').value = item.supplier || '';
         document.getElementById('input-country').value = item.country || '';
+
+        // Image
+        if (item.image) {
+            document.getElementById('image-preview').src = item.image;
+            document.getElementById('image-preview').style.display = 'block';
+            document.getElementById('input-image-base64').value = item.image;
+        } else {
+            document.getElementById('image-preview').style.display = 'none';
+            document.getElementById('image-preview').src = '';
+            document.getElementById('input-image-base64').value = '';
+        }
+    } else {
+        // Clear image on new item
+        document.getElementById('image-preview').style.display = 'none';
+        document.getElementById('image-preview').src = '';
+        document.getElementById('input-image-base64').value = '';
     }
 
     modal.style.display = 'flex';
@@ -183,6 +250,7 @@ itemForm.addEventListener('submit', async (e) => {
         leadTime: document.getElementById('input-leadtime').value,
         supplier: document.getElementById('input-supplier').value,
         country: document.getElementById('input-country').value,
+        image: document.getElementById('input-image-base64').value, // Save Base64
 
         id: index !== '' ? items[index].id : Date.now().toString()
     };

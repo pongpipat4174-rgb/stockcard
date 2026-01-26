@@ -231,6 +231,7 @@
             .btn,
             .no-print,
             #app-loader,
+            #debug-panel,
             .form-actions {
                 display: none !important;
             }
@@ -239,27 +240,57 @@
             .table-container {
                 overflow: visible !important;
                 box-shadow: none !important;
-                border: 1px solid #e2e8f0 !important;
+                border: none !important;
                 position: relative;
                 margin-top: 20px;
                 display: block !important;
             }
 
-            /* Add Title for Print */
+            /* Print Title */
             .table-container::before {
                 content: "รายการวัสดุสิ้นเปลือง (Consumables)";
                 display: block;
-                font-size: 18pt;
+                font-size: 16pt;
                 font-weight: bold;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
                 color: var(--primary-color);
-                text-align: left;
+                text-align: center;
             }
 
             table {
                 width: 100% !important;
-                border-collapse: separate !important;
-                font-size: 9pt !important;
+                border-collapse: collapse !important;
+                font-size: 8.5pt !important;
+            }
+
+            /* Column Sizing Fixes */
+            th:nth-child(2),
+            td:nth-child(2) {
+                /* Name Column */
+                min-width: 200px !important;
+                width: auto !important;
+                white-space: normal !important;
+            }
+
+            /* Status Column */
+            th:nth-child(1),
+            td:nth-child(1) {
+                width: 60px !important;
+                text-align: center !important;
+            }
+
+            /* Numeric Columns - Let them shrink */
+            th:not(:nth-child(1)):not(:nth-child(2)),
+            td:not(:nth-child(1)):not(:nth-child(2)) {
+                width: auto !important;
+                white-space: nowrap !important;
+                padding: 4px 2px !important;
+            }
+
+            /* Hide Action Column (Last one) */
+            th:last-child,
+            td:last-child {
+                display: none !important;
             }
 
             /* Ensure ALL data columns show */
@@ -267,23 +298,20 @@
                 display: table-cell !important;
             }
 
-            /* HIDE Action Column (Last one) */
-            th:last-child,
-            td:last-child {
-                display: none !important;
-            }
-
             th {
-                background-color: #f8fafc !important;
-                color: #64748b !important;
-                font-weight: 600 !important;
-                border-bottom: 1px solid #e2e8f0 !important;
+                background-color: #f1f5f9 !important;
+                color: #334155 !important;
+                font-weight: bold !important;
+                border: 1px solid #cbd5e1 !important;
+                padding: 6px !important;
+                vertical-align: middle;
             }
 
             td {
-                border-bottom: 1px solid #e2e8f0 !important;
+                border: 1px solid #cbd5e1 !important;
                 color: #1e293b !important;
-                padding: 8px 4px !important;
+                padding: 6px 4px !important;
+                vertical-align: middle;
             }
 
             tr {

@@ -330,9 +330,9 @@
             body:not(.printing-history-mode) .table-container::before {
                 content: "รายการวัสดุสิ้นเปลือง (Consumables)";
                 display: block;
-                font-size: 16pt;
+                font-size: 14pt;
                 font-weight: bold;
-                margin-bottom: 8px;
+                margin-bottom: 6px;
                 color: var(--primary-color);
                 text-align: center;
             }
@@ -340,7 +340,12 @@
             body:not(.printing-history-mode) table {
                 width: 100% !important;
                 border-collapse: collapse !important;
-                font-size: 9pt !important;
+                font-size: 7.5pt !important;
+            }
+
+            body:not(.printing-history-mode) th,
+            body:not(.printing-history-mode) td {
+                padding: 3px 2px !important;
             }
         }
     </style>

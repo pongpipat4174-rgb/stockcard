@@ -535,18 +535,24 @@ window.saveData = async () => {
 
                 return {
                     "ชื่อสินค้า": item.name,
+                    "ประเภท": item.category || 'weight', // New
+                    "สต็อก (ลัง/ม้วน)": item.stockCartons, // Renamed for clarity in Sheet? Keep existing key if possible, or User changes header. Let's keep "สต็อก (ลัง)" but User knows. Actually better to use generic key if User adds new column. Let's stick to existing keys where possible and add new ones.
                     "สต็อก (ลัง)": item.stockCartons,
-                    "เศษ(กก.)": stockPartial, // Changed to match Sheet header (No space)
+                    "เศษ(กก.)": stockPartial,
                     "กก./ลัง": item.kgPerCarton,
-                    "รวม (กก.)": parseFloat(totalKg.toFixed(2)), // Calculated
+                    "รวม (กก.)": parseFloat(totalKg.toFixed(2)),
                     "จุดสั่งซื้อ (กก.)": item.minThreshold,
                     "ชิ้น/กก.": item.pcsPerKg,
-                    "รวมถุง (ชิ้น)": parseFloat(totalPcs.toFixed(0)), // Calculated
+                    "รวมถุง (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
                     "ชิ้นงาน/ถุง": pcsPerPack,
                     "ชิ้น FG/ลัง": fgPcsPerCarton,
-                    "ผลิตได้ (ชิ้น)": parseFloat(totalPcs.toFixed(0)), // Calculated (Duplicate but requested)
-                    "ผลิตได้ (ลัง)": parseFloat(fgYield.toFixed(1)),   // Calculated
-                    "สถานะ": isLow ? "ต้องสั่งซื้อ" : "ปกติ"
+                    "ผลิตได้ (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
+                    "ผลิตได้ (ลัง)": parseFloat(fgYield.toFixed(1)),
+                    "สถานะ": isLow ? "ต้องสั่งซื้อ" : "ปกติ",
+                    // New Columns for Roll
+                    "ความยาวม้วน (ม.)": item.rollLength || 0,
+                    "ความยาวตัด (มม.)": item.cutLength || 0,
+                    "ชิ้น/ม้วน": item.pcsPerRoll || 0
                 };
             });
 
@@ -597,10 +603,31 @@ window.renderTable = () => {
     }
 
     items.forEach((item, index) => {
-        const stockPartial = item.stockPartialKg || 0;
-        const totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
-        // Total Pieces = Total Kg * Pcs/Kg * Pcs/Pack
-        const totalPcs = totalKg * item.pcsPerKg * (item.pcsPerPack || 1);
+        const isRoll = item.category === 'unit';
+        const stockPartial = isRoll ? 0 : (item.stockPartialKg || 0); // Partial not used for rolls
+
+        let totalKg = 0;
+        let totalPcs = 0;
+        let displayPackSize = 0;
+        let displayPcsPerUnit = 0;
+
+        if (isRoll) {
+            // Roll Logic
+            // StockCartons = Rolls
+            // Total Pcs = Rolls * Pcs/Roll
+            displayPackSize = item.rollLength; // Show Length
+            displayPcsPerUnit = item.pcsPerRoll; // Show Pcs/Roll
+
+            totalPcs = item.stockCartons * item.pcsPerRoll;
+            // Total Kg N/A? Or maybe calculated if we knew weight/m. For now 0.
+        } else {
+            // Weight Logic
+            displayPackSize = item.kgPerCarton;
+            displayPcsPerUnit = item.pcsPerKg;
+
+            totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
+            totalPcs = totalKg * item.pcsPerKg * (item.pcsPerPack || 1);
+        }
 
         // FG Yield = Total Pieces / FG Pcs Per Carton
         // If fgPcsPerCarton is 0 or undefined, avoid division by zero
@@ -624,11 +651,17 @@ window.renderTable = () => {
                 </div>
             </td>
             <td class="center bg-shrink">${formatNumber(item.stockCartons, 1)}</td>
-            <td class="center text-blue">${formatNumber(item.stockPartialKg || 0, 2)}</td>
-            <td class="center dim bg-shrink mobile-hidden">${item.kgPerCarton}</td>
-            <td class="center bg-shrink">${formatNumber(totalKg, 2)}</td>
+            <td class="center text-blue">${isRoll ? '-' : formatNumber(item.stockPartialKg || 0, 2)}</td>
+            <td class="center dim bg-shrink mobile-hidden">
+                ${isRoll ? formatNumber(item.rollLength, 1) + ' ม.' : item.kgPerCarton}
+            </td>
+            <td class="center bg-shrink">
+                ${isRoll ? '-' : formatNumber(totalKg, 2)}
+            </td>
             <td class="center dim bg-shrink mobile-hidden">${item.minThreshold}</td>
-            <td class="center dim bg-shrink">${formatNumber(item.pcsPerKg)}</td>
+            <td class="center dim bg-shrink">
+                ${isRoll ? formatNumber(item.pcsPerRoll) : formatNumber(item.pcsPerKg)}
+            </td>
             <!-- Hidden Total Pcs -->
             <td class="center dim bg-fg mobile-hidden">${item.pcsPerPack || 1}</td>
             <td class="center dim bg-fg mobile-hidden">${item.fgPcsPerCarton || 1}</td>

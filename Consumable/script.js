@@ -131,10 +131,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // Calculator Logic
     window.calculateRollCapacity = () => {
         // Safe check for elements inside function as they might be dynamic or missed
+        if (category === 'unit') {
+            document.getElementById('input-roll-length').value = item.rollLength || '';
+            document.getElementById('input-cut-length').value = item.cutLength || '';
+            document.getElementById('input-pcs-per-roll').value = item.pcsPerRoll || '';
+            // Trigger calc to show text
+            calculateRollCapacity(); // This will auto-fill yield if empty
+
+            // If saved yield exists, use it (override calc if slightly different or just ensure correctness)
+            if (item.fgYieldPerRoll) {
+                document.getElementById('input-fg-yield-per-roll').value = item.fgYieldPerRoll;
+            }
+        } else {
+            document.getElementById('input-kg-per-carton').value = item.kgPerCarton;
+            document.getElementById('input-pcs-per-kg').value = item.pcsPerKg;
+        }
         const rLenInput = document.getElementById('input-roll-length');
         const cLenInput = document.getElementById('input-cut-length');
         const pcsInput = document.getElementById('input-pcs-per-roll');
         const resEl = document.getElementById('roll-calc-result');
+
+        // FG Calc Refs
+        const fgPcsInput = document.getElementById('input-fg-pcs-per-carton');
+        const yieldInput = document.getElementById('input-fg-yield-per-roll');
 
         if (!rLenInput || !cLenInput) return;
 
@@ -142,22 +161,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const cutMm = parseFloat(cLenInput.value) || 0;
 
         if (lengthM > 0 && cutMm > 0) {
-            const totalMm = lengthM * 1000;
-            const pcs = Math.floor(totalMm / cutMm);
+            // Formula: (Length_m * 1000) / Cut_mm
+            const pcs = Math.floor((lengthM * 1000) / cutMm);
 
-            // Set Hidden Input for storage/logic
             if (pcsInput) pcsInput.value = pcs;
 
             if (resEl) {
                 resEl.innerHTML = `<span style="color:#2563eb">${lengthM.toLocaleString()} ม.</span> / <span style="color:#2563eb">${cutMm} มม.</span> = <span style="font-size:1.2em; color:#16a34a">${pcs.toLocaleString()}</span> ชิ้น/ม้วน`;
             }
+
+            // --- Auto Calculate FG Yield per Roll ---
+            if (fgPcsInput && yieldInput) {
+                const fgPcs = parseFloat(fgPcsInput.value) || 0;
+                if (fgPcs > 0) {
+                    const yieldVal = pcs / fgPcs;
+                    // Only update if user hasn't manually overridden it? 
+                    // For now, let's auto-update always when params change, assuming calculation is truth.
+                    yieldInput.value = yieldVal.toFixed(2);
+                } else {
+                    yieldInput.value = '';
+                }
+            }
+
         } else {
             if (pcsInput) pcsInput.value = 0;
             if (resEl) resEl.innerText = "- ชิ้น/ม้วน";
+            if (yieldInput) yieldInput.value = '';
         }
     };
 
-    // Toggle Form Function
     // Toggle Form Function
     window.toggleItemFormFields = () => {
         if (!inputCategory) return;
@@ -166,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Selectors
         const lblStock = document.querySelector('label[for="input-stock-cartons"]');
         const lblThreshold = document.querySelector('label[for="input-min-threshold"]');
+        const rollYieldField = document.getElementById('field-roll-yield');
 
         // Partial Group - Select Parent Form Group
         const partialInput = document.getElementById('input-stock-partial');
@@ -181,6 +214,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Hide Partial
             if (partialGrp) partialGrp.style.display = 'none';
+            // Show Roll Yield
+            if (rollYieldField) rollYieldField.style.display = 'flex';
 
         } else {
             if (fieldShrink) fieldShrink.style.display = 'block';
@@ -192,6 +227,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Show Partial
             if (partialGrp) partialGrp.style.display = 'block';
+            // Hide Roll Yield
+            if (rollYieldField) rollYieldField.style.display = 'none';
         }
     };
 
@@ -239,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pcsPerRoll: category === 'unit' ? (parseInt(inputPcsPerRoll.value) || 0) : 0,
                 rollLength: category === 'unit' ? (parseFloat(inputRollLength.value) || 0) : 0,
                 cutLength: category === 'unit' ? (parseFloat(inputCutLength.value) || 0) : 0,
-
+                fgYieldPerRoll: category === 'unit' ? (parseFloat(document.getElementById('input-fg-yield-per-roll').value) || 0) : 0,
 
                 // Common Stock (Cartons = Rolls for unit)
                 stockCartons: parseFloat(inputStockCartons.value) || 0,
@@ -682,9 +719,16 @@ window.renderTable = () => {
 
         // FG Yield = Total Pieces / FG Pcs Per Carton
         // If fgPcsPerCarton is 0 or undefined, avoid division by zero
-        const fgYield = (item.fgPcsPerCarton && item.fgPcsPerCarton > 0) ? (totalPcs / item.fgPcsPerCarton) : 0;
+        let fgYield = 0;
+        if (isRoll && item.fgYieldPerRoll) {
+            // Use specific yield per roll if available
+            fgYield = item.stockCartons * item.fgYieldPerRoll;
+        } else {
+            // Fallback or Weight Logic
+            fgYield = (item.fgPcsPerCarton && item.fgPcsPerCarton > 0) ? (totalPcs / item.fgPcsPerCarton) : 0;
+        }
 
-        const isLowStock = totalKg < item.minThreshold;
+        const isLowStock = isRoll ? (item.stockCartons < item.minThreshold) : (totalKg < item.minThreshold);
 
         const row = document.createElement('tr');
         if (isLowStock) row.classList.add('low-stock');

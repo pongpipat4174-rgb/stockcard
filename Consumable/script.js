@@ -43,7 +43,7 @@ console.error = function (...args) { originalErr.apply(console, args); debugLog(
 
 console.log("Script Started...");
 const initialData = [
-    { name: "PVC Shrink film 125*185 (กล่องของเล็ก)", kgPerCarton: 25, pcsPerKg: 554, stockCartons: 16, minThreshold: 100, pcsPerPack: 6, fgPcsPerCarton: 504 },
+    { name: "PVC Shrink film 125*185 (กล่องของเล็ก)", kgPerCarton: 25, pcsPerKg: 554, stockCartons: 16, stockPartialKg: 0, minThreshold: 100, pcsPerPack: 6, fgPcsPerCarton: 504 },
     { name: "PVC Shrink film 222*200 (กล่องสบู่)", kgPerCarton: 25, pcsPerKg: 277, stockCartons: 24, minThreshold: 100, pcsPerPack: 4, fgPcsPerCarton: 120 },
     { name: "PVC Shrink film 125*220 (กล่องสูงรุ่นใหม่)", kgPerCarton: 25, pcsPerKg: 466, stockCartons: 16, minThreshold: 100, pcsPerPack: 6, fgPcsPerCarton: 504 },
     { name: "PVC Shrink film 163*235 (กล่องลิปซอง+ขวด)", kgPerCarton: 25, pcsPerKg: 335, stockCartons: 14, minThreshold: 100, pcsPerPack: 6, fgPcsPerCarton: 288 },
@@ -78,6 +78,7 @@ const inputName = document.getElementById('input-name');
 const inputKgPerCarton = document.getElementById('input-kg-per-carton');
 const inputPcsPerKg = document.getElementById('input-pcs-per-kg');
 const inputStockCartons = document.getElementById('input-stock-cartons');
+const inputStockPartial = document.getElementById('input-stock-partial');
 const inputMinThreshold = document.getElementById('input-min-threshold');
 const inputPcsPerPack = document.getElementById('input-pcs-per-pack');
 const inputFgPcsPerCarton = document.getElementById('input-fg-pcs-per-carton');
@@ -105,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputKgPerCarton = document.getElementById('input-kg-per-carton');
     const inputPcsPerKg = document.getElementById('input-pcs-per-kg');
     const inputStockCartons = document.getElementById('input-stock-cartons');
+    const inputStockPartial = document.getElementById('input-stock-partial');
     const inputMinThreshold = document.getElementById('input-min-threshold');
     const inputPcsPerPack = document.getElementById('input-pcs-per-pack');
     const inputFgPcsPerCarton = document.getElementById('input-fg-pcs-per-carton');
@@ -134,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 kgPerCarton: parseFloat(inputKgPerCarton.value) || 0,
                 pcsPerKg: parseFloat(inputPcsPerKg.value) || 0,
                 stockCartons: parseFloat(inputStockCartons.value) || 0,
+                stockPartialKg: parseFloat(inputStockPartial.value) || 0,
                 minThreshold: parseFloat(inputMinThreshold.value) || 0,
                 pcsPerPack: parseFloat(inputPcsPerPack.value) || 1,
                 fgPcsPerCarton: parseFloat(inputFgPcsPerCarton.value) || 1
@@ -358,6 +361,7 @@ const loadData = async () => {
                     loadedItems = loadedItems.map(row => ({
                         name: row["ชื่อสินค้า"],
                         stockCartons: parseFloat(row["สต็อก (ลัง)"] || row["คงเหลือปัจจุบัน (ลัง)"] || 0),
+                        stockPartialKg: parseFloat(row["เศษ (กก.)"] || 0),
                         kgPerCarton: parseFloat(row["กก./ลัง"] || row["น้ำหนักต่อลัง (kg)"] || 25),
                         pcsPerKg: parseFloat(row["ชิ้น/กก.1"] || row["ชิ้น/กก."] || row["จำนวนซองต่อ กก."] || 0), // Handle potential key variations
                         minThreshold: parseFloat(row["จุดสั่งซื้อ (กก.)"] || row["แจ้งเตือนเมื่อต่ำกว่า (กก.)"] || 0),
@@ -429,7 +433,8 @@ window.saveData = async () => {
         try {
             // Map to Thai Headers matching Web Page EXACTLY
             const sheetItems = items.map(item => {
-                const totalKg = item.stockCartons * item.kgPerCarton;
+                const stockPartial = item.stockPartialKg || 0;
+                const totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
                 const pcsPerPack = item.pcsPerPack || 1;
                 const totalPcs = totalKg * item.pcsPerKg * pcsPerPack;
                 const fgPcsPerCarton = item.fgPcsPerCarton || 1;
@@ -439,6 +444,7 @@ window.saveData = async () => {
                 return {
                     "ชื่อสินค้า": item.name,
                     "สต็อก (ลัง)": item.stockCartons,
+                    "เศษ (กก.)": stockPartial,
                     "กก./ลัง": item.kgPerCarton,
                     "รวม (กก.)": parseFloat(totalKg.toFixed(2)), // Calculated
                     "จุดสั่งซื้อ (กก.)": item.minThreshold,
@@ -499,7 +505,8 @@ window.renderTable = () => {
     }
 
     items.forEach((item, index) => {
-        const totalKg = item.stockCartons * item.kgPerCarton;
+        const stockPartial = item.stockPartialKg || 0;
+        const totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
         // Total Pieces = Total Kg * Pcs/Kg * Pcs/Pack
         const totalPcs = totalKg * item.pcsPerKg * (item.pcsPerPack || 1);
 
@@ -525,6 +532,7 @@ window.renderTable = () => {
                 </div>
             </td>
             <td class="center bg-shrink">${formatNumber(item.stockCartons, 1)}</td>
+            <td class="center text-blue">${formatNumber(item.stockPartialKg || 0, 2)}</td>
             <td class="center dim bg-shrink mobile-hidden">${item.kgPerCarton}</td>
             <td class="center bg-shrink">${formatNumber(totalKg, 2)}</td>
             <td class="center dim bg-shrink mobile-hidden">${item.minThreshold}</td>
@@ -572,7 +580,7 @@ window.updateStats = () => {
 
     // Count Low Stock
     const lowStockCount = items.filter(item => {
-        const totalKg = item.stockCartons * item.kgPerCarton;
+        const totalKg = (item.stockCartons * item.kgPerCarton) + (item.stockPartialKg || 0);
         return totalKg < item.minThreshold;
     }).length;
 
@@ -645,7 +653,7 @@ transForm.addEventListener('submit', async (e) => {
 // --- History Modal with Stock Card Style & Print ---
 window.openHistoryModal = (index) => {
     const item = items[index];
-    const itemTotalKg = item.stockCartons * item.kgPerCarton;
+    const itemTotalKg = (item.stockCartons * item.kgPerCarton) + (item.stockPartialKg || 0);
 
     // Header Info
     document.getElementById('history-subtitle').innerHTML = `
@@ -753,6 +761,7 @@ window.openModal = (isEdit = false, index = null) => {
         inputKgPerCarton.value = item.kgPerCarton;
         inputPcsPerKg.value = item.pcsPerKg;
         inputStockCartons.value = item.stockCartons;
+        inputStockPartial.value = item.stockPartialKg || 0;
         inputMinThreshold.value = item.minThreshold;
         inputPcsPerPack.value = item.pcsPerPack || 1;
         inputFgPcsPerCarton.value = item.fgPcsPerCarton || 1;
@@ -768,8 +777,10 @@ window.openModal = (isEdit = false, index = null) => {
     } else {
         modalTitle.textContent = 'เพิ่มสินค้าใหม่';
         itemForm.reset();
+        // Reset to defaults
         inputKgPerCarton.value = 25;
         inputMinThreshold.value = 100;
+        inputStockPartial.value = 0;
         inputPcsPerPack.value = 1;
         inputFgPcsPerCarton.value = 1;
         editIndexInput.value = '-1';

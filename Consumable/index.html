@@ -277,6 +277,7 @@
                             <th class="center" style="width: 40px;">สถานะ</th>
                             <th style="min-width: 120px;">ชื่อสินค้า</th>
                             <th class="center">คงเหลือ (ลัง)</th>
+                            <th class="center text-blue">เศษ (กก.)</th>
                             <th class="center mobile-hidden">กก./ลัง</th>
                             <th class="center">รวม(กก.)</th>
                             <th class="center mobile-hidden">จุดสั่งซื้อ (กก.)</th>
@@ -330,6 +331,12 @@
                             <label>คงเหลือปัจจุบัน (ลัง)</label>
                             <input type="number" id="input-stock-cartons" required placeholder="0">
                         </div>
+                        <div class="form-group">
+                            <label class="text-blue">เศษ (กก.)</label>
+                            <input type="number" id="input-stock-partial" step="0.01" value="0" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="form-row">
                         <div class="form-group">
                             <label>แจ้งเตือนเมื่อต่ำกว่า (กก.)</label>
                             <input type="number" id="input-min-threshold" required value="100">
@@ -526,7 +533,7 @@
         </style>
 
 
-        <script src="script.js?v=mobile_fix_6"></script>
+        <script src="script.js?v=mobile_fix_7"></script>
 </body>
 
 </html>

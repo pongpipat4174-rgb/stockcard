@@ -36,6 +36,9 @@
                     <button class="btn secondary" onclick="loadData()">
                         <i class="fa-solid fa-rotate"></i> รีเฟรช
                     </button>
+                    <button class="btn secondary" onclick="window.print()">
+                        <i class="fa-solid fa-print"></i> พิมพ์
+                    </button>
                 </div>
             </div>
         </header>
@@ -74,7 +77,8 @@
                 <div class="category-filters">
                     <button class="filter-btn active" onclick="setCategoryFilter('all')">ทั้งหมด</button>
                     <button class="filter-btn" onclick="setCategoryFilter('Spare Part')">อะไหล่เครื่องจักร</button>
-                    <button class="filter-btn" onclick="setCategoryFilter('Cleaning')">น้ำยาทำความสะอาด</button>
+                    <button class="filter-btn" onclick="setCategoryFilter('Cleaning')">อุปกรณ์ทั่วไป (น้ำยา, ถุงมือ,
+                        ฯลฯ)</button>
                     <button class="filter-btn" onclick="setCategoryFilter('Other')">อื่นๆ</button>
                 </div>
             </div>
@@ -121,7 +125,7 @@
                         <label>หมวดหมู่</label>
                         <select id="input-category">
                             <option value="Spare Part">อะไหล่เครื่องจักร</option>
-                            <option value="Cleaning">น้ำยาทำความสะอาด</option>
+                            <option value="Cleaning">อุปกรณ์ทั่วไป (น้ำยา, ถุงมือ, ฯลฯ)</option>
                             <option value="Other">อื่นๆ</option>
                         </select>
                     </div>

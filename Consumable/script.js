@@ -788,7 +788,7 @@ window.renderTable = () => {
                 </span>
             </td>
             <td style="text-align: left; font-weight: 500;">
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="product-name-container">
                      ${item.name}
                      ${isLowStock ? '<i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;" title="Low Stock"></i>' : ''}
                 </div>

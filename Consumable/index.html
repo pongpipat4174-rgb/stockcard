@@ -35,14 +35,32 @@
         /* Status Alert - High Visibility */
         .status-badge.status-low {
             background-color: #dc2626 !important;
-            /* Red-600 */
             color: white !important;
             font-weight: 700;
-            box-shadow: 0 4px 6px rgba(220, 38, 38, 0.5);
-            border: 2px solid #991b1b;
-            padding: 4px 12px;
+            box-shadow: 0 4px 6px rgba(220, 38, 38, 0.4);
+            border: 1px solid #991b1b;
+            padding: 4px 10px;
             border-radius: 20px;
             animation: pulse-red 2s infinite;
+            white-space: nowrap;
+        }
+
+        .status-badge.status-ok {
+            background-color: #ecfdf5 !important;
+            color: #059669 !important;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            border: 1px solid #bbf7d0;
+            white-space: nowrap;
+        }
+
+        .product-name-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            font-size: 0.9rem;
         }
 
         @keyframes pulse-red {
@@ -71,16 +89,21 @@
             table#shrink-table th,
             table#shrink-table td {
                 font-size: 0.75rem;
-                padding: 6px 2px;
-                white-space: normal;
-                line-height: 1.1;
+                padding: 6px 4px;
+                white-space: nowrap;
+                line-height: 1.2;
+            }
+
+            .product-name-container {
+                font-size: 0.72rem;
+                gap: 4px;
             }
 
             /* Adjust column widths for better proportion */
             table#shrink-table th:nth-child(2),
             table#shrink-table td:nth-child(2) {
-                min-width: 120px !important;
-                max-width: 160px !important;
+                min-width: 130px !important;
+                max-width: none !important;
             }
 
             table#shrink-table th {
@@ -154,7 +177,7 @@
 
             table#shrink-table td {
                 font-size: 0.7rem !important;
-                padding: 8px 3px !important;
+                padding: 8px 6px !important;
                 /* Increased padding */
             }
 
@@ -874,7 +897,7 @@
         </style>
 
 
-        <script src="script.js?v=mobile_fix_13"></script>
+        <script src="script.js?v=mobile_fix_14"></script>
 </body>
 
 </html>

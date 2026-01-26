@@ -11,7 +11,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=15">
+    <link rel="stylesheet" href="styles.css?v=16">
 </head>
 
 <body>
@@ -59,11 +59,19 @@
                     🧪 วัตถุดิบ (RM)
                 </button>
                 <button class="module-tab" data-module="consumable" type="button" id="tabConsumable"
-                    onclick="toggleConsumableView(true)">
+                    onclick="switchModule('consumable')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                     </svg>
                     🧱 วัสดุสิ้นเปลือง
+                </button>
+                <button class="module-tab" data-module="general" type="button" id="tabGeneral"
+                    onclick="switchModule('general')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path
+                            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                    </svg>
+                    ⚙️ อะไหล่ & อุปกรณ์
                 </button>
             </div>
 
@@ -94,9 +102,13 @@
         </div>
     </header>
 
-    <!-- Consumable Module Iframe Container -->
-    <div id="consumable-view-container" style="display: none; width: 100%; height: calc(100vh - 100px); border: none;">
-        <iframe src="Consumable/index.html?v=cache_fix_6" style="width: 100%; height: 100%; border: none;"></iframe>
+    <!-- Module Iframes -->
+    <div id="consumable-view-container" class="module-frame-container" style="display: none;">
+        <iframe src="Consumable/index.html?v=mobile_fix_14" style="width: 100%; height: 100%; border: none;"></iframe>
+    </div>
+
+    <div id="general-view-container" class="module-frame-container" style="display: none;">
+        <iframe src="GeneralStock/index.html?v=1" style="width: 100%; height: 100%; border: none;"></iframe>
     </div>
 
     <!-- StockCard Main Wrapper for Toggling -->
@@ -614,37 +626,42 @@
     <script src="app.js?v=45"></script>
 
     <script>
-        // Integrated Consumable Toggle Logic
-        function toggleConsumableView(show) {
+        // Integrated Module Switch Logic
+        function switchModule(moduleName) {
             const stockMain = document.getElementById('stockcard-main-view');
-            const consumView = document.getElementById('consumable-view-container');
-            const tabConsumable = document.getElementById('tabConsumable');
-            const otherTabs = document.querySelectorAll('.module-tab:not(#tabConsumable)');
+            const frames = {
+                'consumable': document.getElementById('consumable-view-container'),
+                'general': document.getElementById('general-view-container')
+            };
+            const tabs = {
+                'package': document.getElementById('tabPackage'),
+                'rm': document.getElementById('tabRM'),
+                'consumable': document.getElementById('tabConsumable'),
+                'general': document.getElementById('tabGeneral')
+            };
+            const headerActions = document.querySelector('.header-actions');
 
-            if (show) {
-                stockMain.style.display = 'none';
-                consumView.style.display = 'block';
+            // Hide all views first
+            stockMain.style.display = 'none';
+            Object.values(frames).forEach(f => f.style.display = 'none');
 
-                // Update Tab Styles
-                otherTabs.forEach(t => t.classList.remove('active'));
-                tabConsumable.classList.add('active');
+            // Handle Tabs Class
+            Object.values(tabs).forEach(t => t.classList.remove('active'));
+            if (tabs[moduleName]) tabs[moduleName].classList.add('active');
 
-                // Hide Header Actions that are SC specific if needed, or keep them?
-                // SC actions like "Add Entry", "Refresh" belong to SC logic. 
-                // Consumable has its own buttons inside the iframe.
-                document.querySelector('.header-actions').style.display = 'none';
-            } else {
+            if (moduleName === 'package' || moduleName === 'rm') {
                 stockMain.style.display = 'block';
-                consumView.style.display = 'none';
-
-                tabConsumable.classList.remove('active');
-                document.querySelector('.header-actions').style.display = 'flex';
+                headerActions.style.display = 'flex';
+                // Note: Logic inside app.js handles the actually switch between Package/RM
+            } else if (frames[moduleName]) {
+                frames[moduleName].style.display = 'block';
+                headerActions.style.display = 'none';
             }
         }
 
-        // Hook into existing tabs to switch back
-        document.getElementById('tabPackage').addEventListener('click', () => toggleConsumableView(false));
-        document.getElementById('tabRM').addEventListener('click', () => toggleConsumableView(false));
+        // Hook into existing tabs (Package and RM follow internal app.js logic but need to hide iframes)
+        document.getElementById('tabPackage').addEventListener('click', () => switchModule('package'));
+        document.getElementById('tabRM').addEventListener('click', () => switchModule('rm'));
     </script>
 </body>
 

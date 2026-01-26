@@ -111,8 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputPcsPerPack = document.getElementById('input-pcs-per-pack');
     const inputFgPcsPerCarton = document.getElementById('input-fg-pcs-per-carton');
     const editIndexInput = document.getElementById('edit-index');
-    // New Globals (Locally scoped to init but accessible)
-    // New Globals (Locally scoped to init but accessible)
+    // New Globals (Locally scoped to init)
     const inputCategory = document.getElementById('input-category');
     const inputPcsPerRoll = document.getElementById('input-pcs-per-roll');
     // Calculator Field Refs
@@ -122,25 +121,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const fieldShrink = document.getElementById('field-shrink');
     const fieldRoll = document.getElementById('field-roll');
 
+    // ATTACH LISTENER if exists
+    if (inputCategory) {
+        inputCategory.addEventListener('change', window.toggleItemFormFields);
+    }
+
     // Calculator Logic
     window.calculateRollCapacity = () => {
-        const lengthM = parseFloat(inputRollLength.value) || 0;
-        const cutMm = parseFloat(inputCutLength.value) || 0;
-        const resultEl = document.getElementById('roll-calc-result');
+        // Safe check for elements inside function as they might be dynamic or missed
+        const rLenInput = document.getElementById('input-roll-length');
+        const cLenInput = document.getElementById('input-cut-length');
+        const pcsInput = document.getElementById('input-pcs-per-roll');
+        const resEl = document.getElementById('roll-calc-result');
+
+        if (!rLenInput || !cLenInput) return;
+
+        const lengthM = parseFloat(rLenInput.value) || 0;
+        const cutMm = parseFloat(cLenInput.value) || 0;
 
         if (lengthM > 0 && cutMm > 0) {
             const totalMm = lengthM * 1000;
             const pcs = Math.floor(totalMm / cutMm);
 
             // Set Hidden Input for storage/logic
-            inputPcsPerRoll.value = pcs;
+            if (pcsInput) pcsInput.value = pcs;
 
-            if (resultEl) {
-                resultEl.innerHTML = `<span style="color:#2563eb">${lengthM.toLocaleString()} ม.</span> / <span style="color:#2563eb">${cutMm} มม.</span> = <span style="font-size:1.2em; color:#16a34a">${pcs.toLocaleString()}</span> ชิ้น/ม้วน`;
+            if (resEl) {
+                resEl.innerHTML = `<span style="color:#2563eb">${lengthM.toLocaleString()} ม.</span> / <span style="color:#2563eb">${cutMm} มม.</span> = <span style="font-size:1.2em; color:#16a34a">${pcs.toLocaleString()}</span> ชิ้น/ม้วน`;
             }
         } else {
-            inputPcsPerRoll.value = 0;
-            if (resultEl) resultEl.innerText = "- ชิ้น/ม้วน";
+            if (pcsInput) pcsInput.value = 0;
+            if (resEl) resEl.innerText = "- ชิ้น/ม้วน";
         }
     };
 

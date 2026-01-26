@@ -658,13 +658,24 @@
                         <div class="form-group">
                             <label for="trans-qty-cartons">จำนวนเต็ม (ลัง)</label>
                             <input type="number" id="trans-qty-cartons" placeholder="0" class="large-input"
-                                style="font-size: 1.2em; border-color: #3b82f6;">
+                                style="font-size: 1.2em; border-color: #3b82f6;" oninput="calculateTransRollYield()">
                         </div>
                         <div class="form-group">
                             <label for="trans-qty-partial">เศษ (กิโลกรัม)</label>
                             <input type="number" id="trans-qty-partial" min="0" step="0.01" placeholder="0.00"
-                                class="large-input" style="font-size: 1.2em; border-color: #3b82f6;">
+                                class="large-input" style="font-size: 1.2em; border-color: #3b82f6;"
+                                oninput="calculateTransRollYield()">
                         </div>
+                    </div>
+
+                    <!-- Roll Calc Row for Transaction Modal -->
+                    <div id="trans-roll-calc-row"
+                        style="display: none; background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 15px;">
+                        <p
+                            style="margin: 0; font-size: 0.95em; color: #166534; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-calculator" style="color: #16a34a;"></i>
+                            <span>ประมาณการผลผลิต (FG): <strong id="trans-roll-yield-result">-</strong> ลัง</span>
+                        </p>
                     </div>
                     <div class="form-group">
                         <label>วันที่</label>
@@ -863,7 +874,7 @@
         </style>
 
 
-        <script src="script.js?v=mobile_fix_20"></script>
+        <script src="script.js?v=mobile_fix_13"></script>
 </body>
 
 </html>

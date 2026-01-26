@@ -862,6 +862,32 @@ window.updateStats = () => {
     healthyStockCountEl.textContent = items.length - lowStockCount;
 };
 
+window.calculateTransRollYield = () => {
+    const index = document.getElementById('trans-item-index').value;
+    if (index === '') return;
+    const item = items[index];
+    const isRoll = item.category === 'unit';
+    const calcRow = document.getElementById('trans-roll-calc-row');
+    const resultSpan = document.getElementById('trans-roll-yield-result');
+
+    if (!isRoll || !calcRow || !resultSpan) {
+        if (calcRow) calcRow.style.display = 'none';
+        return;
+    }
+
+    const qtyText = document.getElementById('trans-qty-cartons').value;
+    const qty = parseFloat(qtyText) || 0;
+    const yieldPerRoll = item.fgYieldPerRoll || 0;
+    const totalYield = qty * yieldPerRoll;
+
+    if (qty > 0 && yieldPerRoll > 0) {
+        calcRow.style.display = 'block';
+        resultSpan.textContent = formatNumber(totalYield, 1);
+    } else {
+        calcRow.style.display = 'none';
+    }
+};
+
 // Transaction Logic
 window.openTransactionModal = (index) => {
     const item = items[index];
@@ -893,12 +919,16 @@ window.openTransactionModal = (index) => {
         if (labelMain) labelMain.textContent = "จำนวน (ม้วน)";
         if (labelPartial) labelPartial.parentElement.style.display = 'none'; // Hide Partial
         if (inputPartial) inputPartial.removeAttribute('required');
+        // Show Roll Calc Row if possible
+        window.calculateTransRollYield();
     } else {
         if (labelMain) labelMain.textContent = "จำนวนเต็ม (ลัง)";
         if (labelPartial) {
             labelPartial.textContent = "เศษ (กิโลกรัม)";
             labelPartial.parentElement.style.display = 'block';
         }
+        const calcRow = document.getElementById('trans-roll-calc-row');
+        if (calcRow) calcRow.style.display = 'none';
     }
 
     transModal.style.display = 'flex';
@@ -977,8 +1007,8 @@ transForm.addEventListener('submit', async (e) => {
         qtyUnit: isRoll ? totalMove : 0, // New field for units
         qtyCartons: inputCartons,
         qtyPartial: isRoll ? 0 : inputPartial,
+        fgYield: isRoll ? (inputCartons * (item.fgYieldPerRoll || 0)) : 0,
         remainingStock: item.stockCartons,
-        stockPartialKg: item.stockPartialKg,
         stockPartialKg: item.stockPartialKg,
         note: note
     };
@@ -1013,6 +1043,21 @@ window.openHistoryModal = (index) => {
         </div>
     `;
 
+    // Dynamic Column Headers
+    const modalTable = document.getElementById('history-body').closest('table');
+    const ths = modalTable.querySelectorAll('thead th');
+    if (ths.length >= 5) {
+        if (isRoll) {
+            ths[2].textContent = "ปริมาณ (ม้วน)";
+            ths[3].textContent = "ผลผลิต (ลัง FG)";
+            ths[4].textContent = "คงเหลือ (ม้วน)";
+        } else {
+            ths[2].textContent = "ปริมาณ (กก.)";
+            ths[3].textContent = "เทียบเท่า (ลัง)";
+            ths[4].textContent = "คงเหลือ (ลัง)";
+        }
+    }
+
     historyBody.innerHTML = '';
 
     if (logs.length === 0) {
@@ -1022,9 +1067,17 @@ window.openHistoryModal = (index) => {
             const isIn = log.type === 'IN';
             const row = document.createElement('tr');
 
-            // For rolls, we show qtyUnit instead of qtyKg
             const displayQty = isRoll ? log.qtyUnit : log.qtyKg;
             const displayUnit = isRoll ? 'ม้วน' : 'กก.';
+
+            // FG Yield logic for display
+            let fgYieldDisplay = '-';
+            if (isRoll) {
+                const yieldVal = log.fgYield || (log.qtyCartons * (item.fgYieldPerRoll || 0));
+                fgYieldDisplay = formatNumber(yieldVal, 1) + ' ลัง';
+            } else {
+                fgYieldDisplay = formatNumber(log.qtyCartons, 1) + ' ลัง';
+            }
 
             row.innerHTML = `
                 <td style="font-family:monospace; font-size:0.95rem;">${formatDate(log.date)}</td>
@@ -1036,8 +1089,8 @@ window.openHistoryModal = (index) => {
                 <td class="center" style="font-weight:600; color: ${isIn ? '#16a34a' : '#ef4444'};">
                     ${isIn ? '+' : '-'}${formatNumber(displayQty, isRoll ? 0 : 2)} ${displayUnit}
                 </td>
-                <td class="center text-muted">${formatNumber(log.qtyCartons, 1)} ${isRoll ? 'ม้วน' : 'ลัง'}</td>
-                <td class="center" style="font-weight:700;">${formatNumber(log.remainingStock, 1)}</td>
+                <td class="center text-blue">${fgYieldDisplay}</td>
+                <td class="center" style="font-weight:700;">${formatNumber(log.remainingStock, isRoll ? 1 : 1)}</td>
                 <td style="font-size:0.9rem;">${log.note || '-'}</td>
                 <td class="center no-print">
                     <button class="btn icon-only delete" onclick="deleteTransaction('${log.id}', ${index})" title="ลบ" style="padding:4px;width:28px;height:28px;">

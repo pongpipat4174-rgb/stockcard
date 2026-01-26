@@ -2088,15 +2088,22 @@ async function saveEntryRM() {
         for (var i = 0; i < entriesToSave.length; i++) {
             var entry = entriesToSave[i];
 
+            // DEBUG: Alert first entry to ensure data is correct
+            // alert('Debug: Sending Entry ' + (i+1) + '\nProduct: ' + entry.productCode + '\nQty: ' + (entry.inQty || entry.outQty));
+
             if (entriesToSave.length > 1) {
                 showToast('กำลังบันทึกรายการที่ ' + (i + 1) + '/' + entriesToSave.length + '...');
             }
 
             // Using fetch in await mode
             await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
+                method: "POST",
+                mode: "no-cors",
+                cache: "no-cache",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                redirect: "follow",
                 body: JSON.stringify({
                     action: 'add_rm',
                     entry: entry

@@ -128,12 +128,12 @@ function renderTable() {
 
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td class="center">
+            <td class="center" data-label="สถานะ">
                 <span class="status-indicator ${isLow ? 'status-low' : 'status-ok'}">
                     ${isLow ? 'ต้องสั่งซื้อ' : 'ปกติ'}
                 </span>
             </td>
-            <td style="cursor: pointer;" onclick="viewItemDetails(${realIndex})" title="คลิกเพื่อดูรายละเอียด">
+            <td style="cursor: pointer;" onclick="viewItemDetails(${realIndex})" title="คลิกเพื่อดูรายละเอียด" data-label="รายการ / สเปก">
                 <div class="product-info" style="display: flex; flex-direction: row; align-items: center; gap: 12px;">
                     ${item.image ? `<img src="${item.image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;">` : '<div style="width:50px;height:50px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#cbd5e1;"><i class="fa-solid fa-image"></i></div>'}
                     <div>
@@ -145,15 +145,15 @@ function renderTable() {
                     </div>
                 </div>
             </td>
-            <td class="center"><span class="cat-badge">${item.category}</span></td>
-            <td class="center">
+            <td class="center" data-label="หมวดหมู่"><span class="cat-badge">${item.category === 'Spare Part' ? 'อะไหล่เครื่องจักร' : item.category === 'Cleaning' ? 'อุปกรณ์ทั่วไป' : 'อื่นๆ'}</span></td>
+            <td class="center" data-label="คงเหลือ">
                 <span class="stock-badge" style="color: ${isLow ? 'var(--danger)' : 'var(--primary-color)'}">
                     ${item.stock}
                 </span>
                 <span style="font-size: 0.8rem; color: var(--text-muted)"> ${item.unit}</span>
             </td>
-            <td class="center">${item.min}</td>
-            <td class="center no-print">
+            <td class="center" data-label="จุดสั่งซื้อ">${item.min}</td>
+            <td class="center no-print" data-label="จัดการ">
                 <div style="display: flex; gap: 4px; justify-content: center;">
                     <button class="btn icon in" title="รับเข้า" onclick="openTransModal(${realIndex}, 'IN')"><i class="fa-solid fa-plus"></i></button>
                     <button class="btn icon out" title="เบิกออก" onclick="openTransModal(${realIndex}, 'OUT')"><i class="fa-solid fa-minus"></i></button>

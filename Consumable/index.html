@@ -232,10 +232,28 @@
             .no-print,
             #app-loader,
             #debug-panel,
-            .form-actions,
-            .modal {
-                /* HIDE ALL MODALS */
+            .form-actions {
                 display: none !important;
+            }
+
+            /* Aggressively Hide ALL Modals */
+            .modal,
+            .modal-backdrop,
+            #item-modal,
+            #transaction-modal,
+            #history-modal,
+            #calc-modal,
+            #action-sheet-modal,
+            .modal-content {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                z-index: -9999 !important;
+                width: 0 !important;
+                height: 0 !important;
+                position: absolute !important;
+                top: -9999px !important;
+                left: -9999px !important;
             }
 
             /* Table Tweaks */
@@ -244,8 +262,9 @@
                 box-shadow: none !important;
                 border: none !important;
                 position: relative;
-                margin-top: 20px;
+                margin-top: 0;
                 display: block !important;
+                width: 100% !important;
             }
 
             /* Print Title */

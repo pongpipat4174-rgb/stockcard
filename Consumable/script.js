@@ -111,6 +111,59 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputPcsPerPack = document.getElementById('input-pcs-per-pack');
     const inputFgPcsPerCarton = document.getElementById('input-fg-pcs-per-carton');
     const editIndexInput = document.getElementById('edit-index');
+    // New Globals (Locally scoped to init but accessible)
+    // New Globals (Locally scoped to init but accessible)
+    const inputCategory = document.getElementById('input-category');
+    const inputPcsPerRoll = document.getElementById('input-pcs-per-roll');
+    // Calculator Field Refs
+    const inputRollLength = document.getElementById('input-roll-length');
+    const inputCutLength = document.getElementById('input-cut-length');
+
+    const fieldShrink = document.getElementById('field-shrink');
+    const fieldRoll = document.getElementById('field-roll');
+
+    // Calculator Logic
+    window.calculateRollCapacity = () => {
+        const lengthM = parseFloat(inputRollLength.value) || 0;
+        const cutMm = parseFloat(inputCutLength.value) || 0;
+        const resultEl = document.getElementById('roll-calc-result');
+
+        if (lengthM > 0 && cutMm > 0) {
+            const totalMm = lengthM * 1000;
+            const pcs = Math.floor(totalMm / cutMm);
+
+            // Set Hidden Input for storage/logic
+            inputPcsPerRoll.value = pcs;
+
+            if (resultEl) {
+                resultEl.innerHTML = `<span style="color:#2563eb">${lengthM.toLocaleString()} ม.</span> / <span style="color:#2563eb">${cutMm} มม.</span> = <span style="font-size:1.2em; color:#16a34a">${pcs.toLocaleString()}</span> ชิ้น/ม้วน`;
+            }
+        } else {
+            inputPcsPerRoll.value = 0;
+            if (resultEl) resultEl.innerText = "- ชิ้น/ม้วน";
+        }
+    };
+
+    // Toggle Form Function
+    window.toggleItemFormFields = () => {
+        if (!inputCategory) return;
+        const cat = inputCategory.value;
+        if (cat === 'unit') {
+            if (fieldShrink) fieldShrink.style.display = 'none';
+            if (fieldRoll) fieldRoll.style.display = 'block';
+            const lbl = document.querySelector('label[for="input-stock-cartons"]');
+            if (lbl) lbl.innerText = 'คงเหลือปัจจุบัน (ม้วน)';
+            const partialGrp = document.querySelector('label[for="input-stock-partial"]')?.parentElement;
+            if (partialGrp) partialGrp.style.display = 'none';
+        } else {
+            if (fieldShrink) fieldShrink.style.display = 'block';
+            if (fieldRoll) fieldRoll.style.display = 'none';
+            const lbl = document.querySelector('label[for="input-stock-cartons"]');
+            if (lbl) lbl.innerText = 'คงเหลือปัจจุบัน (ลัง)';
+            const partialGrp = document.querySelector('label[for="input-stock-partial"]')?.parentElement;
+            if (partialGrp) partialGrp.style.display = 'block';
+        }
+    };
 
     if (addItemBtn) {
         addItemBtn.addEventListener('click', () => {
@@ -131,15 +184,43 @@ document.addEventListener('DOMContentLoaded', () => {
         itemForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const index = parseInt(editIndexInput.value);
+            const category = inputCategory ? inputCategory.value : 'weight';
+
+            // Basic Validation
+            if (category === 'weight' && (!inputKgPerCarton.value || !inputPcsPerKg.value)) {
+                alert("กรุณากรอกข้อมูลน้ำหนักและจำนวนซอง"); return;
+            }
+            if (category === 'unit') {
+                // Check logic for roll inputs
+                const rLen = parseFloat(inputRollLength.value) || 0;
+                const cLen = parseFloat(inputCutLength.value) || 0;
+                if (rLen <= 0 || cLen <= 0) {
+                    alert("กรุณาระบุความยาวม้วนและความยาวตัดให้ถูกต้อง"); return;
+                }
+            }
+
             const item = {
                 name: inputName.value,
-                kgPerCarton: parseFloat(inputKgPerCarton.value) || 0,
-                pcsPerKg: parseFloat(inputPcsPerKg.value) || 0,
+                category: category,
+                // Weight Logic
+                kgPerCarton: category === 'weight' ? (parseFloat(inputKgPerCarton.value) || 0) : 0,
+                pcsPerKg: category === 'weight' ? (parseFloat(inputPcsPerKg.value) || 0) : 0,
+                // Unit Logic
+                pcsPerRoll: category === 'unit' ? (parseInt(inputPcsPerRoll.value) || 0) : 0,
+                rollLength: category === 'unit' ? (parseFloat(inputRollLength.value) || 0) : 0,
+                cutLength: category === 'unit' ? (parseFloat(inputCutLength.value) || 0) : 0,
+
+
+                // Common Stock (Cartons = Rolls for unit)
                 stockCartons: parseFloat(inputStockCartons.value) || 0,
-                stockPartialKg: parseFloat(inputStockPartial.value) || 0,
+                stockPartialKg: category === 'weight' ? (parseFloat(inputStockPartial.value) || 0) : 0,
+
                 minThreshold: parseFloat(inputMinThreshold.value) || 0,
                 pcsPerPack: parseFloat(inputPcsPerPack.value) || 1,
-                fgPcsPerCarton: parseFloat(inputFgPcsPerCarton.value) || 1
+                fgPcsPerCarton: parseFloat(inputFgPcsPerCarton.value) || 0,
+
+                updated: new Date().toISOString(),
+                history: index >= 0 ? items[index].history : []
             };
 
             // Save History
@@ -597,7 +678,6 @@ window.openTransactionModal = (index) => {
 
     // Default date to today
     const now = new Date();
-    // Format YYYY-MM-DD for input type=date
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -609,6 +689,24 @@ window.openTransactionModal = (index) => {
 
     // Reset Radio
     document.querySelector('input[name="trans-type"][value="IN"]').checked = true;
+
+    // --- CATEGORY UI SWITCH ---
+    const isRoll = item.category === 'unit';
+    const labelMain = document.querySelector('label[for="trans-qty-cartons"]');
+    const labelPartial = document.querySelector('label[for="trans-qty-partial"]');
+    const inputPartial = document.getElementById('trans-qty-partial');
+
+    if (isRoll) {
+        if (labelMain) labelMain.textContent = "จำนวน (ม้วน)";
+        if (labelPartial) labelPartial.parentElement.style.display = 'none'; // Hide Partial
+        if (inputPartial) inputPartial.removeAttribute('required');
+    } else {
+        if (labelMain) labelMain.textContent = "จำนวนเต็ม (ลัง)";
+        if (labelPartial) {
+            labelPartial.textContent = "เศษ (กิโลกรัม)";
+            labelPartial.parentElement.style.display = 'block';
+        }
+    }
 
     transModal.style.display = 'flex';
 };
@@ -624,36 +722,45 @@ transForm.addEventListener('submit', async (e) => {
     const date = document.getElementById('trans-date').value;
     const note = document.getElementById('trans-note').value;
 
-    if (inputCartons === 0 && inputPartial === 0) {
-        alert("กรุณาระบุจำนวน (ลัง หรือ กก.)");
-        return;
+    // Category check
+    const isRoll = item.category === 'unit';
+
+    if (isRoll) {
+        if (inputCartons === 0) {
+            alert("กรุณาระบุจำนวนม้วน"); return;
+        }
+    } else {
+        if (inputCartons === 0 && inputPartial === 0) {
+            alert("กรุณาระบุจำนวน (ลัง หรือ กก.)"); return;
+        }
     }
 
     // Direct Update Logic
-    let newStockCartons = parseFloat(item.stockCartons);
+    let newStockCartons = parseFloat(item.stockCartons || 0);
     let newStockPartial = parseFloat(item.stockPartialKg || 0);
 
     if (type === 'IN') {
         newStockCartons += inputCartons;
-        newStockPartial += inputPartial;
+        if (!isRoll) newStockPartial += inputPartial;
     } else {
         newStockCartons -= inputCartons;
-        newStockPartial -= inputPartial;
+        if (!isRoll) newStockPartial -= inputPartial;
     }
 
     item.stockCartons = newStockCartons;
     item.stockPartialKg = newStockPartial;
 
-    // --- AUTO-BREAK LOGIC (ตัดลังอัตโนมัติ) ---
-    // ถ้าเศษติดลบ แต่มีลังเหลือ ให้ระเบิดลังมาโปะเศษ
-    while (item.stockPartialKg < 0 && item.stockCartons > 0) {
-        item.stockCartons -= 1;
-        item.stockPartialKg += item.kgPerCarton;
+    // --- AUTO-BREAK LOGIC (ตัดลังอัตโนมัติ) Only for Weight ---
+    if (!isRoll) {
+        while (item.stockPartialKg < 0 && item.stockCartons > 0 && item.kgPerCarton > 0) {
+            item.stockCartons -= 1;
+            item.stockPartialKg += item.kgPerCarton;
+        }
     }
     // -----------------------------------------
 
-    // Calculate approx total Kg for reference
-    const totalKgMoved = (inputCartons * item.kgPerCarton) + inputPartial;
+    // Calculate approx total unit for history
+    const totalMove = isRoll ? inputCartons : ((inputCartons * (item.kgPerCarton || 25)) + inputPartial);
 
     const newTrans = {
         id: Date.now().toString(),
@@ -661,19 +768,22 @@ transForm.addEventListener('submit', async (e) => {
         itemName: item.name,
         date: date,
         type: type,
-        qtyKg: totalKgMoved, // Keeping legacy field for simpler history list
-        qtyCartons: inputCartons + (inputPartial / item.kgPerCarton), // Approx cartons for legacy
-        movedCartons: inputCartons, // New specific field
-        movedPartial: inputPartial, // New specific field
-        remainingStock: item.stockCartons, // Use normalized value
-        stockPartialKg: item.stockPartialKg, // Use normalized value
+        category: item.category || 'weight',
+        qtyKg: isRoll ? 0 : totalMove, // Keep legacy field for weight
+        qtyUnit: isRoll ? totalMove : 0, // New field for units
+        qtyCartons: inputCartons,
+        qtyPartial: isRoll ? 0 : inputPartial,
+        remainingStock: item.stockCartons,
+        stockPartialKg: item.stockPartialKg,
         note: note
     };
+    note: note
+};
 
-    transactions.unshift(newTrans);
+transactions.unshift(newTrans);
 
-    await saveData(); // Save all
-    closeModal('transaction-modal');
+await saveData(); // Save all
+closeModal('transaction-modal');
 });
 
 // --- History Modal with Delete ---

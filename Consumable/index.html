@@ -513,16 +513,53 @@
                         <datalist id="product-history-list"></datalist>
                     </div>
 
-                    <h4 class="section-title">ข้อมูลวัสดุสิ้นเปลือง</h4>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>น้ำหนักต่อลัง (kg)</label>
-                            <input type="number" id="input-kg-per-carton" step="0.01" required value="25">
+                    <div class="form-group">
+                        <label>ประเภทสินค้า</label>
+                        <select id="input-category" class="input-field" onchange="toggleItemFormFields()"
+                            style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                            <option value="weight">ถุงชริ้ง (คำนวณตามน้ำหนัก กก.)</option>
+                            <option value="unit">ม้วนฟิล์ม / ของชิ้น (คำนวณตามจำนวนหน่วย/ม้วน)</option>
+                        </select>
+                    </div>
+
+                    <!-- SHRINK FIELDS (Category: weight) -->
+                    <div id="field-shrink">
+                        <h4 class="section-title">ข้อมูลวัสดุสิ้นเปลือง (ถุงชริ้ง)</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>น้ำหนักต่อลัง (kg)</label>
+                                <input type="number" id="input-kg-per-carton" step="0.01" value="25">
+                            </div>
+                            <div class="form-group">
+                                <label>จำนวนซองต่อ กก.</label>
+                                <input type="number" id="input-pcs-per-kg" placeholder="เช่น 554">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>จำนวนซองต่อ กก.</label>
-                            <input type="number" id="input-pcs-per-kg" required placeholder="เช่น 554">
+                    </div>
+
+                    <!-- ROLL FIELDS (Category: unit) -->
+                    <div id="field-roll" style="display: none;">
+                        <h4 class="section-title" style="color: #059669;">ข้อมูลวัสดุสิ้นเปลือง (ม้วนฟิล์ม)</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>ความยาวม้วน (เมตร)</label>
+                                <input type="number" id="input-roll-length" placeholder="เช่น 2664"
+                                    oninput="calculateRollCapacity()">
+                            </div>
+                            <div class="form-group">
+                                <label>ความยาวตัด/ชิ้น (มม.)</label>
+                                <input type="number" id="input-cut-length" placeholder="เช่น 180"
+                                    oninput="calculateRollCapacity()">
+                            </div>
                         </div>
+                        <div
+                            style="background: #f0fdf4; padding: 10px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 15px;">
+                            <p style="margin: 0; font-size: 0.9em; color: #166534;">
+                                <i class="fa-solid fa-calculator"></i> คำนวณอัตโนมัติ:<br>
+                                <span id="roll-calc-result" style="font-weight: 600;">- ชิ้น/ม้วน</span>
+                            </p>
+                        </div>
+                        <input type="hidden" id="input-pcs-per-roll">
                     </div>
                     <div class="form-row">
                         <div class="form-group">

@@ -736,7 +736,46 @@ window.openHistoryModal = (index) => {
             historyBody.appendChild(row);
         });
     }
+    // --- Calculate Summary Stats for Card ---
+    let totalIn = 0;
+    let totalOut = 0;
+
+    itemFiles.forEach(t => {
+        // If qtyKg exists, use it, else calculate from cartons
+        const kg = t.qtyKg || (t.qtyCartons * item.kgPerCarton);
+        if (t.type === 'IN') {
+            totalIn += kg;
+        } else if (t.type === 'OUT') {
+            totalOut += kg;
+        }
+    });
+
+    // Update Summary DOM
+    document.getElementById('hist-total-in').innerText = `+${totalIn.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+    document.getElementById('hist-total-out').innerText = `-${totalOut.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+    // Current Stock (Total Kg)
+    const currentTotalKg = (item.stockCartons * item.kgPerCarton) + (item.stockPartialKg || 0);
+    document.getElementById('hist-current-stock').innerText = currentTotalKg.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' กก.';
+
+    // Update Print Header
+    document.getElementById('print-product-name').innerText = item.name;
+    const today = new Date();
+    document.getElementById('print-print-date').innerText = `วันที่พิมพ์: ${today.toLocaleDateString('th-TH')} ${today.toLocaleTimeString('th-TH')}`;
+
     historyModal.style.display = 'flex';
+};
+
+// --- History Print Function ---
+window.printHistoryFromModal = () => {
+    // Add specific class to body to trigger CSS overrides
+    document.body.classList.add('printing-history-mode');
+    setTimeout(() => {
+        window.print();
+        // Remove class after print dialog is mostly likely open/closed (delayed)
+        // Note: window.print() is blocking in many browsers, so next line runs after dialog closes.
+        document.body.classList.remove('printing-history-mode');
+    }, 100);
 };
 
 window.printHistory = (title) => {

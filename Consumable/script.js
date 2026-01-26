@@ -941,6 +941,17 @@ transForm.addEventListener('submit', async (e) => {
             item.stockPartialKg += item.kgPerCarton;
         }
     }
+
+    // --- LINKED STOCK SYNC ---
+    // If this item has a stockCode, update all other items with the same code
+    if (item.stockCode) {
+        items.forEach(i => {
+            if (i.stockCode === item.stockCode && i.category === item.category) {
+                i.stockCartons = item.stockCartons;
+                i.stockPartialKg = item.stockPartialKg;
+            }
+        });
+    }
     // -----------------------------------------
 
     // Calculate approx total unit for history

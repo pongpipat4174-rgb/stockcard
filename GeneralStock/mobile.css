@@ -41,8 +41,9 @@
 
     /* --- 3. Stats Grid --- */
     .dashboard-stats {
+        display: grid;
+        /* Add this! */
         grid-template-columns: 1fr 1fr;
-        /* Split into 2 columns */
         gap: 12px;
     }
 

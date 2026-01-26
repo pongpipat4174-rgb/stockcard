@@ -360,8 +360,8 @@ const loadData = async () => {
                     console.log("Mapping Thai Headers...");
                     loadedItems = loadedItems.map(row => ({
                         name: row["ชื่อสินค้า"],
-                        stockCartons: parseFloat(row["สต็อก (ลัง)"] || row["คงเหลือปัจจุบัน (ลัง)"] || 0),
-                        stockPartialKg: parseFloat(row["เศษ (กก.)"] || 0),
+                        stockCartons: parseFloat(row["สต็อก (ลัง)"] || row["สต๊อก (ลัง)"] || row["คงเหลือปัจจุบัน (ลัง)"] || 0),
+                        stockPartialKg: parseFloat(row["เศษ(กก.)"] || row["เศษ (กก.)"] || 0),
                         kgPerCarton: parseFloat(row["กก./ลัง"] || row["น้ำหนักต่อลัง (kg)"] || 25),
                         pcsPerKg: parseFloat(row["ชิ้น/กก.1"] || row["ชิ้น/กก."] || row["จำนวนซองต่อ กก."] || 0), // Handle potential key variations
                         minThreshold: parseFloat(row["จุดสั่งซื้อ (กก.)"] || row["แจ้งเตือนเมื่อต่ำกว่า (กก.)"] || 0),
@@ -444,7 +444,7 @@ window.saveData = async () => {
                 return {
                     "ชื่อสินค้า": item.name,
                     "สต็อก (ลัง)": item.stockCartons,
-                    "เศษ (กก.)": stockPartial,
+                    "เศษ(กก.)": stockPartial, // Changed to match Sheet header (No space)
                     "กก./ลัง": item.kgPerCarton,
                     "รวม (กก.)": parseFloat(totalKg.toFixed(2)), // Calculated
                     "จุดสั่งซื้อ (กก.)": item.minThreshold,

@@ -322,18 +322,7 @@ transForm.addEventListener('submit', async (e) => {
     await saveData();
 });
 
-// --- HISTORY LOGIC ---
-window.openHistoryModal = (index) => {
-    const item = items[index];
-    const itemTrans = transactions.filter(t => t.itemId === item.id);
-    const hBody = document.getElementById('history-body');
-    hBody.innerHTML = '';
 
-    itemTrans.forEach(t => {
-        // ... (existing history logic)
-    });
-    // ...
-};
 
 // --- DETAIL VIEW LOGIC ---
 window.viewItemDetails = (index) => {

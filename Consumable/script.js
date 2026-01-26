@@ -19,14 +19,16 @@ const createDebugPanel = () => {
     return p;
 };
 const debugLog = (msg, type = 'INFO') => {
-    let p = document.getElementById('debug-panel');
-    if (!p) p = createDebugPanel();
+    const debuggerEl = document.getElementById('debug-log');
+    if (!debuggerEl) return;
     const line = document.createElement('div');
-    line.textContent = `[${type}] ${msg}`;
-    if (type === 'ERROR') line.style.color = '#f55';
-    p.appendChild(line);
-    p.scrollTop = p.scrollHeight;
+    line.className = `debug-line ${type.toLowerCase()}`;
+    line.innerText = `[${new Date().toLocaleTimeString()}] [${type}] ${msg}`;
+    debuggerEl.prepend(line);
 };
+
+// --- UTILITIES ---
+// (formatNumber moved to line 278)
 
 // Trap Errors
 window.onerror = function (msg, url, line, col, error) {
@@ -819,15 +821,14 @@ transForm.addEventListener('submit', async (e) => {
         qtyPartial: isRoll ? 0 : inputPartial,
         remainingStock: item.stockCartons,
         stockPartialKg: item.stockPartialKg,
+        stockPartialKg: item.stockPartialKg,
         note: note
     };
-    note: note
-};
 
-transactions.unshift(newTrans);
+    transactions.unshift(newTrans);
 
-await saveData(); // Save all
-closeModal('transaction-modal');
+    await saveData(); // Save all
+    closeModal('transaction-modal');
 });
 
 // --- History Modal with Delete ---

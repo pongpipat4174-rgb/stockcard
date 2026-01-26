@@ -2114,11 +2114,14 @@ function autoFillRMForm(productCode) {
         calculateRMTotal();
     }
 
-    // 2. Intelligent Auto-Fill for Withdrawal (Lot No, Vendor)
+
+    // 2. Intelligent Auto-Fill specific to Type
     if (isWithdrawal) {
-        // Find all active lots for this product
+        // --- WITHDRAWAL LOGIC (Suggest Lot) ---
         var entries = rmStockData.filter(function (d) { return d.productCode === productCode; });
         var lotBalances = {};
+
+        // ... (existing helper logic for dates/expiry) ...
         var lotFirstDate = {};
         var lotExpDays = {};
         var lotVendor = {};
@@ -2128,11 +2131,10 @@ function autoFillRMForm(productCode) {
             if (!lotBalances[e.lotNo]) {
                 lotBalances[e.lotNo] = 0;
                 lotFirstDate[e.lotNo] = e.date;
-                lotVendor[e.lotNo] = e.supplier || e.vendorLot; // Fallback to whatever is available
+                lotVendor[e.lotNo] = e.supplier || e.vendorLot;
             }
             lotBalances[e.lotNo] += e.inQty - e.outQty;
 
-            // Track expiry
             var days = parseInt(e.daysLeft);
             if (!isNaN(days)) {
                 if (lotExpDays[e.lotNo] === undefined || days < lotExpDays[e.lotNo]) {
@@ -2143,69 +2145,61 @@ function autoFillRMForm(productCode) {
 
         var activeLots = Object.keys(lotBalances).filter(function (lot) { return lotBalances[lot] > 0; });
 
-        if (activeLots.length === 0) return; // No stock to suggest
+        if (activeLots.length > 0) {
+            var bestLot = null;
+            var reason = '';
 
-        var bestLot = null;
-        var reason = '';
-
-        // Priority 1: Revalidated Lots (Check remarks in entries)
-        var revalLot = activeLots.find(function (lot) {
-            return entries.some(function (e) {
-                return e.lotNo === lot && e.remark && /(ต่ออายุ|reval|extend)/i.test(e.remark);
-            });
-        });
-
-        if (revalLot) {
-            bestLot = revalLot;
-            reason = ' (ต่ออายุ)';
-        } else {
-            // Priority 2: Near Expiry (FEFO) - say < 90 days or just soonest?
-            // User requested "Priority: Reval -> Near Expiry -> FIFO"
-            // Let's sort by days left
-            var sortedByExp = activeLots.slice().sort(function (a, b) {
-                return (lotExpDays[a] || 9999) - (lotExpDays[b] || 9999);
-            });
-
-            var bestExpLot = sortedByExp[0];
-            var minDays = lotExpDays[bestExpLot];
-
-            if (minDays !== undefined && minDays <= 90) { // arbitrary threshold for "Near Expiry" priority? Or just always take FEFO?
-                // Usually FEFO is the rule.
-                bestLot = bestExpLot;
-                reason = ' (FEFO/ใกล้หมดอายุ)';
-            } else {
-                // Priority 3: FIFO (Oldest First Date)
-                var sortedByDate = activeLots.slice().sort(function (a, b) {
-                    var dA = parseDateThai(lotFirstDate[a]);
-                    var dB = parseDateThai(lotFirstDate[b]);
-                    return dA.getTime() - dB.getTime();
+            // Priority: Reval > FEFO > FIFO
+            var revalLot = activeLots.find(function (lot) {
+                return entries.some(function (e) {
+                    return e.lotNo === lot && e.remark && /(ต่ออายุ|reval|extend)/i.test(e.remark);
                 });
-                bestLot = sortedByDate[0];
-                reason = ' (FIFO/เก่าสุด)';
-            }
-        }
+            });
 
-        // Fill Form
-        if (bestLot) {
-            var lotInput = document.getElementById('entryLotNoRM');
-            var vendorInput = document.getElementById('entryVendorRM');
-
-            // Only fill if empty to avoid annoying user
-            if (lotInput && !lotInput.value) {
-                lotInput.value = bestLot;
-                showToast('แนะนำ Lot: ' + bestLot + reason);
+            if (revalLot) {
+                bestLot = revalLot;
+                reason = ' (ต่ออายุ)';
+            } else {
+                var sortedByExp = activeLots.slice().sort(function (a, b) {
+                    return (lotExpDays[a] || 9999) - (lotExpDays[b] || 9999);
+                });
+                var bestExpLot = sortedByExp[0];
+                if (lotExpDays[bestExpLot] !== undefined && lotExpDays[bestExpLot] <= 90) {
+                    bestLot = bestExpLot;
+                    reason = ' (FEFO/ใกล้หมดอายุ)';
+                } else {
+                    var sortedByDate = activeLots.slice().sort(function (a, b) {
+                        // Use string comparison for simple ISO-like dates or parse
+                        return (lotFirstDate[a] || '') > (lotFirstDate[b] || '') ? 1 : -1;
+                    });
+                    bestLot = sortedByDate[0];
+                    reason = ' (FIFO/เก่าสุด)';
+                }
             }
-            if (vendorInput && !vendorInput.value && lotVendor[bestLot]) {
-                vendorInput.value = lotVendor[bestLot];
+
+            if (bestLot) {
+                var lotInput = document.getElementById('entryLotNoRM');
+                var vendorInput = document.getElementById('entryVendorRM');
+                if (lotInput && !lotInput.value) {
+                    lotInput.value = bestLot;
+                    showToast('แนะนำ Lot: ' + bestLot + reason);
+                }
+                if (vendorInput && !vendorInput.value && lotVendor[bestLot]) {
+                    vendorInput.value = lotVendor[bestLot];
+                }
+                // Try to fill standard weight for this specific lot if possible? 
+                // We already filled standard weight above.
             }
         }
     } else {
-        // If Receiving (In), maybe just suggest last Supplier?
-        // User didn't ask explicitly, but "ข้อมูลสินค้าด้านล่าง" might imply supplier too.
+        // --- RECEIVE LOGIC ---
+        // 1. Vendor Hint (Last vendor used for this product)
         var vendorInput = document.getElementById('entryVendorRM');
         if (vendorInput && !vendorInput.value && lastVendor !== '-') {
             vendorInput.value = lastVendor;
         }
+
+        // REMOVED: Auto-Generate Lot No. (User manages their own running numbers)
     }
 }
 

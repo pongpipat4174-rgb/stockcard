@@ -201,9 +201,16 @@
 
         /* Print Override for Main Dashboard */
         @media print {
+            @page {
+                size: A4 landscape;
+                margin: 1cm;
+            }
+
             body {
                 visibility: visible !important;
                 background: white !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             /* Show main content */
@@ -214,9 +221,10 @@
                 margin: 0 !important;
                 width: 100% !important;
                 max-width: 100% !important;
+                box-shadow: none !important;
             }
 
-            /* Hide non-printable elements */
+            /* HIDE these */
             .actions,
             .btn,
             .no-print,
@@ -225,9 +233,9 @@
                 display: none !important;
             }
 
-            /* Adjust Layout for Print */
+            /* Header: Keep it clean but styled */
             header {
-                padding: 10px 0 !important;
+                padding: 0 !important;
                 margin-bottom: 20px !important;
                 box-shadow: none !important;
                 border: none !important;
@@ -235,51 +243,86 @@
 
             .header-content {
                 flex-direction: row !important;
-                /* Ensure logo stays left */
                 align-items: center !important;
+                justify-content: flex-start !important;
             }
 
-            /* Table Tweaks */
+            .header-content .logo h1 {
+                font-size: 1.8rem !important;
+                color: var(--primary-color) !important;
+            }
+
+            /* Dashboard Stats: Simplify for print or Keep? User said "beautiful like web" */
+            /* Let's keep them but make sure they fit */
+            .dashboard-stats {
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 15px !important;
+                page-break-after: avoid;
+                margin-bottom: 20px !important;
+            }
+
+            .stat-card {
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+                /* Force background print */
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Table Styling - KEEP WEB LOOK */
             .table-container {
                 overflow: visible !important;
-                border: 1px solid #000 !important;
                 box-shadow: none !important;
+                border: 1px solid #e2e8f0 !important;
             }
 
             table {
                 width: 100% !important;
-                border-collapse: collapse !important;
-                font-size: 10pt !important;
-            }
-
-            th,
-            td {
-                border: 1px solid #000 !important;
-                color: black !important;
-                padding: 6px !important;
+                border-collapse: separate !important;
+                /* Keep rounded corners if possible, or collapse */
+                font-size: 9pt !important;
+                /* Slightly smaller to fit */
             }
 
             th {
-                background-color: #f0f0f0 !important;
+                background-color: #f8fafc !important;
+                color: #64748b !important;
+                font-weight: 600 !important;
+                border-bottom: 1px solid #e2e8f0 !important;
             }
 
-            /* Ensure colors print reasonably well */
+            td {
+                border-bottom: 1px solid #e2e8f0 !important;
+                color: #1e293b !important;
+                padding: 8px 4px !important;
+            }
+
+            /* Group Headers */
+            .header-group th {
+                background-color: #f1f5f9 !important;
+                border-bottom: 2px solid #e2e8f0 !important;
+            }
+
+            .group-fg {
+                background-color: #eff6ff !important;
+            }
+
+            /* Status Badges */
+            .status-badge {
+                border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            }
+
+            /* Highlights */
             .text-blue {
-                color: black !important;
-                font-weight: bold;
+                color: #1d4ed8 !important;
             }
 
-            /* Setup Page */
-            @page {
-                size: A4 landscape;
-                margin: 0.5cm;
+            .highlight-head {
+                background-color: #eff6ff !important;
             }
 
-            /* Handle History Modal overlap if open */
-            /* If modal is open (display:flex), we want to hide the app-container usually, 
-                   but without JS class it's hard. 
-                   However, the modal has white background and z-index, so it should cover. 
-                   We just ensure modal is visible if it's there. */
+            /* Modal handling */
             #history-modal {
                 background: white !important;
             }

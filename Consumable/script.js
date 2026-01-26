@@ -131,22 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Calculator Logic
     window.calculateRollCapacity = () => {
         // Safe check for elements inside function as they might be dynamic or missed
-        if (category === 'unit') {
-            document.getElementById('input-roll-length').value = item.rollLength || '';
-            document.getElementById('input-cut-length').value = item.cutLength || '';
-            document.getElementById('input-pcs-per-roll').value = item.pcsPerRoll || '';
-            // Trigger calc to show text
-            calculateRollCapacity(); // This will auto-fill yield if empty
-
-            // If saved yield exists, use it (override calc if slightly different or just ensure correctness)
-            if (item.fgYieldPerRoll) {
-                document.getElementById('input-fg-yield-per-roll').value = item.fgYieldPerRoll;
-            }
-        } else {
-            document.getElementById('input-kg-per-carton').value = item.kgPerCarton;
-            document.getElementById('input-pcs-per-kg').value = item.pcsPerKg;
-        }
         const rLenInput = document.getElementById('input-roll-length');
+
         const cLenInput = document.getElementById('input-cut-length');
         const pcsInput = document.getElementById('input-pcs-per-roll');
         const resEl = document.getElementById('roll-calc-result');
@@ -1099,6 +1085,21 @@ window.openModal = (isEdit = false, index = null) => {
         inputPcsPerPack.value = item.pcsPerPack || 1;
         inputFgPcsPerCarton.value = item.fgPcsPerCarton || 1;
         editIndexInput.value = index;
+
+        // Populate Roll Fields if they exist
+        if (item.category === 'unit') {
+            document.getElementById('input-roll-length').value = item.rollLength || '';
+            document.getElementById('input-cut-length').value = item.cutLength || '';
+            document.getElementById('input-pcs-per-roll').value = item.pcsPerRoll || '';
+            document.getElementById('input-fg-yield-per-roll').value = item.fgYieldPerRoll || '';
+            // Trigger Calc to show text
+            if (window.calculateRollCapacity) window.calculateRollCapacity();
+        } else {
+            // Reset roll fields
+            document.getElementById('input-roll-length').value = '';
+            document.getElementById('input-cut-length').value = '';
+            document.getElementById('input-fg-yield-per-roll').value = '';
+        }
 
         baseFields.forEach(field => {
             field.disabled = true;

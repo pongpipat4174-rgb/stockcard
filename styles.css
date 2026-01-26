@@ -143,7 +143,8 @@ body {
     /* Solid fallback */
     background: linear-gradient(135deg, var(--primary-800), var(--primary-900)) !important;
     color: white !important;
-    box-shadow: var(--shadow-xl);
+    padding: 0.75rem 0;
+    /* Vertical spacing */
     position: sticky;
     top: 0;
     z-index: 100;
@@ -152,12 +153,12 @@ body {
 .header-content {
     max-width: 1400px;
     margin: 0 auto;
+    padding: 0 1.5rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 1rem;
     flex-wrap: wrap;
-    /* Safe wrap for many items */
 }
 
 .brand {
@@ -1878,32 +1879,40 @@ mark.search-highlight {
 
 /* ==================== MODULE NAVIGATION ==================== */
 .module-tabs {
+    order: 3;
+    /* Push to bottom */
+    width: 100%;
+    /* Force full width line */
     display: flex;
-    gap: 0.25rem;
-    background: rgba(255, 255, 255, 0.15);
-    padding: 0.25rem;
-    border-radius: var(--radius-lg);
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    /* Darker contrast */
+    padding: 0.4rem;
+    border-radius: var(--radius-xl);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     align-items: center;
+    justify-content: center;
+    margin-top: 0.5rem;
 }
 
 .module-tab {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.5rem 0.875rem !important;
-    font-size: 0.8125rem !important;
-    font-weight: 600 !important;
-    border-radius: var(--radius-md) !important;
+    gap: 0.6rem;
+    padding: 0.75rem 2rem !important;
+    /* SIGNIFICANTLY WIDER */
+    font-size: 1rem !important;
+    /* LARGER FONT */
+    font-weight: 700 !important;
+    border-radius: var(--radius-lg) !important;
     border: none !important;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     background: transparent !important;
     color: rgba(255, 255, 255, 0.6) !important;
-    /* Slightly more visible than 0.5 */
     white-space: nowrap;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .module-tab:hover {
@@ -1913,10 +1922,12 @@ mark.search-highlight {
 
 .module-tab.active {
     background: white !important;
-    color: var(--primary-600) !important;
-    box-shadow: var(--shadow-md) !important;
+    color: var(--primary-800) !important;
+    /* Stronger color */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
     text-shadow: none !important;
     opacity: 1 !important;
+    transform: translateY(-1px);
 }
 
 .module-tab svg {

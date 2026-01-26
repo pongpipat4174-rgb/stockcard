@@ -225,6 +225,8 @@
             }
 
             /* HIDE these */
+            header,
+            .dashboard-stats,
             .actions,
             .btn,
             .no-print,
@@ -233,56 +235,30 @@
                 display: none !important;
             }
 
-            /* Header: Keep it clean but styled */
-            header {
-                padding: 0 !important;
-                margin-bottom: 20px !important;
-                box-shadow: none !important;
-                border: none !important;
-            }
-
-            .header-content {
-                flex-direction: row !important;
-                align-items: center !important;
-                justify-content: flex-start !important;
-            }
-
-            .header-content .logo h1 {
-                font-size: 1.8rem !important;
-                color: var(--primary-color) !important;
-            }
-
-            /* Dashboard Stats: Simplify for print or Keep? User said "beautiful like web" */
-            /* Let's keep them but make sure they fit */
-            .dashboard-stats {
-                display: grid !important;
-                grid-template-columns: repeat(3, 1fr) !important;
-                gap: 15px !important;
-                page-break-after: avoid;
-                margin-bottom: 20px !important;
-            }
-
-            .stat-card {
-                box-shadow: none !important;
-                border: 1px solid #ddd !important;
-                /* Force background print */
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-
-            /* Table Styling - KEEP WEB LOOK */
+            /* Table Tweaks */
             .table-container {
                 overflow: visible !important;
                 box-shadow: none !important;
                 border: 1px solid #e2e8f0 !important;
+                position: relative;
+                margin-top: 20px;
+            }
+
+            /* Add Title for Print */
+            .table-container::before {
+                content: "รายการวัสดุสิ้นเปลือง (Consumables)";
+                display: block;
+                font-size: 18pt;
+                font-weight: bold;
+                margin-bottom: 10px;
+                color: var(--primary-color);
+                text-align: left;
             }
 
             table {
                 width: 100% !important;
                 border-collapse: separate !important;
-                /* Keep rounded corners if possible, or collapse */
                 font-size: 9pt !important;
-                /* Slightly smaller to fit */
             }
 
             th {

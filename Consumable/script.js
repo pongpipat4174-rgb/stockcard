@@ -130,16 +130,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Calculator Logic
     window.calculateRollCapacity = () => {
+        const item = (editIndexInput && editIndexInput.value >= 0) ? items[editIndexInput.value] : {};
+        const category = inputCategory ? inputCategory.value : 'weight';
+
         // Safe check for elements inside function as they might be dynamic or missed
         const rLenInput = document.getElementById('input-roll-length');
-
         const cLenInput = document.getElementById('input-cut-length');
         const pcsInput = document.getElementById('input-pcs-per-roll');
+        const yieldInput = document.getElementById('input-fg-yield-per-roll');
         const resEl = document.getElementById('roll-calc-result');
 
-        // FG Calc Refs
+        // Note: We don't need to populate inputs FROM item here anymore, openModal handles that.
+        // This function should just compute based on Current Input Values. Is that correct?
+        // Prior logic had auto-population inside it for some reason? 
+        // Let's stick to calculation based on inputs.
+
+        // Wait, if called from openModal, inputs might be empty if not populated yet.
+        // openModal populates then calls this. So inputs have values.
+        // BUT openModal logic passed "item" object into here implicitly? NO.
+        // The previous code had `if (category === 'unit') { document.getElementById... = item.rollLength }`
+        // That was weird side-effect. I removed it in Step 581 but maybe it was needed?
+        // NO, openModal does population now.
+
+
         const fgPcsInput = document.getElementById('input-fg-pcs-per-carton');
-        const yieldInput = document.getElementById('input-fg-yield-per-roll');
 
         if (!rLenInput || !cLenInput) return;
 
@@ -1074,9 +1088,25 @@ window.deleteTransaction = async (transId, itemIndex) => {
 
 // Modal Operations
 window.openModal = (isEdit = false, index = null) => {
+    // Re-select elements locally to ensure access (Fix scope issues)
+    const modal = document.getElementById('item-modal');
     const modalTitle = document.getElementById('modal-title');
+    const itemForm = document.getElementById('item-form');
+    const inputName = document.getElementById('input-name');
+    const inputCategory = document.getElementById('input-category');
+
+    // Inputs (Redeclare to be safe)
+    const inputKgPerCarton = document.getElementById('input-kg-per-carton');
+    const inputPcsPerKg = document.getElementById('input-pcs-per-kg');
+    const inputStockCartons = document.getElementById('input-stock-cartons');
+    const inputStockPartial = document.getElementById('input-stock-partial');
+    const inputMinThreshold = document.getElementById('input-min-threshold');
+    const inputPcsPerPack = document.getElementById('input-pcs-per-pack');
+    const inputFgPcsPerCarton = document.getElementById('input-fg-pcs-per-carton');
+    const editIndexInput = document.getElementById('edit-index');
+
+    if (!modal) return;
     modal.style.display = 'flex';
-    document.getElementById('item-modal').style.display = 'flex';
 
     const baseFields = [inputKgPerCarton, inputPcsPerKg, inputPcsPerPack, inputFgPcsPerCarton];
 
@@ -1088,7 +1118,8 @@ window.openModal = (isEdit = false, index = null) => {
         // Set Category and Trigger UI update
         if (inputCategory) {
             inputCategory.value = item.category || 'weight';
-            window.toggleItemFormFields();
+            // Trigger Change Manually to ensure UI toggle runs
+            if (window.toggleItemFormFields) window.toggleItemFormFields();
         }
 
         inputKgPerCarton.value = item.kgPerCarton;
@@ -1106,8 +1137,10 @@ window.openModal = (isEdit = false, index = null) => {
             document.getElementById('input-cut-length').value = item.cutLength || '';
             document.getElementById('input-pcs-per-roll').value = item.pcsPerRoll || '';
             document.getElementById('input-fg-yield-per-roll').value = item.fgYieldPerRoll || '';
-            // Trigger Calc to show text
+
+            // Trigger Calc
             if (window.calculateRollCapacity) window.calculateRollCapacity();
+
         } else {
             // Reset roll fields
             document.getElementById('input-roll-length').value = '';
@@ -1116,15 +1149,17 @@ window.openModal = (isEdit = false, index = null) => {
         }
 
         baseFields.forEach(field => {
-            field.disabled = true;
-            field.style.backgroundColor = '#f3f4f6';
-            field.style.color = '#6b7280';
-            field.style.cursor = 'not-allowed';
+            if (field) {
+                field.disabled = true;
+                field.style.backgroundColor = '#f3f4f6';
+                field.style.color = '#6b7280';
+                field.style.cursor = 'not-allowed';
+            }
         });
 
     } else {
         modalTitle.textContent = 'เพิ่มสินค้าใหม่';
-        itemForm.reset();
+        if (itemForm) itemForm.reset();
         // Reset to defaults
         inputKgPerCarton.value = 25;
         inputMinThreshold.value = 100;
@@ -1133,17 +1168,26 @@ window.openModal = (isEdit = false, index = null) => {
         inputFgPcsPerCarton.value = 1;
         editIndexInput.value = '-1';
 
+        // Reset Category
+        if (inputCategory) {
+            inputCategory.value = 'weight';
+            if (window.toggleItemFormFields) window.toggleItemFormFields();
+        }
+
         baseFields.forEach(field => {
-            field.disabled = false;
-            field.style.backgroundColor = '#fff';
-            field.style.color = '#000';
-            field.style.cursor = 'text';
+            if (field) {
+                field.disabled = false;
+                field.style.backgroundColor = '#fff';
+                field.style.color = '#000';
+                field.style.cursor = 'text';
+            }
         });
     }
 };
 
 window.closeModal = (modalId) => {
-    document.getElementById(modalId).style.display = 'none';
+    const m = document.getElementById(modalId);
+    if (m) m.style.display = 'none';
 };
 
 window.editItem = (index) => {

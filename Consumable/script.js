@@ -190,6 +190,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const partialInput = document.getElementById('input-stock-partial');
         const partialGrp = partialInput ? partialInput.closest('.form-group') : null;
 
+        // Pcs Per Pack Group - Yellow Box to Hide for Unit
+        const pcsPerPackInput = document.getElementById('input-pcs-per-pack');
+        const pcsPerPackGrp = pcsPerPackInput ? pcsPerPackInput.closest('.form-group') : null;
+
         if (cat === 'unit') {
             if (fieldShrink) fieldShrink.style.display = 'none';
             if (fieldRoll) fieldRoll.style.display = 'block';
@@ -202,6 +206,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (partialGrp) partialGrp.style.display = 'none';
             // Show Roll Yield
             if (rollYieldField) rollYieldField.style.display = 'flex';
+            // Hide Pcs Per Pack
+            if (pcsPerPackGrp) pcsPerPackGrp.style.display = 'none';
 
         } else {
             if (fieldShrink) fieldShrink.style.display = 'block';
@@ -215,6 +221,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (partialGrp) partialGrp.style.display = 'block';
             // Hide Roll Yield
             if (rollYieldField) rollYieldField.style.display = 'none';
+            // Show Pcs Per Pack
+            if (pcsPerPackGrp) pcsPerPackGrp.style.display = 'block';
         }
     };
 

@@ -242,6 +242,7 @@
                 border: 1px solid #e2e8f0 !important;
                 position: relative;
                 margin-top: 20px;
+                display: block !important;
             }
 
             /* Add Title for Print */
@@ -261,6 +262,17 @@
                 font-size: 9pt !important;
             }
 
+            /* Ensure ALL data columns show */
+            .mobile-hidden {
+                display: table-cell !important;
+            }
+
+            /* HIDE Action Column (Last one) */
+            th:last-child,
+            td:last-child {
+                display: none !important;
+            }
+
             th {
                 background-color: #f8fafc !important;
                 color: #64748b !important;
@@ -272,6 +284,10 @@
                 border-bottom: 1px solid #e2e8f0 !important;
                 color: #1e293b !important;
                 padding: 8px 4px !important;
+            }
+
+            tr {
+                page-break-inside: avoid;
             }
 
             /* Group Headers */

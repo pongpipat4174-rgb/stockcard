@@ -2077,11 +2077,41 @@ function calculateRMTotal() {
         inInput.value = total;
         // outInput.value = 0; // Dont force clear if user wants to do something weird, but typically yes.
     } else if (type && type !== '') {
+
+    } else if (type && type !== '') {
         // For withdrawals (Out)
         outInput.value = total;
         // inInput.value = 0;
     }
 }
+
+// Reverse Calculate: Total (Kg) -> Container Qty + Remainder
+function reverseCalculateRM() {
+    var inQty = parseFloat(document.getElementById('entryInQtyRM').value) || 0;
+    var outQty = parseFloat(document.getElementById('entryOutQtyRM').value) || 0;
+    var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
+
+    // Determine which total to use based on inputs
+    // If user is typing in OUT, use OUT. If IN, use IN.
+    var total = (inQty > 0) ? inQty : outQty;
+
+    if (total > 0 && containerWeight > 0) {
+        var containers = Math.floor(total / containerWeight);
+        var remainder = total % containerWeight;
+
+        // Handle floating point errors (e.g. 10 % 5 might be 0.00000001 or 4.999999)
+        // Round remainder to 2 decimals
+        remainder = Math.round(remainder * 100) / 100;
+
+        // If remainder is very close to containerWeight, bump container count (optional, but math.floor handles logic)
+        // But if remainder is basically 0, it's good.
+
+        // Update Inputs
+        document.getElementById('entryContainerQtyRM').value = containers;
+        document.getElementById('entryRemainderRM').value = remainder;
+    }
+}
+
 
 
 // Auto-Fill RM Entry Form (Suggest Best Lot + Vendor + Weight)
@@ -2272,13 +2302,20 @@ document.addEventListener('DOMContentLoaded', function () {
     // RM Save Button
     document.getElementById('saveEntryRM')?.addEventListener('click', saveEntryRM);
 
-    // RM Auto-Calculate Listeners
-    var rmCalcInputs = ['entryContainerQtyRM', 'entryContainerWeightRM', 'entryRemainderRM', 'entryTypeRM'];
+    // RM Auto-Calculate Listeners (Forward: Container -> Total)
+    var rmCalcInputs = ['entryContainerQtyRM', 'entryContainerWeightRM', 'entryRemainderRM'];
     rmCalcInputs.forEach(function (id) {
         document.getElementById(id)?.addEventListener('input', calculateRMTotal);
-        // Also listen for change on select/inputs to be sure
         document.getElementById(id)?.addEventListener('change', calculateRMTotal);
     });
+
+    // RM Reverse-Calculate Listeners (Backward: Total -> Container)
+    // Only trigger if Container Weight is present
+    ['entryInQtyRM', 'entryOutQtyRM'].forEach(function (id) {
+        document.getElementById(id)?.addEventListener('input', reverseCalculateRM);
+        document.getElementById(id)?.addEventListener('change', reverseCalculateRM);
+    });
+
 
     // RM Auto-Fill on Product Change (Logic updated to include Lot/Vendor)
     document.getElementById('entryProductCodeRM')?.addEventListener('change', function () {

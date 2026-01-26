@@ -2001,8 +2001,8 @@ function closeStatsModal() {
 }
 
 
-// Save Entry for RM (Supports Multi-Split)
-function saveEntryRM() {
+// Save Entry for RM (Supports Multi-Split) - Robust Version
+async function saveEntryRM() {
     var productCode = document.getElementById('entryProductCodeRM').value;
     var productName = document.getElementById('entryProductNameRM').value;
     var date = document.getElementById('entryDateRM').value;
@@ -2011,7 +2011,9 @@ function saveEntryRM() {
 
     // Check if we have a split plan
     var splitPlan = window.currentSplitPlan; // [{lot, qty}, {lot, qty}]
-    var isSplit = splitPlan && splitPlan.length > 1;
+    // Only use split plan if we are actually withdrawing (checked by type) and valid plan exists
+    var isWithdrawal = type && type.includes('เบิก');
+    var isSplit = isWithdrawal && splitPlan && splitPlan.length > 1;
 
     // Base info
     var inQty = parseFloat(document.getElementById('entryInQtyRM').value) || 0;
@@ -2023,20 +2025,12 @@ function saveEntryRM() {
     }
 
     showLoading();
-    showToast('กำลังบันทึกข้อมูลวัตถุดิบ...' + (isSplit ? ' (แยก ' + splitPlan.length + ' รายการ)' : ''));
 
     var entriesToSave = [];
 
     if (isSplit && outQty > 0) {
         // Create multiple entries based on plan
         splitPlan.forEach(function (item) {
-            // Recalculate container/remainder logic for this specific chunk if needed?
-            // User put total container in form, but we are splitting.
-            // It's hard to split containers exactly if they are integers.
-            // Let's just save the Weight (qty) accurately. 
-            // Containers: We can try to reverse calc for each chunk or just leave blank for split items?
-            // Let's reverse calc for standard weight.
-
             var chunkQty = item.qty;
             var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
             var contQty = 0;
@@ -2061,7 +2055,7 @@ function saveEntryRM() {
                 inQty: 0,
                 outQty: chunkQty,
                 lotNo: item.lotNo,
-                supplier: item.supplier || vendor // Use specific supplier if known, else form vendor
+                supplier: item.supplier || vendor
             });
         });
     } else {
@@ -2086,17 +2080,20 @@ function saveEntryRM() {
         });
     }
 
-    // Process all entries sequentially using Promise
-    var chain = Promise.resolve();
+    showToast('กำลังบันทึก ' + entriesToSave.length + ' รายการ...');
+    console.log('Saving entries:', entriesToSave);
 
-    entriesToSave.forEach(function (entry, index) {
-        chain = chain.then(function () {
-            // Artificial delay between requests to be safe
-            return new Promise(function (resolve) {
-                setTimeout(resolve, index === 0 ? 0 : 500);
-            });
-        }).then(function () {
-            return fetch(APPS_SCRIPT_URL, {
+    try {
+        // Process sequentially with AWAIT to prevent concurrency issues
+        for (var i = 0; i < entriesToSave.length; i++) {
+            var entry = entriesToSave[i];
+
+            if (entriesToSave.length > 1) {
+                showToast('กำลังบันทึกรายการที่ ' + (i + 1) + '/' + entriesToSave.length + '...');
+            }
+
+            // Using fetch in await mode
+            await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
@@ -2105,22 +2102,29 @@ function saveEntryRM() {
                     entry: entry
                 })
             });
-        });
-    });
 
-    chain.then(function () {
+            // Small safety delay between writes
+            await new Promise(r => setTimeout(r, 800));
+        }
+
+        showToast('บันทึกสำเร็จทั้งหมด!');
+
+        // Success Cleanup
         setTimeout(async function () {
-            showToast('บันทึกวัตถุดิบเรียบร้อย!');
             closeEntryModalRM();
-            // Reset form
             document.getElementById('entryFormRM').reset();
-            window.currentSplitPlan = null; // Clear plan
+            window.currentSplitPlan = null;
             document.getElementById('lotSplitWarning').style.display = 'none';
 
             await fetchRMData();
             hideLoading();
-        }, 2000);
-    }).catch(function (e) { alert(e); hideLoading(); });
+        }, 1000);
+
+    } catch (e) {
+        console.error('Save Error:', e);
+        alert('เกิดข้อผิดพลาดในการบันทึก: ' + e);
+        hideLoading();
+    }
 }
 
 

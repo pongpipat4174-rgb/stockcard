@@ -133,10 +133,10 @@ function renderTable() {
                 </span>
             </td>
             <td>
-                <div class="product-info" style="display: flex; flex-direction: row; align-items: center; gap: 12px;">
-                    ${item.image ? `<img src="${item.image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;">` : ''}
+                <div class="product-info" onclick="viewItemDetails(${realIndex})" style="display: flex; flex-direction: row; align-items: center; gap: 12px; cursor: pointer;">
+                    ${item.image ? `<img src="${item.image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;">` : '<div style="width:50px;height:50px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#cbd5e1;"><i class="fa-solid fa-image"></i></div>'}
                     <div>
-                        <span class="product-name">${item.name}</span>
+                        <span class="product-name" style="color: var(--primary-color); text-decoration: underline;">${item.name}</span>
                         <div class="product-spec" style="font-size: 0.8rem; color: #64748b;">
                             ${item.spec || '-'} 
                             ${item.leadTime ? ` | 🚚 ${item.leadTime}` : ''}
@@ -321,6 +321,58 @@ transForm.addEventListener('submit', async (e) => {
     await saveData();
 });
 
+// --- HISTORY LOGIC ---
+window.openHistoryModal = (index) => {
+    const item = items[index];
+    const itemTrans = transactions.filter(t => t.itemId === item.id);
+    const hBody = document.getElementById('history-body');
+    hBody.innerHTML = '';
+
+    itemTrans.forEach(t => {
+        // ... (existing history logic)
+    });
+    // ...
+};
+
+// --- DETAIL VIEW LOGIC ---
+window.viewItemDetails = (index) => {
+    const item = items[index];
+    const isLow = item.stock <= item.min;
+
+    // Populate Data
+    document.getElementById('detail-name').textContent = item.name;
+    document.getElementById('detail-category').textContent = item.category === 'Spare Part' ? 'อะไหล่เครื่องจักร' :
+        item.category === 'Cleaning' ? 'อุปกรณ์ทั่วไป' : 'อื่นๆ';
+
+    const statusEl = document.getElementById('detail-status');
+    statusEl.textContent = isLow ? 'ต้องสั่งซื้อ' : 'ปกติ';
+    statusEl.className = `status-indicator ${isLow ? 'status-low' : 'status-ok'}`;
+
+    document.getElementById('detail-stock').textContent = item.stock;
+    document.getElementById('detail-unit').textContent = item.unit;
+    document.getElementById('detail-min').textContent = item.min;
+
+    document.getElementById('detail-price').textContent = item.price ? (parseFloat(item.price).toLocaleString() + ' บ.') : '-';
+    document.getElementById('detail-leadtime').textContent = item.leadTime || '-';
+    document.getElementById('detail-spec').textContent = item.spec || '-';
+    document.getElementById('detail-supplier').textContent = item.supplier || '-';
+    document.getElementById('detail-country').textContent = item.country || '-';
+
+    // Image Handling
+    const imgEl = document.getElementById('detail-image');
+    const placeholderEl = document.getElementById('detail-image-placeholder');
+
+    if (item.image) {
+        imgEl.src = item.image;
+        imgEl.style.display = 'block';
+        placeholderEl.style.display = 'none';
+    } else {
+        imgEl.style.display = 'none';
+        placeholderEl.style.display = 'flex';
+    }
+
+    document.getElementById('detail-modal').style.display = 'flex';
+};
 // --- HISTORY LOGIC ---
 window.openHistoryModal = (index) => {
     const item = items[index];

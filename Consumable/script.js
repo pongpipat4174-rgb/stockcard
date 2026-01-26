@@ -158,22 +158,39 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Toggle Form Function
+    // Toggle Form Function
     window.toggleItemFormFields = () => {
         if (!inputCategory) return;
         const cat = inputCategory.value;
+
+        // Selectors
+        const lblStock = document.querySelector('label[for="input-stock-cartons"]');
+        const lblThreshold = document.querySelector('label[for="input-min-threshold"]');
+
+        // Partial Group - Select Parent Form Group
+        const partialInput = document.getElementById('input-stock-partial');
+        const partialGrp = partialInput ? partialInput.closest('.form-group') : null;
+
         if (cat === 'unit') {
             if (fieldShrink) fieldShrink.style.display = 'none';
             if (fieldRoll) fieldRoll.style.display = 'block';
-            const lbl = document.querySelector('label[for="input-stock-cartons"]');
-            if (lbl) lbl.innerText = 'คงเหลือปัจจุบัน (ม้วน)';
-            const partialGrp = document.querySelector('label[for="input-stock-partial"]')?.parentElement;
+
+            // Labels
+            if (lblStock) lblStock.innerText = 'คงเหลือปัจจุบัน (ม้วน)';
+            if (lblThreshold) lblThreshold.innerText = 'แจ้งเตือนเมื่อต่ำกว่า (ม้วน)';
+
+            // Hide Partial
             if (partialGrp) partialGrp.style.display = 'none';
+
         } else {
             if (fieldShrink) fieldShrink.style.display = 'block';
             if (fieldRoll) fieldRoll.style.display = 'none';
-            const lbl = document.querySelector('label[for="input-stock-cartons"]');
-            if (lbl) lbl.innerText = 'คงเหลือปัจจุบัน (ลัง)';
-            const partialGrp = document.querySelector('label[for="input-stock-partial"]')?.parentElement;
+
+            // Labels
+            if (lblStock) lblStock.innerText = 'คงเหลือปัจจุบัน (ลัง)';
+            if (lblThreshold) lblThreshold.innerText = 'แจ้งเตือนเมื่อต่ำกว่า (กก.)';
+
+            // Show Partial
             if (partialGrp) partialGrp.style.display = 'block';
         }
     };

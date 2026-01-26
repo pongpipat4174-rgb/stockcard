@@ -132,10 +132,15 @@ function switchModule(module, event) {
     const tabConsumable = document.getElementById('tabConsumable');
 
     // Explicitly hide consumable view and show main view (Safety)
+    // Explicitly hide consumable/general views and show main view (Safety)
     const stockMain = document.getElementById('stockcard-main-view');
     const consumView = document.getElementById('consumable-view-container');
+    const generalView = document.getElementById('general-view-container');
+
     if (stockMain) stockMain.style.display = 'block';
     if (consumView) consumView.style.display = 'none';
+    if (generalView) generalView.style.display = 'none';
+
     if (document.querySelector('.header-actions')) document.querySelector('.header-actions').style.display = 'flex';
 
     // Remove active from ALL tabs

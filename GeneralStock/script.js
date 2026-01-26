@@ -65,6 +65,7 @@ async function initApp() {
     renderTable();
     updateStats();
 }
+window.initApp = initApp;
 
 function showLoading() { loader.style.display = 'flex'; }
 function hideLoading() { loader.style.display = 'none'; }
@@ -132,8 +133,8 @@ function renderTable() {
                     ${isLow ? 'ต้องสั่งซื้อ' : 'ปกติ'}
                 </span>
             </td>
-            <td>
-                <div class="product-info" onclick="viewItemDetails(${realIndex})" style="display: flex; flex-direction: row; align-items: center; gap: 12px; cursor: pointer;">
+            <td style="cursor: pointer;" onclick="viewItemDetails(${realIndex})" title="คลิกเพื่อดูรายละเอียด">
+                <div class="product-info" style="display: flex; flex-direction: row; align-items: center; gap: 12px;">
                     ${item.image ? `<img src="${item.image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;">` : '<div style="width:50px;height:50px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#cbd5e1;"><i class="fa-solid fa-image"></i></div>'}
                     <div>
                         <span class="product-name" style="color: var(--primary-color); text-decoration: underline;">${item.name}</span>

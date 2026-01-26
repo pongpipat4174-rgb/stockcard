@@ -340,34 +340,33 @@
             body:not(.printing-history-mode) table {
                 width: 100% !important;
                 border-collapse: collapse !important;
-                font-size: 7.5pt !important;
+                font-size: 7pt !important;
+                /* Reduced font size further */
             }
 
             body:not(.printing-history-mode) tr {
-                height: 28px !important;
-                /* Force equal height */
+                height: 24px !important;
+                /* Slightly tighter height */
             }
 
             body:not(.printing-history-mode) th,
             body:not(.printing-history-mode) td {
-                padding: 3px 2px !important;
+                padding: 2px 2px !important;
                 vertical-align: middle !important;
-                height: 28px !important;
-                /* Force cell height */
+                height: 24px !important;
             }
 
             /* Compact Badges for Print */
             body:not(.printing-history-mode) .status-badge {
-                padding: 1px 4px !important;
-                font-size: 7pt !important;
-                border-radius: 4px !important;
+                padding: 0px 3px !important;
+                font-size: 6.5pt !important;
+                border-radius: 3px !important;
                 line-height: 1 !important;
                 display: inline-block !important;
                 margin: 0 !important;
                 border: 1px solid #ddd !important;
                 box-shadow: none !important;
                 animation: none !important;
-                /* Stop pulsing */
             }
 
             /* Force badge text color to be readable */
@@ -380,15 +379,19 @@
             /* Prevent cells from expanding */
             body:not(.printing-history-mode) td {
                 overflow: hidden;
-                white-space: nowrap;
-                text-overflow: ellipsis;
+                white-space: nowrap !important;
+                /* GLOBAL SINGLE LINE */
+                text-overflow: ellipsis !important;
             }
 
-            /* Name column exception for wrapping */
+            /* Name column: allow it to take max width but strictly NO wrap */
             body:not(.printing-history-mode) td:nth-child(2) {
-                white-space: normal !important;
-                overflow: visible !important;
-                line-height: 1.2 !important;
+                white-space: nowrap !important;
+                /* Force Single Line */
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                max-width: 250px !important;
+                /* Ensure eillipsis triggers */
             }
         }
     </style>

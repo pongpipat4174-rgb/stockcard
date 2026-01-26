@@ -538,13 +538,20 @@ const loadData = async () => {
                     console.log("Mapping Thai Headers...");
                     loadedItems = loadedItems.map(row => ({
                         name: row["ชื่อสินค้า"],
+                        category: row["ประเภท"] || 'weight',
                         stockCartons: parseFloat(row["สต็อก (ลัง)"] || row["สต๊อก (ลัง)"] || row["คงเหลือปัจจุบัน (ลัง)"] || 0),
                         stockPartialKg: parseFloat(row["เศษ(กก.)"] || row["เศษ (กก.)"] || 0),
                         kgPerCarton: parseFloat(row["กก./ลัง"] || row["น้ำหนักต่อลัง (kg)"] || 25),
-                        pcsPerKg: parseFloat(row["ชิ้น/กก.1"] || row["ชิ้น/กก."] || row["จำนวนซองต่อ กก."] || 0), // Handle potential key variations
+                        pcsPerKg: parseFloat(row["ชิ้น/กก.1"] || row["ชิ้น/กก."] || row["จำนวนซองต่อ กก."] || 0),
                         minThreshold: parseFloat(row["จุดสั่งซื้อ (กก.)"] || row["แจ้งเตือนเมื่อต่ำกว่า (กก.)"] || 0),
                         pcsPerPack: parseFloat(row["ชิ้นงาน/ถุง"] || row["จำนวนชิ้นงาน ต่อ 1 ถุงชริ้ง"] || 1),
-                        fgPcsPerCarton: parseFloat(row["ชิ้น FG/ลัง"] || row["จำนวนชิ้น FG ต่อลัง"] || 1)
+                        fgPcsPerCarton: parseFloat(row["ชิ้น FG/ลัง"] || row["จำนวนชิ้น FG ต่อลัง"] || 1),
+                        // New Fields
+                        rollLength: parseFloat(row["ความยาวม้วน (ม.)"] || 0),
+                        cutLength: parseFloat(row["ความยาวตัด (มม.)"] || 0),
+                        pcsPerRoll: parseFloat(row["ชิ้น/ม้วน"] || 0),
+                        fgYieldPerRoll: parseFloat(row["Yield/ม้วน"] || 0),
+                        stockCode: row["StockCode"] || row["รหัสสต็อก"] || ""
                     }));
                 }
 
@@ -651,7 +658,7 @@ window.saveData = async () => {
                 // For Rolls, let's use stockCartons < minThreshold (if threshold means cartons?). 
                 // User input minThreshold says "(Kg)". 
                 // Let's leave isLow logic simple for now or strictly defined:
-                const isLowSaving = isRoll ? false : (totalKg < item.minThreshold);
+                const isLowSaving = isRoll ? (item.stockCartons < item.minThreshold) : (totalKg < item.minThreshold);
 
                 return {
                     "ชื่อสินค้า": item.name,
@@ -670,7 +677,9 @@ window.saveData = async () => {
                     "สถานะ": isLowSaving ? "ต้องสั่งซื้อ" : "ปกติ",
                     "ความยาวม้วน (ม.)": item.rollLength || 0,
                     "ความยาวตัด (มม.)": item.cutLength || 0,
-                    "ชิ้น/ม้วน": item.pcsPerRoll || 0
+                    "ชิ้น/ม้วน": item.pcsPerRoll || 0,
+                    "Yield/ม้วน": item.fgYieldPerRoll || 0,
+                    "StockCode": item.stockCode || ""
                 };
             });
 

@@ -198,6 +198,92 @@
                 padding-left: 20px !important;
             }
         }
+
+        /* Print Override for Main Dashboard */
+        @media print {
+            body {
+                visibility: visible !important;
+                background: white !important;
+            }
+
+            /* Show main content */
+            .app-container {
+                visibility: visible !important;
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            /* Hide non-printable elements */
+            .actions,
+            .btn,
+            .no-print,
+            #app-loader,
+            .form-actions {
+                display: none !important;
+            }
+
+            /* Adjust Layout for Print */
+            header {
+                padding: 10px 0 !important;
+                margin-bottom: 20px !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+
+            .header-content {
+                flex-direction: row !important;
+                /* Ensure logo stays left */
+                align-items: center !important;
+            }
+
+            /* Table Tweaks */
+            .table-container {
+                overflow: visible !important;
+                border: 1px solid #000 !important;
+                box-shadow: none !important;
+            }
+
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 10pt !important;
+            }
+
+            th,
+            td {
+                border: 1px solid #000 !important;
+                color: black !important;
+                padding: 6px !important;
+            }
+
+            th {
+                background-color: #f0f0f0 !important;
+            }
+
+            /* Ensure colors print reasonably well */
+            .text-blue {
+                color: black !important;
+                font-weight: bold;
+            }
+
+            /* Setup Page */
+            @page {
+                size: A4 landscape;
+                margin: 0.5cm;
+            }
+
+            /* Handle History Modal overlap if open */
+            /* If modal is open (display:flex), we want to hide the app-container usually, 
+                   but without JS class it's hard. 
+                   However, the modal has white background and z-index, so it should cover. 
+                   We just ensure modal is visible if it's there. */
+            #history-modal {
+                background: white !important;
+            }
+        }
     </style>
 </head>
 
@@ -224,6 +310,9 @@
                             class="fa-solid fa-plus"></i> เพิ่มสินค้า</button>
                     <button id="refresh-data-btn" class="btn secondary" onclick="initApp()"
                         style="white-space: nowrap;"><i class="fa-solid fa-arrows-rotate"></i> รีเฟรช</button>
+                    <button class="btn secondary" onclick="window.print()" style="white-space: nowrap;">
+                        <i class="fa-solid fa-print"></i> พิมพ์
+                    </button>
                     <button id="calc-btn" class="btn secondary"
                         style="color: #854d0e; border-color: #fcd34d; background-color: #fffbeb; white-space: nowrap;"><i
                             class="fa-solid fa-calculator"></i> คำนวณถุง</button>

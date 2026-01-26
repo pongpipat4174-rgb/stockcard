@@ -121,11 +121,12 @@ header {
 }
 
 .btn.icon-only {
-    padding: 8px;
-    width: 32px;
-    height: 32px;
+    padding: 6px;
+    width: 28px;
+    height: 28px;
     justify-content: center;
     border-radius: 6px;
+    font-size: 0.9rem;
 }
 
 .btn.edit {
@@ -252,10 +253,12 @@ table {
 
 th,
 td {
-    padding: 14px 16px;
+    padding: 8px 10px;
+    /* Reduced from 14px 16px */
     text-align: left;
     border-bottom: 1px solid var(--border-color);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    /* Slightly smaller font */
 }
 
 th {
@@ -363,7 +366,7 @@ tbody tr:hover td {
 
 .action-buttons {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     justify-content: center;
 }
 

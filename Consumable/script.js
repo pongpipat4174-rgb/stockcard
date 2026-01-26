@@ -993,7 +993,9 @@ transForm.addEventListener('submit', async (e) => {
 // --- History Modal with Stock Card Style & Print ---
 window.openHistoryModal = (index) => {
     const item = items[index];
+    const isRoll = item.category === 'unit';
     const itemTotalKg = (item.stockCartons * item.kgPerCarton) + (item.stockPartialKg || 0);
+    const logs = transactions.filter(t => t.itemName === item.name || t.itemIndex === index);
 
     // Header Info
     document.getElementById('history-subtitle').innerHTML = `
@@ -1001,8 +1003,8 @@ window.openHistoryModal = (index) => {
             <div>
                 <div style="font-size:1.2rem; font-weight:700; color:var(--primary-color);">${item.name}</div>
                 <div style="color:var(--text-muted); font-size:0.9rem;">
-                    สต็อกปัจจุบัน: <b>${formatNumber(item.stockCartons, 1)} ลัง</b> 
-                    (${formatNumber(itemTotalKg, 2)} กก.)
+                    สต็อกปัจจุบัน: <b>${formatNumber(item.stockCartons, 1)} ${isRoll ? 'ม้วน' : 'ลัง'}</b> 
+                    ${isRoll ? '' : `(${formatNumber(itemTotalKg, 2)} กก.)`}
                 </div>
             </div>
             <button class="btn secondary" onclick="printHistory('${item.name}')">
@@ -1011,22 +1013,19 @@ window.openHistoryModal = (index) => {
         </div>
     `;
 
-    const logs = transactions.filter(t => t.itemName === item.name || t.itemIndex === index);
-
     historyBody.innerHTML = '';
 
-    // Add "Bring Forward" (ยอดยกมา) Logic if needed? 
-    // For now, list simple logs. To make it like Stock Card, we should ideally calculate running balance.
-    // Since transactions are stored reverse-chronologically (newest first), let's sort them old->new for Stock Card feel, OR keep new->top.
-    // Requests "Like Stock Card", usually means chronological with Balance column.
-    // Our existing data has 'remainingStock' snapshot.
-
     if (logs.length === 0) {
-        historyBody.innerHTML = '<tr><td colspan="7" class="center" style="padding: 20px; color: #9ca3af;">ไม่พบประวัติการทำรายการ</td></tr>';
+        historyBody.innerHTML = `<tr><td colspan="${isRoll ? 6 : 7}" class="center" style="padding: 20px; color: #9ca3af;">ไม่พบประวัติการทำรายการ</td></tr>`;
     } else {
         logs.forEach(log => {
             const isIn = log.type === 'IN';
             const row = document.createElement('tr');
+
+            // For rolls, we show qtyUnit instead of qtyKg
+            const displayQty = isRoll ? log.qtyUnit : log.qtyKg;
+            const displayUnit = isRoll ? 'ม้วน' : 'กก.';
+
             row.innerHTML = `
                 <td style="font-family:monospace; font-size:0.95rem;">${formatDate(log.date)}</td>
                 <td>
@@ -1035,10 +1034,10 @@ window.openHistoryModal = (index) => {
                     </span>
                 </td>
                 <td class="center" style="font-weight:600; color: ${isIn ? '#16a34a' : '#ef4444'};">
-                    ${isIn ? '+' : '-'}${formatNumber(log.qtyKg, 2)}
+                    ${isIn ? '+' : '-'}${formatNumber(displayQty, isRoll ? 0 : 2)} ${displayUnit}
                 </td>
-                <td class="center text-muted">${formatNumber(log.qtyCartons, 2)}</td>
-                <td class="center" style="font-weight:700;">${formatNumber(log.remainingStock, 2)}</td>
+                <td class="center text-muted">${formatNumber(log.qtyCartons, 1)} ${isRoll ? 'ม้วน' : 'ลัง'}</td>
+                <td class="center" style="font-weight:700;">${formatNumber(log.remainingStock, 1)}</td>
                 <td style="font-size:0.9rem;">${log.note || '-'}</td>
                 <td class="center no-print">
                     <button class="btn icon-only delete" onclick="deleteTransaction('${log.id}', ${index})" title="ลบ" style="padding:4px;width:28px;height:28px;">
@@ -1049,27 +1048,28 @@ window.openHistoryModal = (index) => {
             historyBody.appendChild(row);
         });
     }
+
     // --- Calculate Summary Stats for Card ---
     let totalIn = 0;
     let totalOut = 0;
 
-    itemFiles.forEach(t => {
-        // If qtyKg exists, use it, else calculate from cartons
-        const kg = t.qtyKg || (t.qtyCartons * item.kgPerCarton);
+    logs.forEach(t => {
+        const val = isRoll ? (t.qtyUnit || t.qtyCartons) : (t.qtyKg || (t.qtyCartons * item.kgPerCarton));
         if (t.type === 'IN') {
-            totalIn += kg;
+            totalIn += val;
         } else if (t.type === 'OUT') {
-            totalOut += kg;
+            totalOut += val;
         }
     });
 
     // Update Summary DOM
-    document.getElementById('hist-total-in').innerText = `+${totalIn.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
-    document.getElementById('hist-total-out').innerText = `-${totalOut.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+    const summUnit = isRoll ? ' ม้วน' : ' กก.';
+    document.getElementById('hist-total-in').innerText = `+${totalIn.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: isRoll ? 0 : 2 })}${summUnit}`;
+    document.getElementById('hist-total-out').innerText = `-${totalOut.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: isRoll ? 0 : 2 })}${summUnit}`;
 
-    // Current Stock (Total Kg)
-    const currentTotalKg = (item.stockCartons * item.kgPerCarton) + (item.stockPartialKg || 0);
-    document.getElementById('hist-current-stock').innerText = currentTotalKg.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' กก.';
+    // Current Stock
+    const currentStockDisp = isRoll ? item.stockCartons : ((item.stockCartons * item.kgPerCarton) + (item.stockPartialKg || 0));
+    document.getElementById('hist-current-stock').innerText = currentStockDisp.toLocaleString('en-US', { minimumFractionDigits: isRoll ? 0 : 2, maximumFractionDigits: isRoll ? 0 : 2 }) + summUnit;
 
     // Update Print Header
     document.getElementById('print-product-name').innerText = item.name;
@@ -1134,7 +1134,17 @@ window.deleteTransaction = async (transId, itemIndex) => {
         }
     }
 
-    // 3. Remove transaction and Save
+    // 3. Linked Stock Sync (If item has stockCode, update peers)
+    if (item.stockCode) {
+        items.forEach(i => {
+            if (i.stockCode === item.stockCode && i.category === item.category) {
+                i.stockCartons = item.stockCartons;
+                i.stockPartialKg = item.stockPartialKg;
+            }
+        });
+    }
+
+    // 4. Remove transaction and Save
     transactions.splice(transIdx, 1);
 
     // Re-render modal list immediately (visual only)

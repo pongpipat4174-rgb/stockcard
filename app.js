@@ -2000,6 +2000,216 @@ function closeStatsModal() {
     if (modal) modal.style.display = 'none';
 }
 
+// Save Entry for RM
+function saveEntryRM() {
+    var productCode = document.getElementById('entryProductCodeRM').value;
+    var productName = document.getElementById('entryProductNameRM').value;
+    var date = document.getElementById('entryDateRM').value;
+    var type = document.getElementById('entryTypeRM').value;
+
+    // Container Info
+    var containerQty = parseFloat(document.getElementById('entryContainerQtyRM').value) || 0;
+    var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
+    var remainder = parseFloat(document.getElementById('entryRemainderRM').value) || 0;
+
+    // Calculated Totals
+    var inQty = parseFloat(document.getElementById('entryInQtyRM').value) || 0;
+    var outQty = parseFloat(document.getElementById('entryOutQtyRM').value) || 0;
+
+    var lotNo = document.getElementById('entryLotNoRM').value || '-';
+    var vendor = document.getElementById('entryVendorRM').value || '-';
+
+    if (!productCode || !date || !type) {
+        alert('กรุณากรอกข้อมูลสำคัญ (รหัสสินค้า, วันที่, ประเภท) ให้ครบถ้วน');
+        return;
+    }
+
+    showLoading();
+    showToast('กำลังบันทึกข้อมูลวัตถุดิบ...');
+
+    fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'add_rm',
+            entry: {
+                date: formatDateThai(date),
+                productCode: productCode,
+                productName: productName,
+                type: type,
+                containerQty: containerQty,
+                containerWeight: containerWeight,
+                remainder: remainder,
+                inQty: inQty,
+                outQty: outQty,
+                lotNo: lotNo,
+                supplier: vendor // Map 'Vendor' input to Supplier field
+            }
+        })
+    }).then(function () {
+        setTimeout(async function () {
+            showToast('บันทึกวัตถุดิบเรียบร้อย!');
+            closeEntryModalRM();
+            // Reset form
+            document.getElementById('entryFormRM').reset();
+            await fetchRMData();
+            hideLoading();
+        }, 2000);
+    }).catch(function (e) { alert(e); hideLoading(); });
+}
+
+// Auto-Calculate RM Totals
+function calculateRMTotal() {
+    var type = document.getElementById('entryTypeRM').value;
+    var containerQty = parseFloat(document.getElementById('entryContainerQtyRM').value) || 0;
+    var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
+    var remainder = parseFloat(document.getElementById('entryRemainderRM').value) || 0;
+
+    // Calculate Total
+    var total = (containerQty * containerWeight) + remainder;
+    total = Math.round(total * 100) / 100; // Round to 2 decimals
+
+    var inInput = document.getElementById('entryInQtyRM');
+    var outInput = document.getElementById('entryOutQtyRM');
+
+    if (type === 'รับเข้า') {
+        inInput.value = total;
+        // outInput.value = 0; // Dont force clear if user wants to do something weird, but typically yes.
+    } else if (type && type !== '') {
+        // For withdrawals (Out)
+        outInput.value = total;
+        // inInput.value = 0;
+    }
+}
+
+
+// Auto-Fill RM Entry Form (Suggest Best Lot + Vendor + Weight)
+function autoFillRMForm(productCode) {
+    if (!productCode) return;
+
+    var type = document.getElementById('entryTypeRM').value;
+    var isWithdrawal = type && type.includes('เบิก'); // e.g., เบิกผลิต
+
+    // 1. Always Auto-Fill Container Weight based on history (Latest entry)
+    var foundWeight = null;
+    var lastVendor = '-';
+    for (var i = rmStockData.length - 1; i >= 0; i--) {
+        var item = rmStockData[i];
+        if (item.productCode === productCode) {
+            if (foundWeight === null && item.containerWeight > 0) {
+                foundWeight = item.containerWeight;
+            }
+            if (lastVendor === '-' && item.supplier) {
+                lastVendor = item.supplier;
+            }
+            if (foundWeight !== null && lastVendor !== '-') break;
+        }
+    }
+
+    // Fill Container Weight (Standard User Helper)
+    var weightInput = document.getElementById('entryContainerWeightRM');
+    if (weightInput && !weightInput.value && foundWeight !== null) {
+        weightInput.value = foundWeight;
+        calculateRMTotal();
+    }
+
+    // 2. Intelligent Auto-Fill for Withdrawal (Lot No, Vendor)
+    if (isWithdrawal) {
+        // Find all active lots for this product
+        var entries = rmStockData.filter(function (d) { return d.productCode === productCode; });
+        var lotBalances = {};
+        var lotFirstDate = {};
+        var lotExpDays = {};
+        var lotVendor = {};
+
+        entries.forEach(function (e) {
+            if (!e.lotNo) return;
+            if (!lotBalances[e.lotNo]) {
+                lotBalances[e.lotNo] = 0;
+                lotFirstDate[e.lotNo] = e.date;
+                lotVendor[e.lotNo] = e.supplier || e.vendorLot; // Fallback to whatever is available
+            }
+            lotBalances[e.lotNo] += e.inQty - e.outQty;
+
+            // Track expiry
+            var days = parseInt(e.daysLeft);
+            if (!isNaN(days)) {
+                if (lotExpDays[e.lotNo] === undefined || days < lotExpDays[e.lotNo]) {
+                    lotExpDays[e.lotNo] = days;
+                }
+            }
+        });
+
+        var activeLots = Object.keys(lotBalances).filter(function (lot) { return lotBalances[lot] > 0; });
+
+        if (activeLots.length === 0) return; // No stock to suggest
+
+        var bestLot = null;
+        var reason = '';
+
+        // Priority 1: Revalidated Lots (Check remarks in entries)
+        var revalLot = activeLots.find(function (lot) {
+            return entries.some(function (e) {
+                return e.lotNo === lot && e.remark && /(ต่ออายุ|reval|extend)/i.test(e.remark);
+            });
+        });
+
+        if (revalLot) {
+            bestLot = revalLot;
+            reason = ' (ต่ออายุ)';
+        } else {
+            // Priority 2: Near Expiry (FEFO) - say < 90 days or just soonest?
+            // User requested "Priority: Reval -> Near Expiry -> FIFO"
+            // Let's sort by days left
+            var sortedByExp = activeLots.slice().sort(function (a, b) {
+                return (lotExpDays[a] || 9999) - (lotExpDays[b] || 9999);
+            });
+
+            var bestExpLot = sortedByExp[0];
+            var minDays = lotExpDays[bestExpLot];
+
+            if (minDays !== undefined && minDays <= 90) { // arbitrary threshold for "Near Expiry" priority? Or just always take FEFO?
+                // Usually FEFO is the rule.
+                bestLot = bestExpLot;
+                reason = ' (FEFO/ใกล้หมดอายุ)';
+            } else {
+                // Priority 3: FIFO (Oldest First Date)
+                var sortedByDate = activeLots.slice().sort(function (a, b) {
+                    var dA = parseDateThai(lotFirstDate[a]);
+                    var dB = parseDateThai(lotFirstDate[b]);
+                    return dA.getTime() - dB.getTime();
+                });
+                bestLot = sortedByDate[0];
+                reason = ' (FIFO/เก่าสุด)';
+            }
+        }
+
+        // Fill Form
+        if (bestLot) {
+            var lotInput = document.getElementById('entryLotNoRM');
+            var vendorInput = document.getElementById('entryVendorRM');
+
+            // Only fill if empty to avoid annoying user
+            if (lotInput && !lotInput.value) {
+                lotInput.value = bestLot;
+                showToast('แนะนำ Lot: ' + bestLot + reason);
+            }
+            if (vendorInput && !vendorInput.value && lotVendor[bestLot]) {
+                vendorInput.value = lotVendor[bestLot];
+            }
+        }
+    } else {
+        // If Receiving (In), maybe just suggest last Supplier?
+        // User didn't ask explicitly, but "ข้อมูลสินค้าด้านล่าง" might imply supplier too.
+        var vendorInput = document.getElementById('entryVendorRM');
+        if (vendorInput && !vendorInput.value && lastVendor !== '-') {
+            vendorInput.value = lastVendor;
+        }
+    }
+}
+
+
 // ==================== EVENT LISTENERS ====================
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -2064,11 +2274,39 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+
+    // RM Save Button
+    document.getElementById('saveEntryRM')?.addEventListener('click', saveEntryRM);
+
+    // RM Auto-Calculate Listeners
+    var rmCalcInputs = ['entryContainerQtyRM', 'entryContainerWeightRM', 'entryRemainderRM', 'entryTypeRM'];
+    rmCalcInputs.forEach(function (id) {
+        document.getElementById(id)?.addEventListener('input', calculateRMTotal);
+        // Also listen for change on select/inputs to be sure
+        document.getElementById(id)?.addEventListener('change', calculateRMTotal);
+    });
+
+    // RM Auto-Fill on Product Change (Logic updated to include Lot/Vendor)
     document.getElementById('entryProductCodeRM')?.addEventListener('change', function () {
         var prod = rmProductMasterData.find(function (p) { return p.code === this.value; }.bind(this));
         if (prod) {
             var nameInput = document.getElementById('entryProductNameRM');
             if (nameInput) nameInput.value = prod.name;
+
+            // Trigger Auto-Fill Logic
+            autoFillRMForm(this.value);
+        }
+    });
+
+    // Also trigger on Type change (e.g., if user selected product first, then switched to withdrawal)
+    document.getElementById('entryTypeRM')?.addEventListener('change', function () {
+        var productCode = document.getElementById('entryProductCodeRM').value;
+        if (productCode) {
+            // Clear inputs first if switching back to 'receive' to avoid confusion? 
+            // Or just re-run logic. Re-running logic is safer.
+            // But we shouldn't wipe data if user typed it. 
+            // autoFillRMForm checks for empty fields before filling, so it's safe.
+            autoFillRMForm(productCode);
         }
     });
 

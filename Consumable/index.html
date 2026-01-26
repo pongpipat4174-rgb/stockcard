@@ -435,6 +435,16 @@
 
             <!-- Tab Content: Consumables (Current App) -->
             <div id="tab-consumables" class="tab-content active" style="display:block;">
+
+                <!-- Search Bar -->
+                <div style="margin-bottom: 20px; position: relative;">
+                    <i class="fa-solid fa-magnifying-glass"
+                        style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
+                    <input type="text" id="main-search-input" placeholder="ค้นหารายการสินค้า..."
+                        style="width: 100%; padding: 12px 12px 12px 45px; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);"
+                        oninput="renderTable()">
+                </div>
+
                 <div class="dashboard-stats">
                     <div class="stat-card total">
                         <div class="icon"><i class="fa-solid fa-layer-group"></i></div>

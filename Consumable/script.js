@@ -698,7 +698,16 @@ window.renderTable = () => {
         return;
     }
 
+    // Search Logic
+    const searchInput = document.getElementById('main-search-input');
+    const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
     items.forEach((item, index) => {
+        // Filter
+        if (searchTerm && !item.name.toLowerCase().includes(searchTerm)) {
+            return; // Skip if not match
+        }
+
         const isRoll = item.category === 'unit';
         const stockPartial = isRoll ? 0 : (item.stockPartialKg || 0); // Partial not used for rolls
 
@@ -761,7 +770,8 @@ window.renderTable = () => {
             <td class="center bg-shrink">
                 ${isRoll ? '-' : formatNumber(totalKg, 2)}
             </td>
-            <td class="center dim bg-shrink mobile-hidden">${item.minThreshold}</td>
+             <!-- Min Threshold Red Color -->
+            <td class="center dim bg-shrink mobile-hidden" style="color: #dc2626; font-weight:600;">${item.minThreshold}</td>
             <td class="center dim bg-shrink">
                 ${isRoll ? formatNumber(item.pcsPerRoll) : formatNumber(item.pcsPerKg)}
             </td>

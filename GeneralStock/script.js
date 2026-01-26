@@ -152,6 +152,12 @@ window.openModal = (index = null) => {
         document.getElementById('input-unit').value = item.unit;
         document.getElementById('input-stock').value = item.stock;
         document.getElementById('input-min').value = item.min;
+
+        // New Fields
+        document.getElementById('input-price').value = item.price || '';
+        document.getElementById('input-leadtime').value = item.leadTime || '';
+        document.getElementById('input-supplier').value = item.supplier || '';
+        document.getElementById('input-country').value = item.country || '';
     }
 
     modal.style.display = 'flex';
@@ -171,6 +177,13 @@ itemForm.addEventListener('submit', async (e) => {
         unit: document.getElementById('input-unit').value,
         stock: parseFloat(document.getElementById('input-stock').value),
         min: parseFloat(document.getElementById('input-min').value),
+
+        // New Fields
+        price: document.getElementById('input-price').value,
+        leadTime: document.getElementById('input-leadtime').value,
+        supplier: document.getElementById('input-supplier').value,
+        country: document.getElementById('input-country').value,
+
         id: index !== '' ? items[index].id : Date.now().toString()
     };
 

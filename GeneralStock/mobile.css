@@ -41,28 +41,23 @@
 
     /* --- 3. Stats Grid --- */
     .dashboard-stats {
-        grid-template-columns: 1fr;
-        /* Stack vertically on small screens */
+        grid-template-columns: 1fr 1fr;
+        /* Split into 2 columns */
         gap: 12px;
     }
 
     .stat-card {
-        padding: 16px;
-        /* Make stats pop a bit more */
-        border-left: 5px solid transparent;
+        padding: 12px;
+        /* Slightly smaller padding */
     }
 
-    .stat-card.total {
-        border-left-color: #3b82f6;
-    }
-
-    .stat-card.warning {
-        border-left-color: #f59e0b;
-    }
-
-    .stat-card.healthy {
-        border-left-color: #10b981;
-    }
+    /* Optional: Make the Last Odd item span full width if we have 3 items? 
+       User said "make yellow box smaller", so currently it was full width. 
+       Now it will be half width. Perfect.
+       If we have 3 items (Total, Low, Normal), the 3rd one will be on new row.
+       Let's leave it as is, or make the IMPORTANT one full width? 
+       User said "Yellow box smaller". So he wants it sharing space.
+    */
 
     /* --- 4. Filtering Section --- */
     .filter-section {
@@ -79,11 +74,8 @@
         overflow-x: auto;
         padding-bottom: 8px;
         gap: 8px;
-        /* Hide scrollbar for cleaner look */
         -ms-overflow-style: none;
-        /* IE and Edge */
         scrollbar-width: none;
-        /* Firefox */
     }
 
     .category-filters::-webkit-scrollbar {
@@ -92,12 +84,10 @@
 
     .filter-btn {
         flex: 0 0 auto;
-        /* Don't shrink */
         white-space: nowrap;
     }
 
-    /* --- 5. Table to Card View (The Core Request) --- */
-    /* Hide Table Header */
+    /* --- 5. Table to Card View --- */
     table,
     thead,
     tbody,
@@ -123,50 +113,38 @@
     }
 
     td {
-        /* Behave like a "row" */
         border: none;
         position: relative;
-        padding-left: 0;
-        padding-right: 0;
-        padding-top: 8px;
-        padding-bottom: 8px;
+        padding: 8px 0;
         border-bottom: 1px solid #f1f5f9;
         display: flex;
         justify-content: space-between;
         align-items: center;
         text-align: right;
-        /* Aligns content to right */
     }
 
     td:last-child {
         border-bottom: none;
         justify-content: center;
-        /* Action buttons centered */
         padding-top: 16px;
     }
 
-    /* Add Labels using data-label attribute */
     td:before {
         content: attr(data-label);
         font-weight: 600;
         color: var(--text-muted);
         text-align: left;
         margin-right: auto;
-        /* Pushes label to left */
         font-size: 0.9rem;
     }
 
-    /* Exceptions for specific columns */
-    /* Product Info Column (Image + Name) */
     td[onclick] {
         display: block;
-        /* Stack image and text */
         text-align: left;
     }
 
     td[onclick]:before {
         display: none;
-        /* Hide label for the main product row to save space/cleaner look */
     }
 
     .product-info {
@@ -174,45 +152,24 @@
         align-items: flex-start;
     }
 
-    /* Hide columns that might clutter mobile view if needed, 
-       but Card View handles them well usually. */
-}
-
-/* --- Navigation Menu Adjustments (Based on User's Image) --- */
-/* Assuming the nav is outside this file or passed in via parent styles, 
-   but we can add some utility classes or targeted fixes if we know the structure. 
-   Since user showed the top menu bar (Packages, RM, Consumable, etc.) */
-
-/* Try to target the top navigation if it exists in the parent frame or this file */
-.nav-menu {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    /* Ensure it wraps nicely */
-    flex-wrap: wrap;
-}
-
-.nav-item {
-    flex: 1;
-    /* Distribute equal width */
-    text-align: center;
-    white-space: nowrap;
-    padding: 8px 4px;
-}
-
-/* Specific fix for text visibility/contrast on the blue background */
-/* Assuming the blue background comes from a parent container or body */
-/* We will force lighter text color for non-active items if we can target them. */
-
-/* Since I can't see the exact HTML for the top nav (it might be in a wrapper outside index.html or injected),
-   I will provide a generic fix that usually works for this layout. */
-
-@media (max-width: 768px) {
-
-    /* If the nav uses flexbox, make it a 2x2 grid */
+    /* --- NAV BAR ADJUSTMENT (Red Box Area) --- */
+    /* Target common nav structures or specific class if known */
+    .tabs-nav,
+    .nav-menu,
     .top-nav-bar {
-        /* Hypothetical class name */
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        white-space: normal !important;
+    }
+
+    .tabs-nav a,
+    .tabs-nav button,
+    .nav-item {
+        width: 100% !important;
+        justify-content: center !important;
+        text-align: center !important;
+        border-radius: 8px !important;
+        margin-bottom: 0 !important;
     }
 }

@@ -1301,6 +1301,39 @@ mark.search-highlight {
         justify-content: center;
     }
 
+    /* --- FIX MOBILE NAV GRID --- */
+    .module-tabs {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        width: 100%;
+        margin-top: 1rem;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+
+    .module-tab {
+        width: 100%;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: var(--radius-lg);
+        padding: 0.75rem;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 500;
+    }
+
+    .module-tab.active {
+        background: white !important;
+        color: var(--primary-600) !important;
+        box-shadow: var(--shadow-md);
+        font-weight: 700;
+        transform: scale(1.02);
+    }
+
+    .tab-slider {
+        display: none !important;
+    }
+
     .stats-grid {
         grid-template-columns: 1fr;
     }

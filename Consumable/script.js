@@ -1085,6 +1085,12 @@ window.openModal = (isEdit = false, index = null) => {
         modalTitle.textContent = 'แก้ไขข้อมูลสินค้า';
         inputName.value = item.name;
 
+        // Set Category and Trigger UI update
+        if (inputCategory) {
+            inputCategory.value = item.category || 'weight';
+            window.toggleItemFormFields();
+        }
+
         inputKgPerCarton.value = item.kgPerCarton;
         inputPcsPerKg.value = item.pcsPerKg;
         inputStockCartons.value = item.stockCartons;

@@ -41,46 +41,50 @@ function doPost(e) {
 
         if (data.action === 'add_rm') {
 
-            // --- FINAL ADJUSTMENT: Supplier Position ---
-            // User screenshot shows Supplier is getting shifted too far or wrong column.
-            // Re-verify Column Mapping based on standard A-R structure:
-            // A:Date, B:Code, C:Name(Formula), D:Type, E:Qty, F:Wt, G:Rem, H:In, I:Out, J:Bal(Formula)
-            // K:Lot, L:VendorLot, M:MFD, N:EXP, O:Days(Formula), P:LotBal(Formula/Manual?), Q:Supplier, R:Remark
+            // --- INTELLIGENT WRITER ---
+            // 1. Check for formulas in the row ABOVE the target.
+            //    If formulas exist (Drag-down style), COPY them to the new row.
+            //    If no formula (ArrayFormula style), CLEAR the new row to let ArrayFormula expand.
 
-            // Clear Formulas
-            sheet.getRange(targetRow, 3).clearContent();  // C
-            sheet.getRange(targetRow, 10).clearContent(); // J
-            sheet.getRange(targetRow, 15).clearContent(); // O
-            sheet.getRange(targetRow, 16).clearContent(); // P (Lot Balance - Assuming formula based on user feedback)
+            var formulaCols = [3, 10, 15, 16]; // C, J, O, P
 
-            // 1. Date, Code (A, B)
-            sheet.getRange(targetRow, 1, 1, 2).setValues([["'" + (entry.date || ''), entry.productCode || '']]);
+            if (targetRow > 2) {
+                formulaCols.forEach(function (col) {
+                    var prevCell = sheet.getRange(targetRow - 1, col);
+                    var targetCell = sheet.getRange(targetRow, col);
 
-            // 2. Type...Out (D, E, F, G, H, I)
+                    if (prevCell.getFormula() !== "") {
+                        // Case A: Drag-Down Formula detected -> Copy it down
+                        prevCell.copyTo(targetCell, SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
+                    } else {
+                        // Case B: No formula (likely ArrayFormula or Value) -> Clear to be safe
+                        targetCell.clearContent();
+                    }
+                });
+            } else {
+                // If writing to row 2 (first data row), just clear.
+                formulaCols.forEach(function (col) {
+                    sheet.getRange(targetRow, col).clearContent();
+                });
+            }
+
+            // 2. Write Data Blocks (Same as before)
+            sheet.getRange(targetRow, 1, 1, 2).setValues([["'" + (entry.date || ''), entry.productCode || '']]); // A,B
+
             sheet.getRange(targetRow, 4, 1, 6).setValues([[
-                entry.type || '',
-                entry.containerQty || 0,
-                entry.containerWeight || 0,
-                entry.remainder || 0,
-                entry.inQty || 0,
-                entry.outQty || 0
-            ]]);
+                entry.type || '', entry.containerQty || 0, entry.containerWeight || 0,
+                entry.remainder || 0, entry.inQty || 0, entry.outQty || 0
+            ]]); // D-I
 
-            // 3. Lot...EXP (K, L, M, N)
             sheet.getRange(targetRow, 11, 1, 4).setValues([[
-                entry.lotNo || '',
-                entry.vendorLot || '',
-                entry.mfgDate || '',
-                entry.expDate || ''
-            ]]);
+                entry.lotNo || '', entry.vendorLot || '', entry.mfgDate || '', entry.expDate || ''
+            ]]); // K-N
 
-            // 4. Supplier is at Column Q (17)
-            sheet.getRange(targetRow, 17).setValue(entry.supplier || '');
-
-            // 5. Remark is at Column R (18)
-            sheet.getRange(targetRow, 18).setValue(entry.remark || '');
+            sheet.getRange(targetRow, 17).setValue(entry.supplier || ''); // Q
+            sheet.getRange(targetRow, 18).setValue(entry.remark || ''); // R
 
         } else {
+            // Package Module
             var rowData = [
                 "'" + (entry.date || ''),
                 entry.productCode || '',

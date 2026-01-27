@@ -42,8 +42,9 @@ function doPost(e) {
         if (data.action === 'add_rm') {
 
             // --- 1. Copy Formulas from Row Above ---
-            // We check C(3), J(10), O(15), P(16)
-            // Also adding L(12), M(13), N(14) in case they are formulas
+            // Check ALL potential formula columns: C(3), J(10), L(12), M(13), N(14), O(15), P(16)
+            // Q(17) is Supplier (Data), but user says it might be overlapping formula? 
+            // Let's assume Q and R are data, but O and P contain formulas.
             if (targetRow > 2) {
                 var prevRow = targetRow - 1;
                 var colsToCheck = [3, 10, 12, 13, 14, 15, 16];
@@ -53,71 +54,41 @@ function doPost(e) {
                     if (prevCell.getFormula() !== "") {
                         prevCell.copyTo(sheet.getRange(targetRow, colIndex), SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
                     }
-                    // If not formula, we will handle it in step 2
                 }
             }
 
-            // --- 2. Write Data with Explicit Empty Checks ---
+            // --- 2. Write Data with "Formula Safe" Checks ---
 
-            // A: Date
+            // A, B
             sheet.getRange(targetRow, 1).setValue("'" + (entry.date || ''));
+            if (entry.productCode) sheet.getRange(targetRow, 2).setValue(entry.productCode);
+            else sheet.getRange(targetRow, 2).clearContent();
 
-            // B: Code
-            if (entry.productCode && entry.productCode !== '') {
-                sheet.getRange(targetRow, 2).setValue(entry.productCode);
-            } else {
-                sheet.getRange(targetRow, 2).clearContent();
-            }
-
-            // C: Name (Formula) -> ALWAYS CLEAR (Formula copied above will populate if it was dragged)
-            // Check if we already copied a formula there? No, explicit clear is safer for ArrayFormula.
-            // BUT if it's drag down formula, we just copied it. 
-            // Logic: If range has formula now (from step 1), DON'T clear.
+            // C: Name (Formula) -> Clear only if NOT formula
             if (sheet.getRange(targetRow, 3).getFormula() === "") {
                 sheet.getRange(targetRow, 3).clearContent();
             }
 
             // D: Type
-            if (entry.type && entry.type !== '') {
-                sheet.getRange(targetRow, 4).setValue(entry.type);
-            } else {
-                sheet.getRange(targetRow, 4).clearContent();
-            }
+            if (entry.type) sheet.getRange(targetRow, 4).setValue(entry.type);
+            else sheet.getRange(targetRow, 4).clearContent();
 
-            // E: Container Qty
-            if (entry.containerQty && entry.containerQty !== 0) {
-                sheet.getRange(targetRow, 5).setValue(entry.containerQty);
-            } else {
-                sheet.getRange(targetRow, 5).clearContent();
-            }
+            // E, F, G (Container)
+            if (entry.containerQty && entry.containerQty !== 0) sheet.getRange(targetRow, 5).setValue(entry.containerQty);
+            else sheet.getRange(targetRow, 5).clearContent();
 
-            // F: Container Weight
-            if (entry.containerWeight && entry.containerWeight !== 0) {
-                sheet.getRange(targetRow, 6).setValue(entry.containerWeight);
-            } else {
-                sheet.getRange(targetRow, 6).clearContent();
-            }
+            if (entry.containerWeight && entry.containerWeight !== 0) sheet.getRange(targetRow, 6).setValue(entry.containerWeight);
+            else sheet.getRange(targetRow, 6).clearContent();
 
-            // G: Remainder
-            if (entry.remainder && entry.remainder !== 0) {
-                sheet.getRange(targetRow, 7).setValue(entry.remainder);
-            } else {
-                sheet.getRange(targetRow, 7).clearContent();
-            }
+            if (entry.remainder && entry.remainder !== 0) sheet.getRange(targetRow, 7).setValue(entry.remainder);
+            else sheet.getRange(targetRow, 7).clearContent();
 
-            // H: In Qty
-            if (entry.inQty && entry.inQty !== 0) {
-                sheet.getRange(targetRow, 8).setValue(entry.inQty);
-            } else {
-                sheet.getRange(targetRow, 8).clearContent();
-            }
+            // H, I (In, Out)
+            if (entry.inQty && entry.inQty !== 0) sheet.getRange(targetRow, 8).setValue(entry.inQty);
+            else sheet.getRange(targetRow, 8).clearContent();
 
-            // I: Out Qty
-            if (entry.outQty && entry.outQty !== 0) {
-                sheet.getRange(targetRow, 9).setValue(entry.outQty);
-            } else {
-                sheet.getRange(targetRow, 9).clearContent();
-            }
+            if (entry.outQty && entry.outQty !== 0) sheet.getRange(targetRow, 9).setValue(entry.outQty);
+            else sheet.getRange(targetRow, 9).clearContent();
 
             // J: Balance (Formula)
             if (sheet.getRange(targetRow, 10).getFormula() === "") {
@@ -125,57 +96,48 @@ function doPost(e) {
             }
 
             // K: Lot No
-            if (entry.lotNo && entry.lotNo !== '') {
-                sheet.getRange(targetRow, 11).setValue(entry.lotNo);
-            } else {
-                sheet.getRange(targetRow, 11).clearContent();
-            }
+            if (entry.lotNo) sheet.getRange(targetRow, 11).setValue(entry.lotNo);
+            else sheet.getRange(targetRow, 11).clearContent();
 
-            // L: Vendor Lot
-            // Only write if NOT a formula (meaning we didn't copy one in Step 1)
+            // L, M, N (Vendor, MFD, EXP) -> Write only if NO Formula
             if (sheet.getRange(targetRow, 12).getFormula() === "") {
-                if (entry.vendorLot && entry.vendorLot !== '') {
-                    sheet.getRange(targetRow, 12).setValue(entry.vendorLot);
-                } else {
-                    sheet.getRange(targetRow, 12).clearContent();
-                }
+                if (entry.vendorLot) sheet.getRange(targetRow, 12).setValue(entry.vendorLot);
+                else sheet.getRange(targetRow, 12).clearContent();
             }
-
-            // M: MFD
             if (sheet.getRange(targetRow, 13).getFormula() === "") {
-                if (entry.mfgDate && entry.mfgDate !== '') {
-                    sheet.getRange(targetRow, 13).setValue(entry.mfgDate);
-                } else {
-                    sheet.getRange(targetRow, 13).clearContent();
-                }
+                if (entry.mfgDate) sheet.getRange(targetRow, 13).setValue(entry.mfgDate);
+                else sheet.getRange(targetRow, 13).clearContent();
             }
-
-            // N: EXP
             if (sheet.getRange(targetRow, 14).getFormula() === "") {
-                if (entry.expDate && entry.expDate !== '') {
-                    sheet.getRange(targetRow, 14).setValue(entry.expDate);
-                } else {
-                    sheet.getRange(targetRow, 14).clearContent();
-                }
+                if (entry.expDate) sheet.getRange(targetRow, 14).setValue(entry.expDate);
+                else sheet.getRange(targetRow, 14).clearContent();
             }
 
-            // O, P (Formulas)
-            if (sheet.getRange(targetRow, 15).getFormula() === "") sheet.getRange(targetRow, 15).clearContent();
-            if (sheet.getRange(targetRow, 16).getFormula() === "") sheet.getRange(targetRow, 16).clearContent();
+            // --- CRITICAL FIX: O, P Checks ----
+            // User says O, P, Q overlap formula.
+            // O (Days), P (LotBal) MUST NOT be cleared if they have formulas!
+
+            // O: Days Left
+            if (sheet.getRange(targetRow, 15).getFormula() === "") {
+                // Only clear/write if it's NOT a formula (copied from above or ArrayFormula)
+                sheet.getRange(targetRow, 15).clearContent();
+            }
+
+            // P: Lot Balance
+            if (sheet.getRange(targetRow, 16).getFormula() === "") {
+                sheet.getRange(targetRow, 16).clearContent();
+            }
 
             // Q: Supplier
-            if (entry.supplier && entry.supplier !== '') {
-                sheet.getRange(targetRow, 17).setValue(entry.supplier);
-            } else {
-                sheet.getRange(targetRow, 17).clearContent();
+            // User implied Q might interfere too. Check formula first.
+            if (sheet.getRange(targetRow, 17).getFormula() === "") {
+                if (entry.supplier) sheet.getRange(targetRow, 17).setValue(entry.supplier);
+                else sheet.getRange(targetRow, 17).clearContent();
             }
 
             // R: Remark
-            if (entry.remark && entry.remark !== '') {
-                sheet.getRange(targetRow, 18).setValue(entry.remark);
-            } else {
-                sheet.getRange(targetRow, 18).clearContent();
-            }
+            if (entry.remark) sheet.getRange(targetRow, 18).setValue(entry.remark);
+            else sheet.getRange(targetRow, 18).clearContent();
 
             SpreadsheetApp.flush();
 

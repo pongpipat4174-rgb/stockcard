@@ -1,7 +1,7 @@
 // --- CONFIGURATION ---
 // ใส่ลิงค์ Google Apps Script Web App ของคุณในเครื่องหมายคำพูดด้านล่าง
 // ตัวอย่าง: const API_URL = "https://script.google.com/macros/s/xxxxxxxxx/exec";
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJglmGvcDbVBSTcGlCXg0NFDXIJm-RyIXe_-G-70nIlK3rxZVFT_tWAbHYP-mb-zOG3w/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxJglmGvcDbVBSTcGlCXg0NFDXIJm-RyIXe_-G-70nIlK3rxZVFT_tWAbHYP-mb-zOG3w/exec';
 
 // --- DEBUG CONSOLE (Visual Analysis) ---
 const createDebugPanel = () => {

@@ -21,7 +21,7 @@ function doPost(e) {
         var lastRow = sheet.getLastRow();
         var targetRow = lastRow + 1;
 
-        // Smart Row Detection (Finding last row with data in Col B)
+        // Smart Row Detection
         if (lastRow > 1) {
             var range = sheet.getRange("B1:B" + lastRow).getValues();
             var foundData = false;
@@ -41,22 +41,22 @@ function doPost(e) {
 
         if (data.action === 'add_rm') {
 
-            // --- ULTRA SAFE WRITE (PREVENT FORMULA OVERWRITE) ---
-            // Columns with ArrayFormula: C, J, O (and potentially others)
-            // We must explicitly CLEAR them to allow formula flow-down.
+            // --- FINAL ADJUSTMENT: Supplier Position ---
+            // User screenshot shows Supplier is getting shifted too far or wrong column.
+            // Re-verify Column Mapping based on standard A-R structure:
+            // A:Date, B:Code, C:Name(Formula), D:Type, E:Qty, F:Wt, G:Rem, H:In, I:Out, J:Bal(Formula)
+            // K:Lot, L:VendorLot, M:MFD, N:EXP, O:Days(Formula), P:LotBal(Formula/Manual?), Q:Supplier, R:Remark
 
-            sheet.getRange(targetRow, 3).clearContent();  // C - Name
-            sheet.getRange(targetRow, 10).clearContent(); // J - Balance
-            sheet.getRange(targetRow, 15).clearContent(); // O - DaysLeft
+            // Clear Formulas
+            sheet.getRange(targetRow, 3).clearContent();  // C
+            sheet.getRange(targetRow, 10).clearContent(); // J
+            sheet.getRange(targetRow, 15).clearContent(); // O
+            sheet.getRange(targetRow, 16).clearContent(); // P (Lot Balance - Assuming formula based on user feedback)
 
-            // Additionally clear any other potential formula columns if suspected
-            // e.g. If Supplier col has formula, clear it too. Assuming P, Q, R are manual for now.
-
-            // WRITE BLOCK 1: A, B (Date, Code)
+            // 1. Date, Code (A, B)
             sheet.getRange(targetRow, 1, 1, 2).setValues([["'" + (entry.date || ''), entry.productCode || '']]);
 
-            // WRITE BLOCK 2: D, E, F, G, H, I (Type, C.Qty, C.Wt, Rem, In, Out)
-            // Skip C
+            // 2. Type...Out (D, E, F, G, H, I)
             sheet.getRange(targetRow, 4, 1, 6).setValues([[
                 entry.type || '',
                 entry.containerQty || 0,
@@ -66,8 +66,7 @@ function doPost(e) {
                 entry.outQty || 0
             ]]);
 
-            // WRITE BLOCK 3: K, L, M, N (Lot, VendorLot, MFD, EXP)
-            // Skip J
+            // 3. Lot...EXP (K, L, M, N)
             sheet.getRange(targetRow, 11, 1, 4).setValues([[
                 entry.lotNo || '',
                 entry.vendorLot || '',
@@ -75,14 +74,11 @@ function doPost(e) {
                 entry.expDate || ''
             ]]);
 
-            // WRITE BLOCK 4: P, Q, R (LotBal, Supplier, Remark)
-            // Skip O
-            // CAUTION: entry.supplier might be causing shifts if passed incorrectly.
-            sheet.getRange(targetRow, 16, 1, 3).setValues([[
-                entry.lotBalance || 0,
-                entry.supplier || '',
-                entry.remark || ''
-            ]]);
+            // 4. Supplier is at Column Q (17)
+            sheet.getRange(targetRow, 17).setValue(entry.supplier || '');
+
+            // 5. Remark is at Column R (18)
+            sheet.getRange(targetRow, 18).setValue(entry.remark || '');
 
         } else {
             var rowData = [

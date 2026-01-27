@@ -1,91 +1,95 @@
-/* Apps Script V.10 (Hybrid Force Delete - Working Version) */
-const SHEET_NAME = 'บันทึก StockCard';
-
 function doPost(e) {
     var lock = LockService.getScriptLock();
-    try { lock.waitLock(10000); } catch (e) { }
+    lock.tryLock(10000);
 
     try {
-        var data = JSON.parse(e.postData.contents);
-        var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-        if (!sheet) return jsonResp(false, 'Sheet not found');
-
-        // ========== DELETE LOGIC ==========
-        if (data.action === 'delete_force' || data.action === 'delete_v5' || data.action === 'delete') {
-            var idx = parseInt(data.rowIndex);
-            var c = data.criteria || {};
-            var targetCode = String(c.productCode || '').toLowerCase().trim();
-            var targetType = String(c.type || '').toLowerCase().trim();
-            var maxRows = sheet.getLastRow();
-
-            // PHASE 1: PRECISION STRIKE
-            if (idx > 1 && idx <= maxRows) {
-                var rowVals = sheet.getRange(idx, 1, 1, 13).getDisplayValues()[0];
-                var sheetCode = String(rowVals[1]).toLowerCase().trim();
-                if (sheetCode === targetCode || !targetCode) {
-                    sheet.deleteRow(idx);
-                    return jsonResp(true, 'Deleted Exact Row ' + idx);
-                }
-            }
-
-            // PHASE 2: AREA SCAN
-            var startSearch = Math.max(2, idx - 10);
-            var endSearch = Math.min(maxRows, idx + 10);
-            if (endSearch >= startSearch) {
-                var numRows = endSearch - startSearch + 1;
-                var range = sheet.getRange(startSearch, 1, numRows, 13);
-                var values = range.getDisplayValues();
-                for (var i = 0; i < values.length; i++) {
-                    if (String(values[i][1]).toLowerCase().trim() === targetCode) {
-                        sheet.deleteRow(startSearch + i);
-                        return jsonResp(true, 'Deleted Nearby Row ' + (startSearch + i));
-                    }
-                }
-            }
-
-            // PHASE 3: GLOBAL HUNT
-            var allVals = sheet.getDataRange().getDisplayValues();
-            for (var i = allVals.length - 1; i >= 1; i--) {
-                if (String(allVals[i][1]).toLowerCase().trim() === targetCode) {
-                    sheet.deleteRow(i + 1);
-                    return jsonResp(true, 'Deleted Global Row ' + (i + 1));
-                }
-            }
-            return jsonResp(false, 'Not found');
+        var data;
+        // Attempt to parse JSON content
+        try {
+            data = JSON.parse(e.postData.contents);
+        } catch (err) {
+            // Fallback if formatting is weird
+            data = e.parameter;
         }
 
-        // ========== ADD LOGIC (ต่อท้ายรายการสุดท้ายของข้อมูลธุรกรรม) ==========
-        var d = data.entry || data;
-        var newRow = [d.date, d.productCode, d.productName, d.type, d.inQty, d.outQty, d.balance, d.lotNo, d.pkId, '', d.docRef, '', d.remark];
+        var sheetId, sheetName;
 
-        // Find the last row with transaction data (check column B for product code)
-        var lastRow = sheet.getLastRow();
-        var colB = sheet.getRange(1, 2, lastRow, 1).getValues(); // Column B = Product Code
+        // Determine Logic based on ACTION
+        if (data.action === 'add_rm') {
+            // --- RM (Raw Material) ---
+            // Use ID provided in request OR fallback to Hardcoded RM Sheet ID
+            sheetId = data.spreadsheetId || '1C3mPPxucPueSOfW4Hh7m4k3BjJ4ZHonqzc8j-JfQOfs';
+            sheetName = data.sheetName || 'Sheet1';
 
-        var lastTransactionRow = 1; // Default to row 1 (header)
-        for (var i = colB.length - 1; i >= 0; i--) {
-            var val = String(colB[i][0]).trim();
-            // If this row has a product code that looks like transaction data
-            if (val && val !== '' && val !== 'code' && val !== 'รหัสสินค้า' && !val.startsWith('Product')) {
-                lastTransactionRow = i + 1;
-                break;
-            }
+        } else {
+            // --- Package (Default) ---
+            // Use ID provided in request OR fallback to Hardcoded Package Sheet ID
+            sheetId = data.spreadsheetId || '1h6--jU1VAjrNwHY1TcCfWn9En_gl464fvMaheNPxaTU';
+            sheetName = data.sheetName || 'บันทึก StockCard';
         }
 
-        // Insert new row after the last transaction row
-        var insertRow = lastTransactionRow + 1;
-        sheet.insertRowAfter(lastTransactionRow);
-        sheet.getRange(insertRow, 1, 1, newRow.length).setValues([newRow]);
+        // Open the Spreadsheet
+        var ss = SpreadsheetApp.openById(sheetId);
+        var sheet = ss.getSheetByName(sheetName);
 
-        return jsonResp(true, 'Added at row ' + insertRow);
+        // Safety check: if sheet name not found, try to use the first sheet
+        if (!sheet) {
+            sheet = ss.getSheets()[0];
+        }
 
-    } catch (err) {
-        return jsonResp(false, 'Error: ' + err);
+        var entry = data.entry;
+
+        if (data.action === 'add_rm') {
+            // Append RM Data (Columns match your RM Sheet Structure)
+            // A:Date, B:Code, C:Name, D:Type, E:Cont.Qty, F:Cont.Weight, G:Remainder, H:In, I:Out, J:Balance, K:Lot, L:VendorLot, M:MFD, N:EXP, O:DaysLeft, P:LotBal, Q:Supplier, R:Remark
+            sheet.appendRow([
+                "'" + entry.date,   // Force Text for Date
+                entry.productCode,
+                entry.productName,
+                entry.type,
+                entry.containerQty || 0,
+                entry.containerWeight || 0,
+                entry.remainder || 0,
+                entry.inQty || 0,
+                entry.outQty || 0,
+                entry.balance || 0, // Calculated balance (optional, usually formula)
+                entry.lotNo,
+                entry.vendorLot || '',
+                entry.mfgDate || '',
+                entry.expDate || '',
+                entry.daysLeft || '',
+                entry.lotBalance || 0,
+                entry.supplier || '',
+                entry.remark || ''
+            ]);
+
+        } else {
+            // Append Package Data (Columns match your Package Sheet Structure)
+            // A:Date, B:Code, C:Name, D:Type, E:In, F:Out, G:Balance, H:Lot, I:PK_ID, J:User, K:Ref, L:Time, M:Remark
+            sheet.appendRow([
+                "'" + entry.date,
+                entry.productCode,
+                entry.productName,
+                entry.type,
+                entry.inQty,
+                entry.outQty,
+                entry.balance,
+                entry.lotNo,
+                entry.pkId,
+                entry.user || 'Admin',
+                entry.docRef,
+                new Date(),
+                entry.remark
+            ]);
+        }
+
+        return ContentService.createTextOutput(JSON.stringify({ "result": "success" }))
+            .setMimeType(ContentService.MimeType.JSON);
+
+    } catch (e) {
+        return ContentService.createTextOutput(JSON.stringify({ "result": "error", "error": e.toString() }))
+            .setMimeType(ContentService.MimeType.JSON);
     } finally {
         lock.releaseLock();
     }
-}
-
-function jsonResp(s, m) {
-    return ContentService.createTextOutput(JSON.stringify({ success: s, message: m })).setMimeType(ContentService.MimeType.JSON);
 }

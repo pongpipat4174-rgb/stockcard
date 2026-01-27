@@ -545,8 +545,13 @@ const loadData = async () => {
             if (data.items && Array.isArray(data.items) && data.items.length > 0) {
                 // Map Thai headers if present
                 let loadedItems = data.items;
-                // ... (Logic for mapping) ...
-                if (loadedItems[0]["ชื่อสินค้า"] || loadedItems[0]["name"]) {
+
+                // CHECK: If backend already sent correct keys (name, category, stock...), USE THEM DIRECTLY!
+                // Don't try to re-map unless it's raw data (which it isn't anymore).
+                if (loadedItems[0].name !== undefined && loadedItems[0].stock !== undefined) {
+                    console.log("Backend sent mapped data. Using directly.");
+                    items = loadedItems;
+                } else if (loadedItems[0]["ชื่อสินค้า"] || loadedItems[0]["name"]) {
                     // Check if it's the raw format or mapped format
                     const row = loadedItems[0];
                     if (row["ชื่อสินค้า"]) {
@@ -570,7 +575,26 @@ const loadData = async () => {
                     }
                 }
 
-                items = loadedItems;
+                // FINAL SAFETY MAP: Ensure all numbers are actually numbers
+                items = loadedItems.map(item => ({
+                    name: item.name,
+                    category: item.category || 'weight',
+                    stockCartons: Number(item.stock || item.stockCartons || 0),
+                    stockPartialKg: Number(item.stockPartial || item.stockPartialKg || 0),
+                    kgPerCarton: Number(item.kgPerCarton || 25),
+                    pcsPerKg: Number(item.pcsPerKg || 0),
+                    minThreshold: Number(item.min || item.minThreshold || 0),
+                    pcsPerPack: Number(item.pcsPerPack || 1),
+                    fgPcsPerCarton: Number(item.fgPerCarton || item.fgPcsPerCarton || 1),
+                    rollLength: Number(item.rollLength || 0),
+                    cutLength: Number(item.cutLength || 0),
+                    pcsPerRoll: Number(item.pcsPerRoll || 0),
+                    fgYieldPerRoll: Number(item.fgYieldPerRoll || 0),
+                    stockCode: item.stockCode || ""
+                }));
+
+
+                // items = loadedItems; // (Already assigned above)
 
                 if (data.transactions && Array.isArray(data.transactions)) {
                     let loadedTrans = data.transactions;

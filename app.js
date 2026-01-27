@@ -2105,18 +2105,15 @@ async function saveEntryRM() {
             }
 
             // Using fetch in await mode
-            await fetch(APPS_SCRIPT_URL + "?action=add_rm", {
+            await fetch(APPS_SCRIPT_URL, {
                 method: "POST",
                 mode: "no-cors",
-                cache: "no-cache",
                 headers: {
-                    "Content-Type": "text/plain;charset=utf-8"
+                    "Content-Type": "application/json"
                 },
                 redirect: "follow",
                 body: JSON.stringify({
                     action: 'add_rm',
-                    spreadsheetId: SHEET_CONFIG.rm.id,
-                    sheetName: SHEET_CONFIG.rm.sheetName,
                     entry: entry
                 })
             });

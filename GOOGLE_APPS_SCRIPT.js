@@ -21,6 +21,7 @@ function doPost(e) {
         var lastRow = sheet.getLastRow();
         var targetRow = lastRow + 1;
 
+        // Detect last row with data in Col B
         if (lastRow > 1) {
             var range = sheet.getRange("B1:B" + lastRow).getValues();
             var foundData = false;
@@ -40,23 +41,17 @@ function doPost(e) {
 
         if (data.action === 'add_rm') {
 
-            // --- CLEANER & SMARTER SAVE ---
-            // 1. Copy Formulas from row above (C, J, O, P)
-            var formulaCols = [3, 10, 15, 16];
-            if (targetRow > 2) {
-                formulaCols.forEach(function (col) {
-                    var prevCell = sheet.getRange(targetRow - 1, col);
-                    var targetCell = sheet.getRange(targetRow, col);
-                    if (prevCell.getFormula() !== "") {
-                        prevCell.copyTo(targetCell, SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
-                    } else {
-                        targetCell.clearContent();
-                    }
-                });
-            }
+            // --- "MISSING LINK" FIX ---
+            // User says L-P are not running down. This means ArrayFormulas in those columns
+            // are failing because they depend on something being present in G or H or K.
+            // OR we are accidentally writing "" (empty string) which BLOCKS ArrayFormula.
 
-            // Helper to set value only if not empty/zero (to keep cells clean for formulas)
-            function setCleanValue(row, col, val) {
+            // STRATEGY: 
+            // 1. Explicitly CLEAR columns L, M, N if they are empty, rather than writing "".
+            // 2. Clear O (Days), P (LotBal) explicitly.
+
+            // Helper: Set value, but if empty, CLEAR IT (don't write "")
+            function setOrClear(row, col, val) {
                 if (val !== null && val !== undefined && val !== '' && val !== 0) {
                     sheet.getRange(row, col).setValue(val);
                 } else {
@@ -64,39 +59,53 @@ function doPost(e) {
                 }
             }
 
-            // Helper for Text (allow 0 if needed, but usually empty string is cleared)
-            function setText(row, col, val) {
-                if (val) sheet.getRange(row, col).setValue(val);
+            // Helper for Text: If empty string, CLEAR IT.
+            function setTextOrClear(row, col, val) {
+                if (val && val !== '') sheet.getRange(row, col).setValue(val);
                 else sheet.getRange(row, col).clearContent();
             }
 
-            // A: Date (Force Text), B: Code
+            // A: Date, B: Code
             sheet.getRange(targetRow, 1).setValue("'" + (entry.date || ''));
-            setText(targetRow, 2, entry.productCode);
+            setTextOrClear(targetRow, 2, entry.productCode);
+
+            // C: Name (Formula) -> CLEAR
+            sheet.getRange(targetRow, 3).clearContent();
 
             // D: Type
-            setText(targetRow, 4, entry.type);
+            setTextOrClear(targetRow, 4, entry.type);
 
-            // E, F, G: Container Info (Only set if > 0)
-            setCleanValue(targetRow, 5, entry.containerQty);
-            setCleanValue(targetRow, 6, entry.containerWeight);
-            setCleanValue(targetRow, 7, entry.remainder);  // Column G - Clean!
+            // E, F, G (Container Info) -> Only write if > 0, else CLEAR
+            setOrClear(targetRow, 5, entry.containerQty);
+            setOrClear(targetRow, 6, entry.containerWeight);
+            setOrClear(targetRow, 7, entry.remainder);
 
-            // H: In, I: Out (Only set if > 0)
-            setCleanValue(targetRow, 8, entry.inQty);      // Column H - Clean!
-            setCleanValue(targetRow, 9, entry.outQty);
+            // H, I (In/Out) -> Only write if > 0, else CLEAR
+            setOrClear(targetRow, 8, entry.inQty);
+            setOrClear(targetRow, 9, entry.outQty);
 
-            // K: Lot
-            setText(targetRow, 11, entry.lotNo);
+            // J: Balance (Formula) -> CLEAR
+            sheet.getRange(targetRow, 10).clearContent();
 
-            // L, M, N: Vendor, MFD, EXP
-            setText(targetRow, 12, entry.vendorLot);
-            setText(targetRow, 13, entry.mfgDate);
-            setText(targetRow, 14, entry.expDate);
+            // K: Lot No (User Key)
+            setTextOrClear(targetRow, 11, entry.lotNo);
 
-            // Q: Supplier, R: Remark
-            setText(targetRow, 17, entry.supplier);
-            setText(targetRow, 18, entry.remark);
+            // L, M, N (Vendor, MFD, EXP)
+            // If these are empty, we MUST clear them so ArrayFormula (if any) can work, 
+            // or so they are just empty cells.
+            setTextOrClear(targetRow, 12, entry.vendorLot);
+            setTextOrClear(targetRow, 13, entry.mfgDate);
+            setTextOrClear(targetRow, 14, entry.expDate);
+
+            // O, P (Days, LotBal) -> CLEAR (Formulas)
+            sheet.getRange(targetRow, 15).clearContent();
+            sheet.getRange(targetRow, 16).clearContent();
+
+            // Q: Supplier
+            setTextOrClear(targetRow, 17, entry.supplier);
+
+            // R: Remark
+            setTextOrClear(targetRow, 18, entry.remark);
 
         } else {
             // Package Module

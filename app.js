@@ -2105,7 +2105,7 @@ async function saveEntryRM() {
             }
 
             // Using fetch in await mode
-            await fetch(APPS_SCRIPT_URL, {
+            await fetch(APPS_SCRIPT_URL + "?action=add_rm", {
                 method: "POST",
                 mode: "no-cors",
                 cache: "no-cache",

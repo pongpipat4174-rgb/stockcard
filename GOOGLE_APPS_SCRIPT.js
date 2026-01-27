@@ -43,7 +43,6 @@ function doPost(e) {
 
             // --- 1. Copy Formulas from Row Above ---
             // We check C(3), J(10), O(15), P(16)
-            // This is safe even if inline. 
             if (targetRow > 2) {
                 var prevRow = targetRow - 1;
                 var colsToCheck = [3, 10, 15, 16];
@@ -70,7 +69,7 @@ function doPost(e) {
                 sheet.getRange(targetRow, 2).clearContent();
             }
 
-            // C: Name (Formula) -> ALWAYS CLEAR to let formula work
+            // C: Name (Formula) -> ALWAYS CLEAR
             sheet.getRange(targetRow, 3).clearContent();
 
             // D: Type
@@ -125,6 +124,12 @@ function doPost(e) {
                 sheet.getRange(targetRow, 11).clearContent();
             }
 
+            // --- DATA MISSING FIX (L, M, N) ---
+            // For 'Withdraw' (Out), these fields are often missing in 'entry'
+            // BUT for the ArrayFormula/Lookups to work, we must Ensure they are CLEARED if missing.
+            // AND importantly, column L, M, N might be formulas themselves in some setups?
+            // Assuming they are data fields:
+
             // L: Vendor Lot
             if (entry.vendorLot && entry.vendorLot !== '') {
                 sheet.getRange(targetRow, 12).setValue(entry.vendorLot);
@@ -134,6 +139,7 @@ function doPost(e) {
 
             // M: MFD
             if (entry.mfgDate && entry.mfgDate !== '') {
+                // Check if user is sending date format or string
                 sheet.getRange(targetRow, 13).setValue(entry.mfgDate);
             } else {
                 sheet.getRange(targetRow, 13).clearContent();
@@ -146,11 +152,12 @@ function doPost(e) {
                 sheet.getRange(targetRow, 14).clearContent();
             }
 
-            // O, P (Days, LotBal) (Formulas) -> ALWAYS CLEAR
+            // O, P (Formulas) -> ALWAYS CLEAR
             sheet.getRange(targetRow, 15).clearContent();
             sheet.getRange(targetRow, 16).clearContent();
 
             // Q: Supplier
+            // Fix: If this is OUT/Withdraw, supplier might be empty.
             if (entry.supplier && entry.supplier !== '') {
                 sheet.getRange(targetRow, 17).setValue(entry.supplier);
             } else {
@@ -163,6 +170,10 @@ function doPost(e) {
             } else {
                 sheet.getRange(targetRow, 18).clearContent();
             }
+
+            // --- EXTRA FORCE RECALCULATE TRICK ---
+            // Sometimes clearing is not enough. Flushing updates helps.
+            SpreadsheetApp.flush();
 
         } else {
             // Package Module

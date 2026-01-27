@@ -41,66 +41,128 @@ function doPost(e) {
 
         if (data.action === 'add_rm') {
 
-            // --- FIXED: Removing Helper Functions from Nested Scope ---
+            // --- 1. Copy Formulas from Row Above ---
+            // We check C(3), J(10), O(15), P(16)
+            // This is safe even if inline. 
+            if (targetRow > 2) {
+                var prevRow = targetRow - 1;
+                var colsToCheck = [3, 10, 15, 16];
+                for (var k = 0; k < colsToCheck.length; k++) {
+                    var colIndex = colsToCheck[k];
+                    var prevCell = sheet.getRange(prevRow, colIndex);
+                    if (prevCell.getFormula() !== "") {
+                        prevCell.copyTo(sheet.getRange(targetRow, colIndex), SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
+                    } else {
+                        sheet.getRange(targetRow, colIndex).clearContent();
+                    }
+                }
+            }
 
-            // A: Date, B: Code
+            // --- 2. Write Data with Explicit Empty Checks ---
+
+            // A: Date
             sheet.getRange(targetRow, 1).setValue("'" + (entry.date || ''));
 
-            if (entry.productCode && entry.productCode !== '') sheet.getRange(targetRow, 2).setValue(entry.productCode);
-            else sheet.getRange(targetRow, 2).clearContent();
+            // B: Code
+            if (entry.productCode && entry.productCode !== '') {
+                sheet.getRange(targetRow, 2).setValue(entry.productCode);
+            } else {
+                sheet.getRange(targetRow, 2).clearContent();
+            }
 
-            // C: Name (Formula) -> CLEAR
+            // C: Name (Formula) -> ALWAYS CLEAR to let formula work
             sheet.getRange(targetRow, 3).clearContent();
 
             // D: Type
-            if (entry.type && entry.type !== '') sheet.getRange(targetRow, 4).setValue(entry.type);
-            else sheet.getRange(targetRow, 4).clearContent();
+            if (entry.type && entry.type !== '') {
+                sheet.getRange(targetRow, 4).setValue(entry.type);
+            } else {
+                sheet.getRange(targetRow, 4).clearContent();
+            }
 
-            // E, F, G (Container Info)
-            if (entry.containerQty && entry.containerQty !== 0) sheet.getRange(targetRow, 5).setValue(entry.containerQty);
-            else sheet.getRange(targetRow, 5).clearContent();
+            // E: Container Qty
+            if (entry.containerQty && entry.containerQty !== 0) {
+                sheet.getRange(targetRow, 5).setValue(entry.containerQty);
+            } else {
+                sheet.getRange(targetRow, 5).clearContent();
+            }
 
-            if (entry.containerWeight && entry.containerWeight !== 0) sheet.getRange(targetRow, 6).setValue(entry.containerWeight);
-            else sheet.getRange(targetRow, 6).clearContent();
+            // F: Container Weight
+            if (entry.containerWeight && entry.containerWeight !== 0) {
+                sheet.getRange(targetRow, 6).setValue(entry.containerWeight);
+            } else {
+                sheet.getRange(targetRow, 6).clearContent();
+            }
 
-            if (entry.remainder && entry.remainder !== 0) sheet.getRange(targetRow, 7).setValue(entry.remainder);
-            else sheet.getRange(targetRow, 7).clearContent();
+            // G: Remainder
+            if (entry.remainder && entry.remainder !== 0) {
+                sheet.getRange(targetRow, 7).setValue(entry.remainder);
+            } else {
+                sheet.getRange(targetRow, 7).clearContent();
+            }
 
-            // H, I (In/Out)
-            if (entry.inQty && entry.inQty !== 0) sheet.getRange(targetRow, 8).setValue(entry.inQty);
-            else sheet.getRange(targetRow, 8).clearContent();
+            // H: In Qty
+            if (entry.inQty && entry.inQty !== 0) {
+                sheet.getRange(targetRow, 8).setValue(entry.inQty);
+            } else {
+                sheet.getRange(targetRow, 8).clearContent();
+            }
 
-            if (entry.outQty && entry.outQty !== 0) sheet.getRange(targetRow, 9).setValue(entry.outQty);
-            else sheet.getRange(targetRow, 9).clearContent();
+            // I: Out Qty
+            if (entry.outQty && entry.outQty !== 0) {
+                sheet.getRange(targetRow, 9).setValue(entry.outQty);
+            } else {
+                sheet.getRange(targetRow, 9).clearContent();
+            }
 
-            // J: Balance (Formula) -> CLEAR
+            // J: Balance (Formula) -> ALWAYS CLEAR
             sheet.getRange(targetRow, 10).clearContent();
 
-            // K: Lot No (User Key)
-            if (entry.lotNo && entry.lotNo !== '') sheet.getRange(targetRow, 11).setValue(entry.lotNo);
-            else sheet.getRange(targetRow, 11).clearContent();
+            // K: Lot No
+            if (entry.lotNo && entry.lotNo !== '') {
+                sheet.getRange(targetRow, 11).setValue(entry.lotNo);
+            } else {
+                sheet.getRange(targetRow, 11).clearContent();
+            }
 
-            // L, M, N (Vendor, MFD, EXP)
-            if (entry.vendorLot && entry.vendorLot !== '') sheet.getRange(targetRow, 12).setValue(entry.vendorLot);
-            else sheet.getRange(targetRow, 12).clearContent();
+            // L: Vendor Lot
+            if (entry.vendorLot && entry.vendorLot !== '') {
+                sheet.getRange(targetRow, 12).setValue(entry.vendorLot);
+            } else {
+                sheet.getRange(targetRow, 12).clearContent();
+            }
 
-            if (entry.mfgDate && entry.mfgDate !== '') sheet.getRange(targetRow, 13).setValue(entry.mfgDate);
-            else sheet.getRange(targetRow, 13).clearContent();
+            // M: MFD
+            if (entry.mfgDate && entry.mfgDate !== '') {
+                sheet.getRange(targetRow, 13).setValue(entry.mfgDate);
+            } else {
+                sheet.getRange(targetRow, 13).clearContent();
+            }
 
-            if (entry.expDate && entry.expDate !== '') sheet.getRange(targetRow, 14).setValue(entry.expDate);
-            else sheet.getRange(targetRow, 14).clearContent();
+            // N: EXP
+            if (entry.expDate && entry.expDate !== '') {
+                sheet.getRange(targetRow, 14).setValue(entry.expDate);
+            } else {
+                sheet.getRange(targetRow, 14).clearContent();
+            }
 
-            // O, P (Days, LotBal) -> CLEAR (Formulas)
+            // O, P (Days, LotBal) (Formulas) -> ALWAYS CLEAR
             sheet.getRange(targetRow, 15).clearContent();
             sheet.getRange(targetRow, 16).clearContent();
 
             // Q: Supplier
-            if (entry.supplier && entry.supplier !== '') sheet.getRange(targetRow, 17).setValue(entry.supplier);
-            else sheet.getRange(targetRow, 17).clearContent();
+            if (entry.supplier && entry.supplier !== '') {
+                sheet.getRange(targetRow, 17).setValue(entry.supplier);
+            } else {
+                sheet.getRange(targetRow, 17).clearContent();
+            }
 
             // R: Remark
-            if (entry.remark && entry.remark !== '') sheet.getRange(targetRow, 18).setValue(entry.remark);
-            else sheet.getRange(targetRow, 18).clearContent();
+            if (entry.remark && entry.remark !== '') {
+                sheet.getRange(targetRow, 18).setValue(entry.remark);
+            } else {
+                sheet.getRange(targetRow, 18).clearContent();
+            }
 
         } else {
             // Package Module

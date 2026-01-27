@@ -2104,18 +2104,21 @@ async function saveEntryRM() {
                 showToast('กำลังบันทึกรายการที่ ' + (i + 1) + '/' + entriesToSave.length + '...');
             }
 
-            // Using fetch in await mode
+            // Using fetch in await mode with Form Data (More robust for GAS)
+            var formData = new URLSearchParams();
+            formData.append('action', 'add_rm');
+            formData.append('entry', JSON.stringify(entry));
+            // Also append sheet config in case backend supports dynamic sheet selection
+            formData.append('spreadsheetId', SHEET_CONFIG.rm.id);
+            formData.append('sheetName', SHEET_CONFIG.rm.sheetName);
+
             await fetch(APPS_SCRIPT_URL, {
                 method: "POST",
                 mode: "no-cors",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/x-www-form-urlencoded"
                 },
-                redirect: "follow",
-                body: JSON.stringify({
-                    action: 'add_rm',
-                    entry: entry
-                })
+                body: formData.toString()
             });
 
             // Small safety delay between writes

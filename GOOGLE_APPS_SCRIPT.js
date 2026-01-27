@@ -22,7 +22,6 @@ function doPost(e) {
         var lastRow = sheet.getLastRow();
         var targetRow = lastRow + 1;
 
-        // Scan for actual data in Column B
         if (lastRow > 1) {
             var range = sheet.getRange("B1:B" + lastRow).getValues();
             var foundData = false;
@@ -41,10 +40,14 @@ function doPost(e) {
         var entry = data.entry;
 
         if (data.action === 'add_rm') {
-            // --- SAFE WRITE FOR RM ---
-            // We write in BLOCKS to avoid touching Formula Columns (C, J, O)
-            // This prevents #REF! errors in ArrayFormulas
+            // --- CRITICAL FIX FOR FORMULAS ---
+            // 1. CLEAR the columns that contain ArrayFormulas (C, J, O) on the target row
+            //    This removes any "hardcoded" values blocking the formula expansion.
+            sheet.getRange(targetRow, 3).clearContent(); // Clear Col C (Name)
+            sheet.getRange(targetRow, 10).clearContent(); // Clear Col J (Balance)
+            sheet.getRange(targetRow, 15).clearContent(); // Clear Col O (DaysLeft)
 
+            // 2. Safe Write in blocks
             // Block 1: A-B (Date, Code)
             sheet.getRange(targetRow, 1, 1, 2).setValues([[
                 "'" + (entry.date || ''),
@@ -52,7 +55,6 @@ function doPost(e) {
             ]]);
 
             // Block 2: D-I (Type, ContQty, ContWt, Rem, In, Out)
-            // Skip Column C (Name)
             sheet.getRange(targetRow, 4, 1, 6).setValues([[
                 entry.type || '',
                 entry.containerQty || 0,
@@ -63,7 +65,6 @@ function doPost(e) {
             ]]);
 
             // Block 3: K-N (Lot, VendorLot, MFD, EXP)
-            // Skip Column J (Balance)
             sheet.getRange(targetRow, 11, 1, 4).setValues([[
                 entry.lotNo || '',
                 entry.vendorLot || '',
@@ -72,7 +73,6 @@ function doPost(e) {
             ]]);
 
             // Block 4: P-R (LotBal, Supplier, Remark)
-            // Skip Column O (DaysLeft)
             sheet.getRange(targetRow, 16, 1, 3).setValues([[
                 entry.lotBalance || 0,
                 entry.supplier || '',
@@ -80,7 +80,7 @@ function doPost(e) {
             ]]);
 
         } else {
-            // Package Module (Standard Row Append)
+            // Package Module Data
             var rowData = [
                 "'" + (entry.date || ''),
                 entry.productCode || '',

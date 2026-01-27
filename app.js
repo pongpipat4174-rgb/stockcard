@@ -2101,7 +2101,7 @@ async function saveEntryRM() {
                 mode: "no-cors",
                 cache: "no-cache",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "text/plain;charset=utf-8"
                 },
                 redirect: "follow",
                 body: JSON.stringify({

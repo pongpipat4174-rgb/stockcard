@@ -517,6 +517,13 @@ if (document.readyState === 'loading') {
 }
 
 const loadData = async () => {
+    // FORCE REFRESH: Clear stale local data to fix display issues
+    try {
+        console.log("Force Clearing Local Data...");
+        localStorage.removeItem('shrinkItems');
+        // localStorage.removeItem('shrinkTransactions'); // Keep transactions history if needed? Better clear to match items.
+    } catch (e) { }
+
     // 1. Try Online First
     if (API_URL) {
         try {

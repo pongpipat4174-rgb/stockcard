@@ -3,57 +3,64 @@ function doPost(e) {
     lock.tryLock(10000);
 
     try {
-        var data;
-        // Attempt to parse JSON content
-        try {
-            data = JSON.parse(e.postData.contents);
-        } catch (err) {
-            // Fallback if formatting is weird
-            data = e.parameter;
-        }
-
+        var data = JSON.parse(e.postData.contents);
         var sheetId, sheetName;
 
-        // Determine Logic based on ACTION
         if (data.action === 'add_rm') {
-            // --- RM (Raw Material) ---
-            // Use ID provided in request OR fallback to Hardcoded RM Sheet ID
-            sheetId = data.spreadsheetId || '1C3mPPxucPueSOfW4Hh7m4k3BjJ4ZHonqzc8j-JfQOfs';
-            sheetName = data.sheetName || 'Sheet1';
-
+            sheetId = '1C3mPPxucPueSOfW4Hh7m4k3BjJ4ZHonqzc8j-JfQOfs';
+            sheetName = 'Sheet1';
         } else {
-            // --- Package (Default) ---
-            // Use ID provided in request OR fallback to Hardcoded Package Sheet ID
-            sheetId = data.spreadsheetId || '1h6--jU1VAjrNwHY1TcCfWn9En_gl464fvMaheNPxaTU';
-            sheetName = data.sheetName || 'บันทึก StockCard';
+            sheetId = '1h6--jU1VAjrNwHY1TcCfWn9En_gl464fvMaheNPxaTU';
+            sheetName = 'บันทึก StockCard';
         }
 
-        // Open the Spreadsheet
         var ss = SpreadsheetApp.openById(sheetId);
         var sheet = ss.getSheetByName(sheetName);
+        if (!sheet) sheet = ss.getSheets()[0];
 
-        // Safety check: if sheet name not found, try to use the first sheet
-        if (!sheet) {
-            sheet = ss.getSheets()[0];
+        // ==========================================
+        // SMART APPEND LOGIC (Fixes "Last Line" Gap)
+        // ==========================================
+        // Check Column B (Product Code) to find the true last content row.
+        // This ignores empty rows that might have formatting.
+        var lastRow = sheet.getLastRow();
+        var targetRow = lastRow + 1;
+
+        // Scan upwards from the detected last row to find actual text
+        if (lastRow > 1) {
+            // Get all values in Column B up to lastRow
+            var range = sheet.getRange("B1:B" + lastRow).getValues();
+            var foundData = false;
+            for (var i = range.length - 1; i >= 0; i--) {
+                if (range[i][0] && range[i][0].toString().trim() !== "") {
+                    targetRow = i + 2; // Row index is i+1, so next is i+2
+                    foundData = true;
+                    break;
+                }
+            }
+            // If no data found in Col B, start at Row 2 (assuming Row 1 is Header)
+            if (!foundData) targetRow = 2;
+        } else {
+            targetRow = 2;
         }
 
         var entry = data.entry;
+        var rowData = [];
 
         if (data.action === 'add_rm') {
-            // Append RM Data (Columns match your RM Sheet Structure)
-            // A:Date, B:Code, C:Name, D:Type, E:Cont.Qty, F:Cont.Weight, G:Remainder, H:In, I:Out, J:Balance, K:Lot, L:VendorLot, M:MFD, N:EXP, O:DaysLeft, P:LotBal, Q:Supplier, R:Remark
-            sheet.appendRow([
-                "'" + entry.date,   // Force Text for Date
-                entry.productCode,
-                entry.productName,
-                entry.type,
+            // RM Data Structure (A-R)
+            rowData = [
+                "'" + (entry.date || ''), // Force Text
+                entry.productCode || '',
+                entry.productName || '',
+                entry.type || '',
                 entry.containerQty || 0,
                 entry.containerWeight || 0,
                 entry.remainder || 0,
                 entry.inQty || 0,
                 entry.outQty || 0,
-                entry.balance || 0, // Calculated balance (optional, usually formula)
-                entry.lotNo,
+                entry.balance || 0,
+                entry.lotNo || '',
                 entry.vendorLot || '',
                 entry.mfgDate || '',
                 entry.expDate || '',
@@ -61,29 +68,30 @@ function doPost(e) {
                 entry.lotBalance || 0,
                 entry.supplier || '',
                 entry.remark || ''
-            ]);
-
+            ];
         } else {
-            // Append Package Data (Columns match your Package Sheet Structure)
-            // A:Date, B:Code, C:Name, D:Type, E:In, F:Out, G:Balance, H:Lot, I:PK_ID, J:User, K:Ref, L:Time, M:Remark
-            sheet.appendRow([
-                "'" + entry.date,
-                entry.productCode,
-                entry.productName,
-                entry.type,
-                entry.inQty,
-                entry.outQty,
-                entry.balance,
-                entry.lotNo,
-                entry.pkId,
+            // Package Data Structure
+            rowData = [
+                "'" + (entry.date || ''),
+                entry.productCode || '',
+                entry.productName || '',
+                entry.type || '',
+                entry.inQty || 0,
+                entry.outQty || 0,
+                entry.balance || 0,
+                entry.lotNo || '',
+                entry.pkId || '',
                 entry.user || 'Admin',
-                entry.docRef,
+                entry.docRef || '',
                 new Date(),
-                entry.remark
-            ]);
+                entry.remark || ''
+            ];
         }
 
-        return ContentService.createTextOutput(JSON.stringify({ "result": "success" }))
+        // Write the data to the calculated targetRow
+        sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
+
+        return ContentService.createTextOutput(JSON.stringify({ "result": "success", "row": targetRow }))
             .setMimeType(ContentService.MimeType.JSON);
 
     } catch (e) {

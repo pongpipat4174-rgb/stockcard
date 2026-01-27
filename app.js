@@ -421,7 +421,16 @@ async function fetchPackageData() {
                 docRef: c[10]?.v || '',
                 remark: c[12]?.v || ''
             };
-        }).filter(function (item) { return item.productCode && item.productCode !== 'code'; });
+        }).filter(function (item) {
+            // Basic check
+            if (!item.productCode || item.productCode === 'code') return false;
+
+            // Exclude RM items (misrouted to Package Sheet)
+            if (item.type && typeof item.type === 'string' && item.type.includes('ผลิต')) return false;
+            if (item.pkId && typeof item.pkId === 'string' && item.pkId.startsWith('RM')) return false;
+
+            return true;
+        });
 
         var uniqueProducts = new Map();
         stockData.forEach(function (item) {
@@ -2106,6 +2115,8 @@ async function saveEntryRM() {
                 redirect: "follow",
                 body: JSON.stringify({
                     action: 'add_rm',
+                    spreadsheetId: SHEET_CONFIG.rm.id,
+                    sheetName: SHEET_CONFIG.rm.sheetName,
                     entry: entry
                 })
             });

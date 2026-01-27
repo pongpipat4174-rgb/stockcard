@@ -21,7 +21,6 @@ function doPost(e) {
         var lastRow = sheet.getLastRow();
         var targetRow = lastRow + 1;
 
-        // Smart Row Detection
         if (lastRow > 1) {
             var range = sheet.getRange("B1:B" + lastRow).getValues();
             var foundData = false;
@@ -41,47 +40,63 @@ function doPost(e) {
 
         if (data.action === 'add_rm') {
 
-            // --- INTELLIGENT WRITER ---
-            // 1. Check for formulas in the row ABOVE the target.
-            //    If formulas exist (Drag-down style), COPY them to the new row.
-            //    If no formula (ArrayFormula style), CLEAR the new row to let ArrayFormula expand.
-
-            var formulaCols = [3, 10, 15, 16]; // C, J, O, P
-
+            // --- CLEANER & SMARTER SAVE ---
+            // 1. Copy Formulas from row above (C, J, O, P)
+            var formulaCols = [3, 10, 15, 16];
             if (targetRow > 2) {
                 formulaCols.forEach(function (col) {
                     var prevCell = sheet.getRange(targetRow - 1, col);
                     var targetCell = sheet.getRange(targetRow, col);
-
                     if (prevCell.getFormula() !== "") {
-                        // Case A: Drag-Down Formula detected -> Copy it down
                         prevCell.copyTo(targetCell, SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
                     } else {
-                        // Case B: No formula (likely ArrayFormula or Value) -> Clear to be safe
                         targetCell.clearContent();
                     }
                 });
-            } else {
-                // If writing to row 2 (first data row), just clear.
-                formulaCols.forEach(function (col) {
-                    sheet.getRange(targetRow, col).clearContent();
-                });
             }
 
-            // 2. Write Data Blocks (Same as before)
-            sheet.getRange(targetRow, 1, 1, 2).setValues([["'" + (entry.date || ''), entry.productCode || '']]); // A,B
+            // Helper to set value only if not empty/zero (to keep cells clean for formulas)
+            function setCleanValue(row, col, val) {
+                if (val !== null && val !== undefined && val !== '' && val !== 0) {
+                    sheet.getRange(row, col).setValue(val);
+                } else {
+                    sheet.getRange(row, col).clearContent();
+                }
+            }
 
-            sheet.getRange(targetRow, 4, 1, 6).setValues([[
-                entry.type || '', entry.containerQty || 0, entry.containerWeight || 0,
-                entry.remainder || 0, entry.inQty || 0, entry.outQty || 0
-            ]]); // D-I
+            // Helper for Text (allow 0 if needed, but usually empty string is cleared)
+            function setText(row, col, val) {
+                if (val) sheet.getRange(row, col).setValue(val);
+                else sheet.getRange(row, col).clearContent();
+            }
 
-            sheet.getRange(targetRow, 11, 1, 4).setValues([[
-                entry.lotNo || '', entry.vendorLot || '', entry.mfgDate || '', entry.expDate || ''
-            ]]); // K-N
+            // A: Date (Force Text), B: Code
+            sheet.getRange(targetRow, 1).setValue("'" + (entry.date || ''));
+            setText(targetRow, 2, entry.productCode);
 
-            sheet.getRange(targetRow, 17).setValue(entry.supplier || ''); // Q
-            sheet.getRange(targetRow, 18).setValue(entry.remark || ''); // R
+            // D: Type
+            setText(targetRow, 4, entry.type);
+
+            // E, F, G: Container Info (Only set if > 0)
+            setCleanValue(targetRow, 5, entry.containerQty);
+            setCleanValue(targetRow, 6, entry.containerWeight);
+            setCleanValue(targetRow, 7, entry.remainder);  // Column G - Clean!
+
+            // H: In, I: Out (Only set if > 0)
+            setCleanValue(targetRow, 8, entry.inQty);      // Column H - Clean!
+            setCleanValue(targetRow, 9, entry.outQty);
+
+            // K: Lot
+            setText(targetRow, 11, entry.lotNo);
+
+            // L, M, N: Vendor, MFD, EXP
+            setText(targetRow, 12, entry.vendorLot);
+            setText(targetRow, 13, entry.mfgDate);
+            setText(targetRow, 14, entry.expDate);
+
+            // Q: Supplier, R: Remark
+            setText(targetRow, 17, entry.supplier);
+            setText(targetRow, 18, entry.remark);
 
         } else {
             // Package Module

@@ -18,60 +18,70 @@ function doPost(e) {
         var sheet = ss.getSheetByName(sheetName);
         if (!sheet) sheet = ss.getSheets()[0];
 
-        // ==========================================
-        // SMART APPEND LOGIC (Fixes "Last Line" Gap)
-        // ==========================================
-        // Check Column B (Product Code) to find the true last content row.
-        // This ignores empty rows that might have formatting.
+        // Find Last Row Logic
         var lastRow = sheet.getLastRow();
         var targetRow = lastRow + 1;
 
-        // Scan upwards from the detected last row to find actual text
+        // Scan for actual data in Column B
         if (lastRow > 1) {
-            // Get all values in Column B up to lastRow
             var range = sheet.getRange("B1:B" + lastRow).getValues();
             var foundData = false;
             for (var i = range.length - 1; i >= 0; i--) {
                 if (range[i][0] && range[i][0].toString().trim() !== "") {
-                    targetRow = i + 2; // Row index is i+1, so next is i+2
+                    targetRow = i + 2;
                     foundData = true;
                     break;
                 }
             }
-            // If no data found in Col B, start at Row 2 (assuming Row 1 is Header)
             if (!foundData) targetRow = 2;
         } else {
             targetRow = 2;
         }
 
         var entry = data.entry;
-        var rowData = [];
 
         if (data.action === 'add_rm') {
-            // RM Data Structure (A-R)
-            rowData = [
-                "'" + (entry.date || ''), // Force Text
-                entry.productCode || '',
-                entry.productName || '',
+            // --- SAFE WRITE FOR RM ---
+            // We write in BLOCKS to avoid touching Formula Columns (C, J, O)
+            // This prevents #REF! errors in ArrayFormulas
+
+            // Block 1: A-B (Date, Code)
+            sheet.getRange(targetRow, 1, 1, 2).setValues([[
+                "'" + (entry.date || ''),
+                entry.productCode || ''
+            ]]);
+
+            // Block 2: D-I (Type, ContQty, ContWt, Rem, In, Out)
+            // Skip Column C (Name)
+            sheet.getRange(targetRow, 4, 1, 6).setValues([[
                 entry.type || '',
                 entry.containerQty || 0,
                 entry.containerWeight || 0,
                 entry.remainder || 0,
                 entry.inQty || 0,
-                entry.outQty || 0,
-                entry.balance || 0,
+                entry.outQty || 0
+            ]]);
+
+            // Block 3: K-N (Lot, VendorLot, MFD, EXP)
+            // Skip Column J (Balance)
+            sheet.getRange(targetRow, 11, 1, 4).setValues([[
                 entry.lotNo || '',
                 entry.vendorLot || '',
                 entry.mfgDate || '',
-                entry.expDate || '',
-                entry.daysLeft || '',
+                entry.expDate || ''
+            ]]);
+
+            // Block 4: P-R (LotBal, Supplier, Remark)
+            // Skip Column O (DaysLeft)
+            sheet.getRange(targetRow, 16, 1, 3).setValues([[
                 entry.lotBalance || 0,
                 entry.supplier || '',
                 entry.remark || ''
-            ];
+            ]]);
+
         } else {
-            // Package Data Structure
-            rowData = [
+            // Package Module (Standard Row Append)
+            var rowData = [
                 "'" + (entry.date || ''),
                 entry.productCode || '',
                 entry.productName || '',
@@ -86,10 +96,8 @@ function doPost(e) {
                 new Date(),
                 entry.remark || ''
             ];
+            sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
         }
-
-        // Write the data to the calculated targetRow
-        sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
 
         return ContentService.createTextOutput(JSON.stringify({ "result": "success", "row": targetRow }))
             .setMimeType(ContentService.MimeType.JSON);

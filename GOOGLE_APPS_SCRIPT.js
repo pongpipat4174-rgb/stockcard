@@ -43,17 +43,17 @@ function doPost(e) {
 
             // --- 1. Copy Formulas from Row Above ---
             // We check C(3), J(10), O(15), P(16)
+            // Also adding L(12), M(13), N(14) in case they are formulas
             if (targetRow > 2) {
                 var prevRow = targetRow - 1;
-                var colsToCheck = [3, 10, 15, 16];
+                var colsToCheck = [3, 10, 12, 13, 14, 15, 16];
                 for (var k = 0; k < colsToCheck.length; k++) {
                     var colIndex = colsToCheck[k];
                     var prevCell = sheet.getRange(prevRow, colIndex);
                     if (prevCell.getFormula() !== "") {
                         prevCell.copyTo(sheet.getRange(targetRow, colIndex), SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
-                    } else {
-                        sheet.getRange(targetRow, colIndex).clearContent();
                     }
+                    // If not formula, we will handle it in step 2
                 }
             }
 
@@ -69,8 +69,13 @@ function doPost(e) {
                 sheet.getRange(targetRow, 2).clearContent();
             }
 
-            // C: Name (Formula) -> ALWAYS CLEAR
-            sheet.getRange(targetRow, 3).clearContent();
+            // C: Name (Formula) -> ALWAYS CLEAR (Formula copied above will populate if it was dragged)
+            // Check if we already copied a formula there? No, explicit clear is safer for ArrayFormula.
+            // BUT if it's drag down formula, we just copied it. 
+            // Logic: If range has formula now (from step 1), DON'T clear.
+            if (sheet.getRange(targetRow, 3).getFormula() === "") {
+                sheet.getRange(targetRow, 3).clearContent();
+            }
 
             // D: Type
             if (entry.type && entry.type !== '') {
@@ -114,8 +119,10 @@ function doPost(e) {
                 sheet.getRange(targetRow, 9).clearContent();
             }
 
-            // J: Balance (Formula) -> ALWAYS CLEAR
-            sheet.getRange(targetRow, 10).clearContent();
+            // J: Balance (Formula)
+            if (sheet.getRange(targetRow, 10).getFormula() === "") {
+                sheet.getRange(targetRow, 10).clearContent();
+            }
 
             // K: Lot No
             if (entry.lotNo && entry.lotNo !== '') {
@@ -124,40 +131,39 @@ function doPost(e) {
                 sheet.getRange(targetRow, 11).clearContent();
             }
 
-            // --- DATA MISSING FIX (L, M, N) ---
-            // For 'Withdraw' (Out), these fields are often missing in 'entry'
-            // BUT for the ArrayFormula/Lookups to work, we must Ensure they are CLEARED if missing.
-            // AND importantly, column L, M, N might be formulas themselves in some setups?
-            // Assuming they are data fields:
-
             // L: Vendor Lot
-            if (entry.vendorLot && entry.vendorLot !== '') {
-                sheet.getRange(targetRow, 12).setValue(entry.vendorLot);
-            } else {
-                sheet.getRange(targetRow, 12).clearContent();
+            // Only write if NOT a formula (meaning we didn't copy one in Step 1)
+            if (sheet.getRange(targetRow, 12).getFormula() === "") {
+                if (entry.vendorLot && entry.vendorLot !== '') {
+                    sheet.getRange(targetRow, 12).setValue(entry.vendorLot);
+                } else {
+                    sheet.getRange(targetRow, 12).clearContent();
+                }
             }
 
             // M: MFD
-            if (entry.mfgDate && entry.mfgDate !== '') {
-                // Check if user is sending date format or string
-                sheet.getRange(targetRow, 13).setValue(entry.mfgDate);
-            } else {
-                sheet.getRange(targetRow, 13).clearContent();
+            if (sheet.getRange(targetRow, 13).getFormula() === "") {
+                if (entry.mfgDate && entry.mfgDate !== '') {
+                    sheet.getRange(targetRow, 13).setValue(entry.mfgDate);
+                } else {
+                    sheet.getRange(targetRow, 13).clearContent();
+                }
             }
 
             // N: EXP
-            if (entry.expDate && entry.expDate !== '') {
-                sheet.getRange(targetRow, 14).setValue(entry.expDate);
-            } else {
-                sheet.getRange(targetRow, 14).clearContent();
+            if (sheet.getRange(targetRow, 14).getFormula() === "") {
+                if (entry.expDate && entry.expDate !== '') {
+                    sheet.getRange(targetRow, 14).setValue(entry.expDate);
+                } else {
+                    sheet.getRange(targetRow, 14).clearContent();
+                }
             }
 
-            // O, P (Formulas) -> ALWAYS CLEAR
-            sheet.getRange(targetRow, 15).clearContent();
-            sheet.getRange(targetRow, 16).clearContent();
+            // O, P (Formulas)
+            if (sheet.getRange(targetRow, 15).getFormula() === "") sheet.getRange(targetRow, 15).clearContent();
+            if (sheet.getRange(targetRow, 16).getFormula() === "") sheet.getRange(targetRow, 16).clearContent();
 
             // Q: Supplier
-            // Fix: If this is OUT/Withdraw, supplier might be empty.
             if (entry.supplier && entry.supplier !== '') {
                 sheet.getRange(targetRow, 17).setValue(entry.supplier);
             } else {
@@ -171,8 +177,6 @@ function doPost(e) {
                 sheet.getRange(targetRow, 18).clearContent();
             }
 
-            // --- EXTRA FORCE RECALCULATE TRICK ---
-            // Sometimes clearing is not enough. Flushing updates helps.
             SpreadsheetApp.flush();
 
         } else {

@@ -30,77 +30,69 @@ function doPost(e) {
 
         if (data.action === 'add_rm') {
 
-            // 1. Copy Formulas (Safety First)
+            // 1. Copy Formulas
             if (targetRow > 2) {
                 var sourceRange = sheet.getRange(targetRow - 1, 1, 1, 18);
                 var destRange = sheet.getRange(targetRow, 1, 1, 18);
                 sourceRange.copyTo(destRange, SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
             }
 
-            // 2. CHECK Formulas
+            // 2. Check Formulas
             var targetRange = sheet.getRange(targetRow, 1, 1, 18);
             var formulas = targetRange.getFormulas()[0];
 
-            // 3. Prevent Overwrite on Specific Request Columns (G, H, O, P, Q)
-            // Even if they are empty of formulas now, User insists they should be formulas or cleared?
-            // Actually, user says "Data overwrites G H O P Q".
-            // O, P are Days/LotBal -> Formulas.
-            // Q is Supplier -> Formula.
-            // G is Remainder -> Might be formula?
-            // H is In -> Might be formula?
-
-            // Strategy: Force these specific columns to be treated as "Do Not Write" if user setup implies they are formulas.
-            // HOWEVER, normally H (In) is data input. If user says H is overwritten, maybe they have formula in H?
-            // Let's rely strictly on `formulas[i] !== ""` check.
-            // AND explicit overrides for O, P, Q.
-
+            // 3. Prepare Map
             var map = [];
             map[0] = "'" + (entry.date || "");
             map[1] = entry.productCode || "";
-            // map[2] Name -> Skip
+            map[2] = null; // Skip Name
             map[3] = entry.type || "";
 
-            // E,F (Container)
+            // E,F (Container) -> Write info
             map[4] = (entry.containerQty !== undefined && entry.containerQty !== "") ? entry.containerQty : null;
             map[5] = (entry.containerWeight !== undefined && entry.containerWeight !== "") ? entry.containerWeight : null;
 
-            // G (Remainder) -> Check formula? Map it, but logic below will skip if formula exists. 
-            map[6] = (entry.remainder !== undefined && entry.remainder !== "") ? entry.remainder : null;
+            // G (Remainder), H (In) -> USER SAYS NO RIGHT ALIGN NUMBERS HERE? 
+            // No, user says "Don't put numbers in G H (right)". 
+            // In image: G, H contains 0.00 0.00.
+            // This likely breaks ArrayFormula if G/H are calculated.
+            // User request: "ไม่ต้องใส่ตัวเลขไปขวา G H" -> Do not put numbers to the right (G H).
+            // This implies: Treat G and H like O, P, Q. DO NOT WRITE DATA. CLEAR them to let formula work.
 
-            // H (In) -> Check formula?
-            map[7] = (entry.inQty !== undefined && entry.inQty !== "") ? entry.inQty : null;
+            map[6] = null; // G (Remainder) -> Clear to let ArrayFormula work
+            map[7] = null; // H (In) -> Clear to let ArrayFormula work? 
+            // Wait, 'In' usually is data entry. But if user says "Don't put numbers", maybe for THIS transaction type?
+            // Or maybe H is always calculated?
+            // Let's Follow User Command: "Don't put numbers in G H".
+            // So we Force Clear G and H.
 
-            // I (Out)
+            // I (Out) -> User didn't mention I. Keep writing Out?
+            // Image shows Out (I) has value. G, H have 0.00.
             map[8] = (entry.outQty !== undefined && entry.outQty !== "") ? entry.outQty : null;
 
             // J Balance -> Skip
+            map[9] = null;
+
             map[10] = entry.lotNo || "";
             map[11] = (entry.vendorLot !== undefined && entry.vendorLot !== "") ? entry.vendorLot : null;
             map[12] = (entry.mfgDate !== undefined && entry.mfgDate !== "") ? entry.mfgDate : null;
             map[13] = (entry.expDate !== undefined && entry.expDate !== "") ? entry.expDate : null;
 
-            // O, P, Q -> Override: FORCE NULL (Clear/Skip) if we want to respect formulas 100%
-            // User specifically complained about O,P,Q. 
-            // We will map them as null, but if they have formula, the loop below skips them anyway.
-            // If they DON'T have formula (e.g. ArrayFormula spilled from top), we must write "" (Clear) to let them spill.
-            // But wait, if we write ""/null, does it clear the cell? Yes.
-
-            // Special Handling for O, P, Q: Use null (Clear)
-            map[14] = null; // O
-            map[15] = null; // P
-            map[16] = null; // Q (Supplier) - User says data overwritten, so we clear it.
+            // O, P, Q -> Clear
+            map[14] = null;
+            map[15] = null;
+            map[16] = null;
 
             map[17] = entry.remark || "";
+
 
             var requests = [];
             var currentBatchVal = [];
             var currentBatchStart = -1;
 
             for (var i = 0; i < 18; i++) {
-                var isUserClaimedFormulaCol = (i === 6 || i === 7 || i === 14 || i === 15 || i === 16); // G, H, O, P, Q
                 var hasFormula = (formulas[i] !== "");
 
-                // If it has a formula, we SKIP (preserve formula).
                 if (hasFormula) {
                     if (currentBatchStart !== -1) {
                         requests.push({ col: currentBatchStart + 1, vals: [currentBatchVal] });
@@ -110,30 +102,8 @@ function doPost(e) {
                     continue;
                 }
 
-                // If it does NOT have a formula...
-                // For O, P, Q (and maybe G, H if user implies):
-                // If user implies these shouldn't be overwritten with data, we should ensure we write NULL implies clear?
-                // Actually, if map[i] is null, we write "".
-
-                // Special Case: G(6), H(7). User complained they are overwritten.
-                // If they are regular data inputs (Remainder, In), we SHOULD write them.
-                // Unleeeess user has a formula there too?
-                // If `formulas[i]` detected it, we already skipped.
-                // If `formulas[i]` didn't detect it, maybe it's ArrayFormula?
-                // If ArrayFormula, we MUST Clear (write "").
-
-                // NOTE: If G or H are inputs, we shouldn't force clear them unless we are sure.
-                // But user request "เอาข้อมูลที่บันทึกไปทับ...แก้ไขให้สูตรเดิมทำงานปกติ" implies G/H are formulas.
-                // So if map has value, but user says it's formula... logic conflict?
-                // Likely user means "If I didn't send data, don't write 0/blank to block formula".
-                // My code handles null -> writes "".
-
                 if (currentBatchStart === -1) currentBatchStart = i;
                 var valToWrite = (map[i] === null || map[i] === undefined) ? "" : map[i];
-
-                // G/H Protection: If user sends data, we write. If Map is null, we write "" (Clear).
-                // This allows ArrayFormula to work if no data sent.
-
                 currentBatchVal.push(valToWrite);
             }
 

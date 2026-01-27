@@ -1,20 +1,12 @@
 function doPost(e) {
-    // Use a simpler lock approach or skip if causing issues, 
-    // but generally good to keep. Let's try 10s lock.
     var lock = LockService.getScriptLock();
 
     try {
-        // Try lock for 10 seconds
+        // Lock for 10 seconds
         lock.tryLock(10000);
-
-        var output = {};
-        if (!e || !e.postData || !e.postData.contents) {
-            throw new Error("No post data received");
-        }
 
         var data = JSON.parse(e.postData.contents);
 
-        // Determine Sheet
         var sheetId = (data.action === 'add_rm') ? '1C3mPPxucPueSOfW4Hh7m4k3BjJ4ZHonqzc8j-JfQOfs' : '1h6--jU1VAjrNwHY1TcCfWn9En_gl464fvMaheNPxaTU';
         var sheetName = (data.action === 'add_rm') ? 'Sheet1' : 'บันทึก StockCard';
 
@@ -22,110 +14,125 @@ function doPost(e) {
         var sheet = ss.getSheetByName(sheetName);
         if (!sheet) sheet = ss.getSheets()[0];
 
-        // --- ROBUST ROW FINDING ---
-        // If getLastRow() is unreliable due to formulas/formatting.
+        // --- Fast Row Detection ---
         var lastRow = sheet.getLastRow();
-        var targetRow = lastRow + 1; // Default append
-
-        // Intelligent scan for REAL last data row in Col B
+        var targetRow = lastRow + 1;
         if (lastRow > 0) {
-            // Read Col B (Product Code) to find last non-empty cell
+            // Grab last 50 rows of Col B to check (faster than getting all if large sheet, but all is safer for "holes")
+            // Let's stick to reading all B for robustness but it's one call.
             var values = sheet.getRange("B1:B" + lastRow).getValues();
-            var realLastRow = 0;
             for (var i = values.length - 1; i >= 0; i--) {
                 if (values[i][0] && String(values[i][0]).trim() !== "") {
-                    realLastRow = i + 1;
+                    targetRow = i + 2;
                     break;
                 }
             }
-            targetRow = realLastRow + 1;
         }
-        if (targetRow < 2) targetRow = 2; // Always start at least at row 2
+        if (targetRow < 2) targetRow = 2;
 
         var entry = data.entry;
-        if (!entry) throw new Error("No entry data provided.");
+        var resultInfo = { "result": "success", "row": targetRow };
 
         if (data.action === 'add_rm') {
+            // --- OPTIMIZED BATCH WRITE ---
 
-            // --- 1. PRESERVE FORMULAS ---
-            // Before writing anything, ensure we are not breaking drag-down formulas.
-            // We COPY formulas from the row above (targetRow - 1) to the targetRow.
+            // 1. Copy ALL formulas from previous row in ONE call
+            // Assuming columns A-R (1-18)
             if (targetRow > 2) {
-                var prevRow = targetRow - 1;
-                // Columns likely to have formulas: C(3), J(10), maybe L-R?
-                var formulaCols = [3, 10, 15, 16, 17]; // C, J, O, P, Q
+                var sourceRange = sheet.getRange(targetRow - 1, 1, 1, 18);
+                var destRange = sheet.getRange(targetRow, 1, 1, 18);
+                sourceRange.copyTo(destRange, SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
+            }
 
-                formulaCols.forEach(function (col) {
-                    var prevCell = sheet.getRange(prevRow, col);
-                    if (prevCell.getFormula() !== "") {
-                        prevCell.copyTo(sheet.getRange(targetRow, col), SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
+            // 2. Get current formulas of the target row to decide where to write
+            // (This tells us which cells got a formula from the copy)
+            var targetRange = sheet.getRange(targetRow, 1, 1, 18);
+            var formulas = targetRange.getFormulas()[0]; // Array of 18 strings
+
+            // 3. Prepare Data Map
+            // We map column index (0-based) to the value we WANT to write.
+            // Use 'undefined' if checking formula, or specific value.
+            var map = [];
+            // A(0): Date
+            map[0] = "'" + (entry.date || "");
+            // B(1): Code
+            map[1] = entry.productCode || "";
+            // C(2): Name (Formula) -> check formula
+            // D(3): Type
+            map[3] = entry.type || "";
+            // E-G(4-6): Container
+            map[4] = (entry.containerQty !== undefined && entry.containerQty !== "") ? entry.containerQty : null; // null means clear
+            map[5] = (entry.containerWeight !== undefined && entry.containerWeight !== "") ? entry.containerWeight : null;
+            map[6] = (entry.remainder !== undefined && entry.remainder !== "") ? entry.remainder : null;
+            // H-I(7-8): In/Out
+            map[7] = (entry.inQty !== undefined && entry.inQty !== "") ? entry.inQty : null;
+            map[8] = (entry.outQty !== undefined && entry.outQty !== "") ? entry.outQty : null;
+            // J(9): Balance (Formula)
+            // K(10): Lot
+            map[10] = entry.lotNo || "";
+            // L-N(11-13): Vendor...
+            map[11] = (entry.vendorLot !== undefined && entry.vendorLot !== "") ? entry.vendorLot : null;
+            map[12] = (entry.mfgDate !== undefined && entry.mfgDate !== "") ? entry.mfgDate : null;
+            map[13] = (entry.expDate !== undefined && entry.expDate !== "") ? entry.expDate : null;
+            // O-P(14-15): Formulas
+            // Q(16): Supplier
+            map[16] = (entry.supplier !== undefined && entry.supplier !== "") ? entry.supplier : null;
+            // R(17): Remark
+            map[17] = entry.remark || "";
+
+            // 4. Construct Batches
+            // We iterate 0 to 17. 
+            // If formulas[i] is NOT empty -> Skip (do not overwrite formula).
+            // If formulas[i] IS empty -> Add to current batch.
+
+            var requests = [];
+            var currentBatchVal = [];
+            var currentBatchStart = -1;
+
+            for (var i = 0; i < 18; i++) {
+                var hasFormula = (formulas[i] !== "");
+
+                // Should we write to this cell?
+                // Yes, if NO formula exists.
+                if (!hasFormula) {
+                    // If we are starting a new batch
+                    if (currentBatchStart === -1) {
+                        currentBatchStart = i;
                     }
+                    // Add value to batch (handle null as "")
+                    var valToWrite = (map[i] === null || map[i] === undefined) ? "" : map[i];
+                    currentBatchVal.push(valToWrite);
+                } else {
+                    // This cell has a formula. specific skip.
+                    // If we have an active batch, verify if we need to close it.
+                    if (currentBatchStart !== -1) {
+                        // Close current batch
+                        requests.push({
+                            col: currentBatchStart + 1, // 1-based
+                            vals: [currentBatchVal] // 2D array for setValues
+                        });
+                        currentBatchVal = [];
+                        currentBatchStart = -1;
+                    }
+                }
+            }
+            // Close trailing batch
+            if (currentBatchStart !== -1) {
+                requests.push({
+                    col: currentBatchStart + 1,
+                    vals: [currentBatchVal]
                 });
             }
 
-            // --- 2. WRITE DATA BLOCK ---
-            // Write standard fields directly.
-
-            // A: Date
-            sheet.getRange(targetRow, 1).setValue("'" + (entry.date || ""));
-            // B: Code
-            sheet.getRange(targetRow, 2).setValue(entry.productCode || "");
-
-            // C: Name -> SKIP (Formula) - Just in case user wants us to clear if no formula?
-            if (sheet.getRange(targetRow, 3).getFormula() === "") sheet.getRange(targetRow, 3).clearContent();
-
-            // D: Type
-            sheet.getRange(targetRow, 4).setValue(entry.type || "");
-
-            // E, F, G: Container (Handle 0 vs Empty)
-            // If 0, we write 0. If null/undefined, we clear.
-            var setValOrClear = function (col, val) {
-                if (val !== undefined && val !== null && val !== "") sheet.getRange(targetRow, col).setValue(val);
-                else sheet.getRange(targetRow, col).clearContent();
-            };
-
-            setValOrClear(5, entry.containerQty);
-            setValOrClear(6, entry.containerWeight);
-            setValOrClear(7, entry.remainder);
-
-            // H, I: In/Out
-            setValOrClear(8, entry.inQty);
-            setValOrClear(9, entry.outQty);
-
-            // J: Balance -> SKIP (Formula)
-            if (sheet.getRange(targetRow, 10).getFormula() === "") sheet.getRange(targetRow, 10).clearContent();
-
-            // K: Lot No
-            sheet.getRange(targetRow, 11).setValue(entry.lotNo || "");
-
-            // L, M, N: Vendor, MFD, EXP
-            // Only write if cell is NOT a formula (preserved from copy above)
-            if (sheet.getRange(targetRow, 12).getFormula() === "") setValOrClear(12, entry.vendorLot);
-            if (sheet.getRange(targetRow, 13).getFormula() === "") setValOrClear(13, entry.mfgDate);
-            if (sheet.getRange(targetRow, 14).getFormula() === "") setValOrClear(14, entry.expDate);
-
-            // O: Days -> SKIP (Formula)
-            // Check if formula exists (from copy). If not, clear it.
-            if (sheet.getRange(targetRow, 15).getFormula() === "") sheet.getRange(targetRow, 15).clearContent();
-
-            // P: Lot Bal -> SKIP (Formula)
-            if (sheet.getRange(targetRow, 16).getFormula() === "") sheet.getRange(targetRow, 16).clearContent();
-
-            // Q: Supplier
-            // If formula exists (ArrayFormula or copied), SKIP. Else write user input if provided, else Clear.
-            if (sheet.getRange(targetRow, 17).getFormula() === "") {
-                // User provided supplier?
-                if (entry.supplier) sheet.getRange(targetRow, 17).setValue(entry.supplier);
-                else sheet.getRange(targetRow, 17).clearContent();
-            }
-
-            // R: Remark
-            sheet.getRange(targetRow, 18).setValue(entry.remark || "");
+            // 5. Execute Batches (Few calls as possible)
+            requests.forEach(function (req) {
+                sheet.getRange(targetRow, req.col, 1, req.vals[0].length).setValues(req.vals);
+            });
 
             SpreadsheetApp.flush();
 
         } else {
-            // --- Package Module ---
+            // --- Package Module (Already fast 1-call) ---
             var rowData = [
                 "'" + (entry.date || ''),
                 entry.productCode || '',
@@ -144,10 +151,10 @@ function doPost(e) {
             sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
         }
 
-        return ContentService.createTextOutput(JSON.stringify({ "result": "success", "row": targetRow })).setMimeType(ContentService.MimeType.JSON);
+        return ContentService.createTextOutput(JSON.stringify(resultInfo)).setMimeType(ContentService.MimeType.JSON);
 
     } catch (e) {
-        return ContentService.createTextOutput(JSON.stringify({ "result": "error", "error": e.toString() + " Stack: " + e.stack })).setMimeType(ContentService.MimeType.JSON);
+        return ContentService.createTextOutput(JSON.stringify({ "result": "error", "error": e.toString() })).setMimeType(ContentService.MimeType.JSON);
     } finally {
         try { lock.releaseLock(); } catch (e) { }
     }

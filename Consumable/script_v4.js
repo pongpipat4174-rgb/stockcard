@@ -521,51 +521,58 @@ const loadData = async () => {
     try {
         console.log("Force Clearing Local Data...");
         localStorage.removeItem('shrinkItems');
-        // localStorage.removeItem('shrinkTransactions'); // Keep transactions history if needed? Better clear to match items.
     } catch (e) { }
 
     // 1. Try Online First
     if (API_URL) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased timeout to 10s
 
             // Add t parameter for cache busting and sheet parameter for data separation
             const response = await fetch(`${API_URL}?action=load_all&sheet=Consumable&t=${Date.now()}`, { signal: controller.signal });
             clearTimeout(timeoutId);
 
-            if (!response.ok) throw new Error("Network response was not ok");
+            if (!response.ok) throw new Error("Network response was not ok: " + response.statusText);
 
             const data = await response.json();
+
+            if (data.error) {
+                alert("Google Script Error: " + data.error);
+                throw new Error(data.error);
+            }
 
             if (data.items && Array.isArray(data.items) && data.items.length > 0) {
                 // Map Thai headers if present
                 let loadedItems = data.items;
-                if (loadedItems[0]["ชื่อสินค้า"]) {
-                    console.log("Mapping Thai Headers...");
-                    loadedItems = loadedItems.map(row => ({
-                        name: row["ชื่อสินค้า"],
-                        category: row["ประเภท"] || 'weight',
-                        stockCartons: parseFloat(row["สต็อก (ลัง)"] || row["สต๊อก (ลัง)"] || row["คงเหลือปัจจุบัน (ลัง)"] || 0),
-                        stockPartialKg: parseFloat(row["เศษ(กก.)"] || row["เศษ (กก.)"] || 0),
-                        kgPerCarton: parseFloat(row["กก./ลัง"] || row["น้ำหนักต่อลัง (kg)"] || 25),
-                        pcsPerKg: parseFloat(row["ชิ้น/กก.1"] || row["ชิ้น/กก."] || row["จำนวนซองต่อ กก."] || 0),
-                        minThreshold: parseFloat(row["จุดสั่งซื้อ (กก.)"] || row["แจ้งเตือนเมื่อต่ำกว่า (กก.)"] || 0),
-                        pcsPerPack: parseFloat(row["ชิ้นงาน/ถุง"] || row["จำนวนชิ้นงาน ต่อ 1 ถุงชริ้ง"] || 1),
-                        fgPcsPerCarton: parseFloat(row["ชิ้น FG/ลัง"] || row["จำนวนชิ้น FG ต่อลัง"] || 1),
-                        // New Fields
-                        rollLength: parseFloat(row["ความยาวม้วน (ม.)"] || 0),
-                        cutLength: parseFloat(row["ความยาวตัด (มม.)"] || 0),
-                        pcsPerRoll: parseFloat(row["ชิ้น/ม้วน"] || 0),
-                        fgYieldPerRoll: parseFloat(row["Yield/ม้วน"] || 0),
-                        stockCode: row["StockCode"] || row["รหัสสต็อก"] || ""
-                    }));
+                // ... (Logic for mapping) ...
+                if (loadedItems[0]["ชื่อสินค้า"] || loadedItems[0]["name"]) {
+                    // Check if it's the raw format or mapped format
+                    const row = loadedItems[0];
+                    if (row["ชื่อสินค้า"]) {
+                        console.log("Mapping Thai Headers...");
+                        loadedItems = loadedItems.map(row => ({
+                            name: row["ชื่อสินค้า"],
+                            category: row["ประเภท"] || 'weight',
+                            stockCartons: parseFloat(row["สต็อก (ลัง)"] || row["สต๊อก (ลัง)"] || row["คงเหลือปัจจุบัน (ลัง)"] || 0),
+                            stockPartialKg: parseFloat(row["เศษ(กก.)"] || row["เศษ (กก.)"] || 0),
+                            kgPerCarton: parseFloat(row["กก./ลัง"] || row["น้ำหนักต่อลัง (kg)"] || 25),
+                            pcsPerKg: parseFloat(row["ชิ้น/กก.1"] || row["ชิ้น/กก."] || row["จำนวนซองต่อ กก."] || 0),
+                            minThreshold: parseFloat(row["จุดสั่งซื้อ (กก.)"] || row["แจ้งเตือนเมื่อต่ำกว่า (กก.)"] || 0),
+                            pcsPerPack: parseFloat(row["ชิ้นงาน/ถุง"] || row["จำนวนชิ้นงาน ต่อ 1 ถุงชริ้ง"] || 1),
+                            fgPcsPerCarton: parseFloat(row["ชิ้น FG/ลัง"] || row["จำนวนชิ้น FG ต่อลัง"] || 1),
+                            rollLength: parseFloat(row["ความยาวม้วน (ม.)"] || 0),
+                            cutLength: parseFloat(row["ความยาวตัด (มม.)"] || 0),
+                            pcsPerRoll: parseFloat(row["ชิ้น/ม้วน"] || 0),
+                            fgYieldPerRoll: parseFloat(row["Yield/ม้วน"] || 0),
+                            stockCode: row["StockCode"] || row["รหัสสต็อก"] || ""
+                        }));
+                    }
                 }
 
                 items = loadedItems;
 
                 if (data.transactions && Array.isArray(data.transactions)) {
-                    // Similar mapping for transactions if needed, strictly safe
                     let loadedTrans = data.transactions;
                     if (loadedTrans.length > 0 && (loadedTrans[0]["ชื่อสินค้า"] || loadedTrans[0]["วันที่"])) {
                         loadedTrans = loadedTrans.map(row => ({
@@ -585,12 +592,15 @@ const loadData = async () => {
 
                 console.log(`Loaded ${items.length} items from Cloud.`);
                 return; // Success!
+            } else {
+                alert("Connected to Sheet but found 0 items! Check Sheet Name in Script.");
             }
 
             console.log("Cloud returned 0 items. Falling back to Local...");
 
         } catch (e) {
-            console.warn("Online load failed (using offline):", e);
+            console.warn("Online load failed:", e);
+            alert("Connection Failed: " + e.message + "\n\nChecking: " + API_URL);
         }
     }
 

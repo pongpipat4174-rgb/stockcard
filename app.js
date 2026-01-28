@@ -179,12 +179,18 @@ function switchModule(module, event) {
         if (rmSupplierGroup) rmSupplierGroup.style.display = 'flex';
         if (labelIn) labelIn.textContent = 'รับเข้าทั้งหมด (Kg)';
         if (labelOut) labelOut.textContent = 'เบิกออกทั้งหมด (Kg)';
+        // Show Smart Withdraw button for RM
+        const smartBtn = document.getElementById('smartWithdrawBtn');
+        if (smartBtn) smartBtn.style.display = 'inline-flex';
     } else {
         if (banner) banner.classList.remove('rm-mode');
         if (rmFilterGroup) rmFilterGroup.style.display = 'none';
         if (rmSupplierGroup) rmSupplierGroup.style.display = 'none';
         if (labelIn) labelIn.textContent = 'รับเข้าทั้งหมด';
         if (labelOut) labelOut.textContent = 'เบิกออกทั้งหมด';
+        // Hide Smart Withdraw button for Package
+        const smartBtn = document.getElementById('smartWithdrawBtn');
+        if (smartBtn) smartBtn.style.display = 'none';
     }
 
     // Reset inputs
@@ -2292,6 +2298,7 @@ function getSortedActiveLots(productCode) {
     var lotBalances = {};
     var lotFirstDate = {};
     var lotExpDays = {};
+    var lotExpDate = {};
     var lotVendor = {};
 
     entries.forEach(function (e) {
@@ -2307,6 +2314,7 @@ function getSortedActiveLots(productCode) {
         if (!isNaN(days)) {
             if (lotExpDays[e.lotNo] === undefined || days < lotExpDays[e.lotNo]) {
                 lotExpDays[e.lotNo] = days;
+                lotExpDate[e.lotNo] = e.expDate || '-';
             }
         }
     });
@@ -2319,6 +2327,7 @@ function getSortedActiveLots(productCode) {
                 balance: lotBalances[lot],
                 firstDate: lotFirstDate[lot],
                 expDays: lotExpDays[lot],
+                expDate: lotExpDate[lot] || '-',
                 supplier: lotVendor[lot]
             };
         });
@@ -2589,7 +2598,380 @@ document.addEventListener('DOMContentLoaded', function () {
     // Resize listener removed to prevent mobile refresh loops
     // The slider will update position on tab switch automatically.
 
+    // ==================== SMART WITHDRAW EVENT LISTENERS ====================
+    document.getElementById('smartWithdrawBtn')?.addEventListener('click', openSmartWithdrawModal);
+    document.getElementById('smartWithdrawModalClose')?.addEventListener('click', closeSmartWithdrawModal);
+    document.getElementById('smartWithdrawBackdrop')?.addEventListener('click', closeSmartWithdrawModal);
+    document.getElementById('btnCalculateAllocation')?.addEventListener('click', calculateSmartAllocation);
+    document.getElementById('btnBackToStep1')?.addEventListener('click', smartWithdrawBackToStep1);
+    document.getElementById('btnConfirmWithdraw')?.addEventListener('click', confirmSmartWithdraw);
+    document.getElementById('swProductSelect')?.addEventListener('change', onSmartWithdrawProductChange);
+    document.getElementById('swTotalQty')?.addEventListener('input', updateSmartWithdrawStockInfo);
+
 });
+
+// ==================== SMART WITHDRAWAL SYSTEM ====================
+
+// Global variable to store current allocation plan
+var smartWithdrawAllocationPlan = [];
+
+// Open Smart Withdraw Modal
+function openSmartWithdrawModal() {
+    var modal = document.getElementById('smartWithdrawModal');
+    if (!modal) return;
+
+    // Populate product dropdown
+    populateSmartWithdrawProducts();
+
+    // Set default date to today
+    var today = new Date();
+    var yyyy = today.getFullYear();
+    var mm = String(today.getMonth() + 1).padStart(2, '0');
+    var dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('swDate').value = yyyy + '-' + mm + '-' + dd;
+
+    // Reset form and show step 1
+    document.getElementById('smartWithdrawForm')?.reset();
+    document.getElementById('swDate').value = yyyy + '-' + mm + '-' + dd;
+    document.getElementById('swStockInfo').style.display = 'none';
+    document.getElementById('smartWithdrawStep1').style.display = 'block';
+    document.getElementById('smartWithdrawStep2').style.display = 'none';
+    smartWithdrawAllocationPlan = [];
+
+    // Show modal
+    modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    modal.style.visibility = 'visible';
+}
+
+// Close Smart Withdraw Modal
+function closeSmartWithdrawModal() {
+    var modal = document.getElementById('smartWithdrawModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+    }
+    smartWithdrawAllocationPlan = [];
+}
+
+// Populate Product Dropdown for Smart Withdraw
+function populateSmartWithdrawProducts() {
+    var select = document.getElementById('swProductSelect');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- เลือกสินค้า --</option>';
+
+    rmProductMasterData.forEach(function (prod) {
+        var option = document.createElement('option');
+        option.value = prod.code;
+        option.textContent = prod.code + ' - ' + prod.name;
+        select.appendChild(option);
+    });
+}
+
+// On Product Selection Change
+function onSmartWithdrawProductChange() {
+    var productCode = document.getElementById('swProductSelect').value;
+    if (!productCode) {
+        document.getElementById('swProductName').value = '';
+        document.getElementById('swStockInfo').style.display = 'none';
+        return;
+    }
+
+    // Find product name
+    var prod = rmProductMasterData.find(function (p) { return p.code === productCode; });
+    if (prod) {
+        document.getElementById('swProductName').value = prod.name;
+    }
+
+    // Show stock info
+    updateSmartWithdrawStockInfo();
+}
+
+// Update Stock Info Display
+function updateSmartWithdrawStockInfo() {
+    var productCode = document.getElementById('swProductSelect').value;
+    if (!productCode) {
+        document.getElementById('swStockInfo').style.display = 'none';
+        return;
+    }
+
+    var lots = getSortedActiveLots(productCode);
+    var totalStock = lots.reduce(function (sum, lot) { return sum + lot.balance; }, 0);
+    totalStock = Math.round(totalStock * 100) / 100;
+
+    // Find nearest expiry lot
+    var nearestExpiry = '-';
+    if (lots.length > 0) {
+        var firstLot = lots[0];
+        if (firstLot.expDays !== undefined) {
+            nearestExpiry = firstLot.lotNo + ' (' + firstLot.expDays + ' วัน)';
+        } else {
+            nearestExpiry = firstLot.lotNo;
+        }
+    }
+
+    // Update UI
+    var prod = rmProductMasterData.find(function (p) { return p.code === productCode; });
+    document.getElementById('swStockProductName').textContent = prod ? prod.name : productCode;
+    document.getElementById('swTotalStock').textContent = formatNumber(totalStock) + ' Kg';
+    document.getElementById('swTotalLots').textContent = lots.length + ' Lots';
+    document.getElementById('swNearExpiry').textContent = nearestExpiry;
+
+    // Check if near expiry warning needed
+    var nearExpiryEl = document.getElementById('swNearExpiry');
+    if (lots.length > 0 && lots[0].expDays !== undefined && lots[0].expDays <= 30) {
+        nearExpiryEl.classList.add('info-warning');
+    } else {
+        nearExpiryEl.classList.remove('info-warning');
+    }
+
+    document.getElementById('swStockInfo').style.display = 'block';
+}
+
+// Calculate Smart Allocation (FEFO/FIFO)
+function calculateSmartAllocation() {
+    var productCode = document.getElementById('swProductSelect').value;
+    var totalQty = parseFloat(document.getElementById('swTotalQty').value) || 0;
+
+    // Validation
+    if (!productCode) {
+        alert('กรุณาเลือกสินค้าก่อน');
+        return;
+    }
+    if (totalQty <= 0) {
+        alert('กรุณาระบุจำนวนที่ต้องการเบิก');
+        return;
+    }
+
+    // Get sorted lots (FEFO/FIFO)
+    var lots = getSortedActiveLots(productCode);
+    if (lots.length === 0) {
+        alert('ไม่พบ Lot ที่มีสต็อกสำหรับสินค้านี้');
+        return;
+    }
+
+    // Calculate total available stock
+    var totalAvailable = lots.reduce(function (sum, lot) { return sum + lot.balance; }, 0);
+    totalAvailable = Math.round(totalAvailable * 100) / 100;
+
+    // Allocation algorithm
+    var allocationPlan = [];
+    var remainingNeeded = totalQty;
+    var isPartial = false;
+
+    for (var i = 0; i < lots.length && remainingNeeded > 0; i++) {
+        var lot = lots[i];
+        var take = Math.min(remainingNeeded, lot.balance);
+        take = Math.round(take * 100) / 100;
+
+        allocationPlan.push({
+            lotNo: lot.lotNo,
+            expDays: lot.expDays,
+            expDate: lot.expDate || '-',
+            balance: lot.balance,
+            takeQty: take,
+            afterQty: Math.round((lot.balance - take) * 100) / 100,
+            supplier: lot.supplier
+        });
+
+        remainingNeeded -= take;
+        remainingNeeded = Math.round(remainingNeeded * 100) / 100;
+    }
+
+    // Check if stock is insufficient
+    if (remainingNeeded > 0) {
+        isPartial = true;
+    }
+
+    // Store allocation plan globally
+    smartWithdrawAllocationPlan = allocationPlan;
+
+    // Render allocation preview
+    renderAllocationPreview(allocationPlan, totalQty, isPartial, remainingNeeded);
+
+    // Switch to step 2
+    document.getElementById('smartWithdrawStep1').style.display = 'none';
+    document.getElementById('smartWithdrawStep2').style.display = 'block';
+}
+
+// Render Allocation Preview Table
+function renderAllocationPreview(plan, totalRequested, isPartial, shortfall) {
+    var tbody = document.getElementById('allocationTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    var totalTake = 0;
+
+    plan.forEach(function (item, idx) {
+        var row = document.createElement('tr');
+
+        // Days class
+        var daysClass = 'days-ok';
+        var daysDisplay = '-';
+        if (item.expDays !== undefined) {
+            daysDisplay = item.expDays + ' วัน';
+            if (item.expDays <= 30) {
+                daysClass = 'days-critical';
+            } else if (item.expDays <= 90) {
+                daysClass = 'days-warning';
+            }
+        }
+
+        row.innerHTML = `
+            <td>${idx + 1}</td>
+            <td><span class="lot-badge">${item.lotNo}</span></td>
+            <td>${item.expDate}</td>
+            <td class="${daysClass}">${daysDisplay}</td>
+            <td>${formatNumber(item.balance)} Kg</td>
+            <td class="qty-withdraw">-${formatNumber(item.takeQty)} Kg</td>
+            <td class="qty-after">${formatNumber(item.afterQty)} Kg</td>
+        `;
+        tbody.appendChild(row);
+        totalTake += item.takeQty;
+    });
+
+    // Update totals
+    document.getElementById('allocationTotalQty').textContent = formatNumber(totalTake) + ' Kg';
+    document.getElementById('allocationLotCount').textContent = plan.length + ' Lots';
+
+    // Handle warning
+    var warningBox = document.getElementById('swWarning');
+    var warningText = document.getElementById('swWarningText');
+    var confirmBtn = document.getElementById('btnConfirmWithdraw');
+
+    if (isPartial) {
+        warningBox.style.display = 'flex';
+        warningBox.classList.add('warning-critical');
+        warningText.textContent = 'สต็อกไม่เพียงพอ! ต้องการ ' + formatNumber(totalRequested) + ' Kg แต่มีเพียง ' + formatNumber(totalTake) + ' Kg (ขาด ' + formatNumber(shortfall) + ' Kg)';
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '❌ สต็อกไม่พอ';
+    } else {
+        warningBox.style.display = 'none';
+        warningBox.classList.remove('warning-critical');
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '✅ ยืนยันการเบิก';
+    }
+
+    // Update badge text
+    var badge = document.getElementById('allocationBadge');
+    if (badge) {
+        badge.textContent = plan.length > 1 ? 'Multi-Lot FEFO' : 'Single Lot';
+    }
+}
+
+// Back to Step 1
+function smartWithdrawBackToStep1() {
+    document.getElementById('smartWithdrawStep1').style.display = 'block';
+    document.getElementById('smartWithdrawStep2').style.display = 'none';
+}
+
+// Confirm and Execute Smart Withdraw
+async function confirmSmartWithdraw() {
+    if (smartWithdrawAllocationPlan.length === 0) {
+        alert('ไม่มีรายการที่จะเบิก');
+        return;
+    }
+
+    var productCode = document.getElementById('swProductSelect').value;
+    var productName = document.getElementById('swProductName').value;
+    var date = document.getElementById('swDate').value;
+    var jobCategory = document.getElementById('swJobCategory').value;
+
+    // Prepare entries
+    var entriesToSave = smartWithdrawAllocationPlan.map(function (item) {
+        // Calculate container info if available
+        var containerWeight = 0;
+        var containerQty = 0;
+        var remainder = item.takeQty;
+
+        // Try to find historical container weight for this product
+        for (var i = rmStockData.length - 1; i >= 0; i--) {
+            if (rmStockData[i].productCode === productCode && rmStockData[i].containerWeight > 0) {
+                containerWeight = rmStockData[i].containerWeight;
+                break;
+            }
+        }
+
+        if (containerWeight > 0) {
+            containerQty = Math.floor(item.takeQty / containerWeight);
+            remainder = Math.round((item.takeQty % containerWeight) * 100) / 100;
+        }
+
+        return {
+            date: formatDateThai(date),
+            productCode: productCode,
+            productName: productName,
+            type: jobCategory,
+            containerQty: containerQty,
+            containerWeight: containerWeight,
+            remainder: remainder,
+            inQty: 0,
+            outQty: item.takeQty,
+            lotNo: item.lotNo,
+            supplier: item.supplier || '-'
+        };
+    });
+
+    // Confirm with user
+    var confirmMsg = 'ยืนยันการเบิกจาก ' + entriesToSave.length + ' Lot:\n\n';
+    entriesToSave.forEach(function (e, i) {
+        confirmMsg += (i + 1) + '. Lot ' + e.lotNo + ': ' + formatNumber(e.outQty) + ' Kg\n';
+    });
+    confirmMsg += '\nรวมทั้งหมด: ' + formatNumber(entriesToSave.reduce((s, e) => s + e.outQty, 0)) + ' Kg';
+
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+
+    showLoading();
+    showToast('กำลังบันทึก ' + entriesToSave.length + ' รายการ...');
+
+    try {
+        for (var i = 0; i < entriesToSave.length; i++) {
+            var entry = entriesToSave[i];
+
+            if (entriesToSave.length > 1) {
+                showToast('บันทึกรายการที่ ' + (i + 1) + '/' + entriesToSave.length + '...');
+            }
+
+            await fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                redirect: "follow",
+                body: JSON.stringify({
+                    action: 'add_rm',
+                    spreadsheetId: SHEET_CONFIG.rm.id,
+                    sheetName: SHEET_CONFIG.rm.sheetName,
+                    entry: entry
+                })
+            });
+
+            // Delay between writes
+            await new Promise(r => setTimeout(r, 800));
+        }
+
+        showToast('✅ Smart Withdraw สำเร็จ! บันทึก ' + entriesToSave.length + ' รายการ');
+
+        // Cleanup and refresh
+        setTimeout(async function () {
+            closeSmartWithdrawModal();
+            smartWithdrawAllocationPlan = [];
+            await fetchRMData();
+            hideLoading();
+        }, 1000);
+
+    } catch (e) {
+        console.error('Smart Withdraw Error:', e);
+        alert('เกิดข้อผิดพลาด: ' + e);
+        hideLoading();
+    }
+}
 
 
 

@@ -3938,3 +3938,390 @@ mark.search-highlight {
         letter-spacing: -0.5px;
     }
 }
+
+/* ==================== SMART WITHDRAW STYLES ==================== */
+
+/* Smart Withdraw Button */
+.btn-smart-withdraw {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+    border: none;
+    animation: smartWithdrawPulse 2s ease-in-out infinite;
+}
+
+.btn-smart-withdraw:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+}
+
+@keyframes smartWithdrawPulse {
+    0%, 100% {
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+    }
+    50% {
+        box-shadow: 0 4px 25px rgba(139, 92, 246, 0.6);
+    }
+}
+
+/* Smart Withdraw Modal */
+.smart-withdraw-modal-content {
+    max-width: 900px;
+    width: 95%;
+}
+
+.modal-header-smart-withdraw {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+}
+
+.modal-header-smart-withdraw h2 {
+    color: white;
+}
+
+/* Step Title */
+.step-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary-100);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.step-title::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 20px;
+    background: var(--primary-500);
+    border-radius: 2px;
+}
+
+/* Smart Withdraw Select */
+.smart-withdraw-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.9375rem;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    background: white;
+    color: var(--gray-800);
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.smart-withdraw-select:focus {
+    outline: none;
+    border-color: var(--primary-400);
+    box-shadow: 0 0 0 4px var(--primary-50);
+}
+
+/* Stock Info Box */
+.smart-withdraw-stock-info {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid #7dd3fc;
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.stock-info-header {
+    font-weight: 600;
+    color: #0369a1;
+    margin-bottom: 0.75rem;
+    font-size: 0.9375rem;
+}
+
+.stock-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.stock-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: #475569;
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0c4a6e;
+}
+
+.info-value.info-warning {
+    color: #dc2626;
+}
+
+/* Calculate Button */
+.btn-calculate-allocation {
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    font-size: 1rem;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+    color: white;
+}
+
+.btn-calculate-allocation:hover {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    transform: translateY(-1px);
+}
+
+/* Allocation Summary */
+.allocation-summary {
+    background: white;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.allocation-header {
+    background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.allocation-title {
+    color: white;
+    font-weight: 600;
+    font-size: 0.9375rem;
+}
+
+.allocation-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    backdrop-filter: blur(10px);
+}
+
+/* Allocation Table */
+.allocation-table-container {
+    overflow-x: auto;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.allocation-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.allocation-table th {
+    background: var(--gray-50);
+    padding: 0.75rem 0.5rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--gray-600);
+    border-bottom: 2px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.allocation-table td {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--gray-100);
+    color: var(--gray-700);
+}
+
+.allocation-table tbody tr:hover {
+    background: var(--primary-50);
+}
+
+/* Table Status Colors */
+.allocation-table .qty-withdraw {
+    font-weight: 700;
+    color: var(--danger-500);
+}
+
+.allocation-table .qty-after {
+    font-weight: 600;
+    color: var(--success-600);
+}
+
+.allocation-table .days-critical {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+.allocation-table .days-warning {
+    color: #d97706;
+    font-weight: 600;
+}
+
+.allocation-table .days-ok {
+    color: #059669;
+}
+
+.allocation-table .lot-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+    color: #6d28d9;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+}
+
+/* Allocation Totals */
+.allocation-totals {
+    display: flex;
+    gap: 2rem;
+    padding: 1rem;
+    background: var(--gray-50);
+    border-top: 2px solid var(--gray-200);
+}
+
+.total-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.total-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+.total-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--primary-700);
+}
+
+/* Warning Section */
+.smart-withdraw-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #f59e0b;
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.smart-withdraw-warning.warning-critical {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-color: #ef4444;
+}
+
+.warning-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.warning-text {
+    font-size: 0.875rem;
+    color: #92400e;
+    line-height: 1.5;
+}
+
+.smart-withdraw-warning.warning-critical .warning-text {
+    color: #991b1b;
+}
+
+/* Action Buttons */
+.smart-withdraw-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.btn-confirm-withdraw {
+    flex: 1;
+    justify-content: center;
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.btn-confirm-withdraw:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-confirm-withdraw:disabled {
+    background: var(--gray-300);
+    color: var(--gray-500);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* Responsive: Mobile */
+@media (max-width: 768px) {
+    .smart-withdraw-modal-content {
+        max-width: 100%;
+        width: 100%;
+        margin: 0;
+        border-radius: 0;
+        height: 100vh;
+        max-height: 100vh;
+    }
+
+    .stock-info-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .stock-info-item {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .stock-info-item:last-child {
+        border-bottom: none;
+    }
+
+    .allocation-table {
+        font-size: 0.75rem;
+    }
+
+    .allocation-table th,
+    .allocation-table td {
+        padding: 0.5rem 0.25rem;
+    }
+
+    .allocation-totals {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .smart-withdraw-actions {
+        flex-direction: column;
+    }
+
+    .btn-smart-withdraw span {
+        display: none;
+    }
+}

@@ -19,7 +19,7 @@ window.onerror = function (msg, url, lineNo, columnNo, error) {
 };
 
 // Configuration
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdF61u0WhgQ6Uxmb_fCmfK8Ww1wlTMFBC79a13AFAhN2TCjBHKDL4VmVL49C4W5bKdVw/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyOqTeTNvcIfFXjxdG2Zi9nvK-HZXUiTTWH0GuajXICBBJIva1GDvbMXde2vvZeZ53U/exec';
 
 // Google Sheet URLs for direct data fetching
 const SHEET_CONFIG = {

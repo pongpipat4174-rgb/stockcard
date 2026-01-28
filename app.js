@@ -553,7 +553,8 @@ async function fetchRMData() {
                 daysLeft: c[14]?.v || '',
                 lotBalance: parseFloat(c[15]?.v) || 0,
                 supplier: c[16]?.v || '',
-                remark: c[17]?.v || '' // Column R: หมายเหตุ (ระบุ "ต่ออายุ" ที่นี่)
+                remark: c[17]?.v || '', // Column R: หมายเหตุ (ระบุ "ต่ออายุ" ที่นี่)
+                containerOut: parseFloat(c[18]?.v) || 0 // Column S: ถังที่เบิก
             };
         }).filter(function (item) { return item.productCode && item.productCode !== 'รหัสสินค้า'; });
 
@@ -1053,6 +1054,7 @@ function renderStockCardsRM(products) {
                 expiringLotData[entry.lotNo] = {
                     daysLeft: null,
                     containersIn: 0,
+                    containersOut: 0,
                     kgIn: 0,
                     kgOut: 0
                 };
@@ -1069,13 +1071,14 @@ function renderStockCardsRM(products) {
                 expiringLotData[entry.lotNo].kgIn += entry.inQty;
             }
             if (entry.outQty > 0) {
+                expiringLotData[entry.lotNo].containersOut += entry.containerOut || 0;
                 expiringLotData[entry.lotNo].kgOut += entry.outQty;
             }
         });
 
         // Sum containers only for expiring lots (≤30 days) with remaining stock
-        var exactContainers = 0;  // Lots with NO withdrawals
-        var estimatedContainers = 0;  // Lots WITH withdrawals (estimated remaining)
+        var exactContainers = 0;  // Lots with containerOut data
+        var estimatedContainers = 0;  // Lots WITHOUT containerOut data (estimate)
         var expiringLotCount = 0;
         var hasEstimate = false;
 
@@ -1087,13 +1090,18 @@ function renderStockCardsRM(products) {
             if (lot.daysLeft !== null && lot.daysLeft <= 30 && kgRemaining > 0) {
                 expiringLotCount++;
 
+                // Calculate remaining containers
+                var containersRemaining = lot.containersIn - lot.containersOut;
+
                 if (lot.kgOut === 0) {
-                    // No withdrawals - EXACT count
+                    // No withdrawals - EXACT count (all containers remain)
                     exactContainers += lot.containersIn;
+                } else if (lot.containersOut > 0) {
+                    // Has containerOut recorded - EXACT count
+                    exactContainers += Math.max(0, containersRemaining);
                 } else {
-                    // Has withdrawals - ESTIMATE remaining
+                    // Has withdrawals but NO containerOut recorded - ESTIMATE
                     hasEstimate = true;
-                    // Estimate: original containers × (remaining Kg / original Kg)
                     var remainRatio = lot.kgIn > 0 ? kgRemaining / lot.kgIn : 0;
                     var estContainers = Math.round(lot.containersIn * remainRatio);
                     estimatedContainers += estContainers;
@@ -2167,6 +2175,12 @@ async function saveEntryRM() {
                 rem = chunkQty;
             }
 
+            // Calculate containerOut for this split chunk
+            var lotInfo = getLotContainerInfo(productCode, item.lotNo);
+            var avgWeight = lotInfo.totalKgIn > 0 ? lotInfo.totalKgIn / lotInfo.containersIn : 0;
+            var estContainerOut = avgWeight > 0 ? Math.ceil(chunkQty / avgWeight) : 0;
+            estContainerOut = Math.min(estContainerOut, lotInfo.containersAvailable);
+
             entriesToSave.push({
                 date: formatDateThai(date),
                 productCode: productCode,
@@ -2178,7 +2192,8 @@ async function saveEntryRM() {
                 inQty: 0,
                 outQty: chunkQty,
                 lotNo: item.lotNo,
-                supplier: item.supplier || vendor
+                supplier: item.supplier || vendor,
+                containerOut: estContainerOut
             });
         });
     } else {
@@ -2187,6 +2202,7 @@ async function saveEntryRM() {
         var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
         var remainder = parseFloat(document.getElementById('entryRemainderRM').value) || 0;
         var lotNo = document.getElementById('entryLotNoRM').value || '-';
+        var containerOut = parseFloat(document.getElementById('entryContainerOutRM').value) || 0;
 
         entriesToSave.push({
             date: formatDateThai(date),
@@ -2199,7 +2215,8 @@ async function saveEntryRM() {
             inQty: inQty,
             outQty: outQty,
             lotNo: lotNo,
-            supplier: vendor
+            supplier: vendor,
+            containerOut: isWithdrawal ? containerOut : 0
         });
     }
 
@@ -2307,6 +2324,38 @@ function reverseCalculateRM() {
     var isWithdrawal = type && type.includes('เบิก');
     var productCode = document.getElementById('entryProductCodeRM').value;
 
+    // Show/hide container out field
+    var containerOutGroup = document.getElementById('containerOutGroup');
+    var containerOutHint = document.getElementById('containerOutHint');
+    var containerOutInput = document.getElementById('entryContainerOutRM');
+
+    if (isWithdrawal && outQty > 0) {
+        containerOutGroup.style.display = 'block';
+
+        // Get lot info and suggest container count
+        var lotNo = document.getElementById('entryLotNoRM').value;
+        if (productCode && lotNo) {
+            var lotInfo = getLotContainerInfo(productCode, lotNo);
+            if (lotInfo.containersAvailable > 0) {
+                // Calculate suggested containers based on withdrawal Kg
+                var avgWeight = lotInfo.totalKgIn > 0 ? lotInfo.totalKgIn / lotInfo.containersIn : 0;
+                var suggestedContainers = avgWeight > 0 ? Math.ceil(outQty / avgWeight) : 0;
+                suggestedContainers = Math.min(suggestedContainers, lotInfo.containersAvailable);
+
+                containerOutInput.value = suggestedContainers;
+                containerOutHint.textContent = '💡 Lot นี้มี ' + lotInfo.containersAvailable + ' ถัง (จาก ' + lotInfo.containersIn + ' ถังรับเข้า)';
+            } else {
+                containerOutHint.textContent = '⚠️ ไม่พบข้อมูลถังสำหรับ Lot นี้';
+            }
+        } else {
+            containerOutHint.textContent = '';
+        }
+    } else {
+        containerOutGroup.style.display = 'none';
+        containerOutInput.value = '';
+        containerOutHint.textContent = '';
+    }
+
     if (isWithdrawal && productCode && outQty > 0) {
         checkLotSplit(productCode, outQty);
     } else {
@@ -2314,6 +2363,35 @@ function reverseCalculateRM() {
         document.getElementById('lotSplitWarning').style.display = 'none';
         window.currentSplitPlan = null;
     }
+}
+
+// Get container info for a specific lot
+function getLotContainerInfo(productCode, lotNo) {
+    var containersIn = 0;
+    var containersOut = 0;
+    var totalKgIn = 0;
+    var totalKgOut = 0;
+
+    rmStockData.forEach(function (entry) {
+        if (entry.productCode === productCode && entry.lotNo === lotNo) {
+            if (entry.inQty > 0) {
+                containersIn += entry.containerQty || 0;
+                totalKgIn += entry.inQty;
+            }
+            if (entry.outQty > 0) {
+                containersOut += entry.containerOut || 0;
+                totalKgOut += entry.outQty;
+            }
+        }
+    });
+
+    return {
+        containersIn: containersIn,
+        containersOut: containersOut,
+        containersAvailable: Math.max(0, containersIn - containersOut),
+        totalKgIn: totalKgIn,
+        totalKgOut: totalKgOut
+    };
 }
 
 // Logic to check if splitting is needed

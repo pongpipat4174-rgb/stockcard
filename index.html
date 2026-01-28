@@ -542,7 +542,7 @@
                                 placeholder="ชื่อวัตถุดิบ">
                         </div>
                     </div>
-                    <div class="form-grid form-grid-3" id="containerInputRow">
+                    <div class="form-grid" id="containerInputRow">
                         <div class="form-group">
                             <label for="entryContainerQtyRM">จำนวน Container</label>
                             <input type="number" id="entryContainerQtyRM" name="containerQty" min="0" placeholder="0">
@@ -552,18 +552,15 @@
                             <input type="number" id="entryContainerWeightRM" name="containerWeight" min="0" step="0.01"
                                 placeholder="0">
                         </div>
-                        <div class="form-group">
-                            <label for="entryRemainderRM">เศษ (Kg)</label>
-                            <input type="number" id="entryRemainderRM" name="remainder" min="0" step="0.01"
-                                placeholder="0">
-                        </div>
                     </div>
+                    <!-- Hidden remainder field -->
+                    <input type="hidden" id="entryRemainderRM" name="remainder" value="0">
                     <div class="form-grid" id="inOutBalanceRow">
                         <div class="form-group" id="inQtyGroup">
                             <label for="entryInQtyRM">รับเข้า (Kg)</label>
                             <input type="number" id="entryInQtyRM" name="inQty" min="0" step="0.01" placeholder="0">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" id="outQtyGroup">
                             <label for="entryOutQtyRM">เบิกออก (Kg)</label>
                             <input type="number" id="entryOutQtyRM" name="outQty" min="0" step="0.01" placeholder="0">
                         </div>
@@ -783,7 +780,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=61"></script>
+    <script src="app.js?v=62"></script>
 
     <script>
         // Integrated Module Switch Logic

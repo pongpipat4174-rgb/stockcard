@@ -2280,20 +2280,27 @@ async function saveEntryRM() {
 function calculateRMTotal() {
     var type = document.getElementById('entryTypeRM').value;
     var isWithdrawal = type && type.includes('เบิก');
+    var isReceiving = type && type.includes('รับเข้า');
 
-    // Hide container input row for withdrawals (only needed for receiving)
+    // Get all toggle-able groups
     var containerInputRow = document.getElementById('containerInputRow');
     var inQtyGroup = document.getElementById('inQtyGroup');
+    var outQtyGroup = document.getElementById('outQtyGroup');
     var balanceGroup = document.getElementById('balanceGroup');
 
+    // For WITHDRAWAL: hide container inputs, inQty, balance
+    // For RECEIVING: hide outQty, balance
     if (containerInputRow) {
         containerInputRow.style.display = isWithdrawal ? 'none' : 'grid';
     }
     if (inQtyGroup) {
         inQtyGroup.style.display = isWithdrawal ? 'none' : 'block';
     }
+    if (outQtyGroup) {
+        outQtyGroup.style.display = isReceiving ? 'none' : 'block';
+    }
     if (balanceGroup) {
-        balanceGroup.style.display = isWithdrawal ? 'none' : 'block';
+        balanceGroup.style.display = 'none'; // Always hide - calculated in Sheet
     }
 
     var containerQty = parseFloat(document.getElementById('entryContainerQtyRM').value) || 0;

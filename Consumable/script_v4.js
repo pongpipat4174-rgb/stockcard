@@ -844,6 +844,9 @@ window.renderTable = () => {
                      ${isLowStock ? '<i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;" title="Low Stock"></i>' : ''}
                 </div>
             </td>
+            <td class="center mobile-hidden text-blue">
+                ${(item.category === 'unit' && item.cutLength) ? formatNumber(item.cutLength, 0) : '-'}
+            </td>
             <td class="center bg-shrink">${formatNumber(item.stockCartons, 1)}</td>
             <td class="center text-blue">${isRoll ? '-' : formatNumber(item.stockPartialKg || 0, 2)}</td>
             <td class="center dim bg-shrink mobile-hidden">

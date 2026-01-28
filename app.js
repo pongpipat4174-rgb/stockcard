@@ -182,6 +182,9 @@ function switchModule(module, event) {
         // Show Smart Withdraw button for RM
         const smartBtn = document.getElementById('smartWithdrawBtn');
         if (smartBtn) smartBtn.style.display = 'inline-flex';
+        // Show Recalculate button for RM
+        const recalcBtn = document.getElementById('recalculateBtn');
+        if (recalcBtn) recalcBtn.style.display = 'inline-flex';
     } else {
         if (banner) banner.classList.remove('rm-mode');
         if (rmFilterGroup) rmFilterGroup.style.display = 'none';
@@ -191,6 +194,9 @@ function switchModule(module, event) {
         // Hide Smart Withdraw button for Package
         const smartBtn = document.getElementById('smartWithdrawBtn');
         if (smartBtn) smartBtn.style.display = 'none';
+        // Hide Recalculate button for Package
+        const recalcBtn = document.getElementById('recalculateBtn');
+        if (recalcBtn) recalcBtn.style.display = 'none';
     }
 
     // Reset inputs
@@ -344,6 +350,9 @@ async function init() {
             // Show Smart Withdraw button for RM on init
             var smartBtn = document.getElementById('smartWithdrawBtn');
             if (smartBtn) smartBtn.style.display = 'inline-flex';
+            // Show Recalculate button for RM
+            var recalcBtn = document.getElementById('recalculateBtn');
+            if (recalcBtn) recalcBtn.style.display = 'inline-flex';
 
             await fetchRMData();
         } else {
@@ -2707,6 +2716,9 @@ document.addEventListener('DOMContentLoaded', function () {
         filterByDate(this.value);
     });
 
+    // Recalculate Button (RM only)
+    document.getElementById('recalculateBtn')?.addEventListener('click', recalculateAllBalances);
+
     // RM Modal events
     document.getElementById('entryModalCloseRM')?.addEventListener('click', closeEntryModalRM);
     document.getElementById('entryModalBackdropRM')?.addEventListener('click', closeEntryModalRM);
@@ -3275,6 +3287,44 @@ async function confirmSmartWithdraw() {
     }
 }
 
+// ======================= RECALCULATE ALL BALANCES =======================
 
+async function recalculateAllBalances() {
+    if (!confirm('ต้องการคำนวณยอดคงเหลือใหม่ทั้งหมด?\n\nใช้เมื่อ:\n- มีการแก้ไขข้อมูลใน Sheet โดยตรง\n- มีการเพิ่มข้อมูลผ่าน AppSheet\n- ยอดคงเหลือไม่ถูกต้อง')) {
+        return;
+    }
 
+    showLoading();
+    showToast('🔄 กำลังคำนวณยอดคงเหลือใหม่...');
 
+    try {
+        var config = SHEET_CONFIG.rm;
+
+        var response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'recalculate_rm',
+                spreadsheetId: config.id,
+                sheetName: 'RM_StockCard'
+            })
+        });
+
+        showToast('✅ คำนวณเสร็จสิ้น! กำลังรีเฟรชข้อมูล...');
+
+        // Refresh data
+        setTimeout(async function () {
+            rmStockData = [];
+            await fetchRMData();
+            hideLoading();
+        }, 2000);
+
+    } catch (e) {
+        console.error('Recalculate Error:', e);
+        alert('เกิดข้อผิดพลาด: ' + e);
+        hideLoading();
+    }
+}

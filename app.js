@@ -2203,6 +2203,9 @@ async function saveEntryRM() {
         var remainder = parseFloat(document.getElementById('entryRemainderRM').value) || 0;
         var lotNo = document.getElementById('entryLotNoRM').value || '-';
         var containerOut = parseFloat(document.getElementById('entryContainerOutRM').value) || 0;
+        var mfgDate = document.getElementById('entryMfgDateRM')?.value || '';
+        var expDate = document.getElementById('entryExpDateRM')?.value || '';
+        var vendorLot = document.getElementById('entryVendorLotRM')?.value || '';
 
         entriesToSave.push({
             date: formatDateThai(date),
@@ -2215,6 +2218,9 @@ async function saveEntryRM() {
             inQty: inQty,
             outQty: outQty,
             lotNo: lotNo,
+            vendorLot: vendorLot,
+            mfgDate: mfgDate ? formatDateThai(mfgDate) : '',
+            expDate: expDate ? formatDateThai(expDate) : '',
             supplier: vendor,
             containerOut: isWithdrawal ? containerOut : 0
         });
@@ -2287,8 +2293,9 @@ function calculateRMTotal() {
     var inQtyGroup = document.getElementById('inQtyGroup');
     var outQtyGroup = document.getElementById('outQtyGroup');
     var balanceGroup = document.getElementById('balanceGroup');
+    var mfdExpRow = document.getElementById('mfdExpRow');
 
-    // For WITHDRAWAL: hide container inputs, inQty, balance
+    // For WITHDRAWAL: hide container inputs, inQty, balance, mfd/exp
     // For RECEIVING: hide outQty, balance
     if (containerInputRow) {
         containerInputRow.style.display = isWithdrawal ? 'none' : 'grid';
@@ -2301,6 +2308,9 @@ function calculateRMTotal() {
     }
     if (balanceGroup) {
         balanceGroup.style.display = 'none'; // Always hide - calculated in Sheet
+    }
+    if (mfdExpRow) {
+        mfdExpRow.style.display = isWithdrawal ? 'none' : 'grid';
     }
 
     var containerQty = parseFloat(document.getElementById('entryContainerQtyRM').value) || 0;

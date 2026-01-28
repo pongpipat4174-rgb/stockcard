@@ -582,6 +582,20 @@
                             <input type="text" id="entryVendorRM" name="vendor" placeholder="เช่น CHEMICO">
                         </div>
                     </div>
+                    <div class="form-grid" id="mfdExpRow">
+                        <div class="form-group">
+                            <label for="entryVendorLotRM">Vendor Lot</label>
+                            <input type="text" id="entryVendorLotRM" name="vendorLot" placeholder="Lot จาก Supplier">
+                        </div>
+                        <div class="form-group">
+                            <label for="entryMfgDateRM">วันผลิต (MFD)</label>
+                            <input type="date" id="entryMfgDateRM" name="mfgDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="entryExpDateRM">วันหมดอายุ (EXP)</label>
+                            <input type="date" id="entryExpDateRM" name="expDate">
+                        </div>
+                    </div>
                     <!-- Warning Section for Split Lots -->
                     <div id="lotSplitWarning"
                         style="display:none; background:#fff3cd; color:#856404; padding:10px; border-radius:5px; margin-top:10px; font-size:0.9em; border: 1px solid #ffeeba;">
@@ -780,7 +794,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=63"></script>
+    <script src="app.js?v=64"></script>
 
     <script>
         // Integrated Module Switch Logic

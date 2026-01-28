@@ -265,7 +265,12 @@ th {
     background-color: #f8fafc;
     font-weight: 600;
     color: var(--text-muted);
-    white-space: nowrap;
+    white-space: normal;
+    /* Allow wrapping */
+    vertical-align: bottom;
+    line-height: 1.1;
+    font-size: 0.7rem;
+    /* Smaller for compact headers */
 }
 
 /* Column Group Headers */

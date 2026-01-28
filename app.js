@@ -2279,6 +2279,19 @@ async function saveEntryRM() {
 // Auto-Calculate RM Totals
 function calculateRMTotal() {
     var type = document.getElementById('entryTypeRM').value;
+    var isWithdrawal = type && type.includes('เบิก');
+
+    // Hide container input row for withdrawals (only needed for receiving)
+    var containerInputRow = document.getElementById('containerInputRow');
+    var inQtyGroup = document.getElementById('entryInQtyRM').parentElement;
+
+    if (containerInputRow) {
+        containerInputRow.style.display = isWithdrawal ? 'none' : 'grid';
+    }
+    if (inQtyGroup) {
+        inQtyGroup.style.display = isWithdrawal ? 'none' : 'block';
+    }
+
     var containerQty = parseFloat(document.getElementById('entryContainerQtyRM').value) || 0;
     var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
     var remainder = parseFloat(document.getElementById('entryRemainderRM').value) || 0;
@@ -2324,36 +2337,21 @@ function reverseCalculateRM() {
     var isWithdrawal = type && type.includes('เบิก');
     var productCode = document.getElementById('entryProductCodeRM').value;
 
-    // Show/hide container out field
-    var containerOutGroup = document.getElementById('containerOutGroup');
-    var containerOutHint = document.getElementById('containerOutHint');
+    // Calculate containerOut for hidden field (used when saving)
     var containerOutInput = document.getElementById('entryContainerOutRM');
-
     if (isWithdrawal && outQty > 0) {
-        containerOutGroup.style.display = 'block';
-
-        // Get lot info and suggest container count
         var lotNo = document.getElementById('entryLotNoRM').value;
         if (productCode && lotNo) {
             var lotInfo = getLotContainerInfo(productCode, lotNo);
             if (lotInfo.containersAvailable > 0) {
-                // Calculate suggested containers based on withdrawal Kg
                 var avgWeight = lotInfo.totalKgIn > 0 ? lotInfo.totalKgIn / lotInfo.containersIn : 0;
                 var suggestedContainers = avgWeight > 0 ? Math.ceil(outQty / avgWeight) : 0;
                 suggestedContainers = Math.min(suggestedContainers, lotInfo.containersAvailable);
-
                 containerOutInput.value = suggestedContainers;
-                containerOutHint.textContent = '💡 Lot นี้มี ' + lotInfo.containersAvailable + ' ถัง (จาก ' + lotInfo.containersIn + ' ถังรับเข้า)';
-            } else {
-                containerOutHint.textContent = '⚠️ ไม่พบข้อมูลถังสำหรับ Lot นี้';
             }
-        } else {
-            containerOutHint.textContent = '';
         }
     } else {
-        containerOutGroup.style.display = 'none';
-        containerOutInput.value = '';
-        containerOutHint.textContent = '';
+        containerOutInput.value = 0;
     }
 
     if (isWithdrawal && productCode && outQty > 0) {
@@ -2461,10 +2459,21 @@ function renderSplitWarning(plan) {
     if (!warningBox || !list) return;
 
     list.innerHTML = '';
+    var productCode = document.getElementById('entryProductCodeRM').value;
 
     plan.forEach(function (item, idx) {
+        // Get container info for this lot
+        var lotInfo = getLotContainerInfo(productCode, item.lotNo);
+        var avgWeight = lotInfo.totalKgIn > 0 ? lotInfo.totalKgIn / lotInfo.containersIn : 0;
+        var estContainers = avgWeight > 0 ? Math.ceil(item.qty / avgWeight) : 0;
+        estContainers = Math.min(estContainers, lotInfo.containersAvailable);
+
+        var containerText = lotInfo.containersAvailable > 0
+            ? ' → <strong>' + estContainers + ' ถัง</strong> (มี ' + lotInfo.containersAvailable + ' ถัง)'
+            : '';
+
         var li = document.createElement('li');
-        li.innerHTML = '<strong>' + (idx + 1) + '. Lot ' + item.lotNo + '</strong>: ตัด ' + formatNumber(item.qty) + ' Kg (จากคงเหลือ ' + formatNumber(item.balance) + ')';
+        li.innerHTML = '<strong>' + (idx + 1) + '. Lot ' + item.lotNo + '</strong>: ตัด ' + formatNumber(item.qty) + ' Kg' + containerText;
         list.appendChild(li);
     });
 
@@ -2474,7 +2483,6 @@ function renderSplitWarning(plan) {
     var lotInput = document.getElementById('entryLotNoRM');
     if (lotInput) {
         lotInput.value = plan[0].lotNo; // Show first lot
-        // Maybe change color or border to indicate?
     }
 }
 

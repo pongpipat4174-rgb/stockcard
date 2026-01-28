@@ -81,11 +81,16 @@ function addEntry(data) {
     entry.supplier || ''
   ];
   
-  sheet.appendRow(row);
+  // Find actual last row with data (in column A)
+  var lastRow = getActualLastRow(sheet, 1); // Column A
+  var newRow = lastRow + 1;
+  
+  // Write data to the next row
+  sheet.getRange(newRow, 1, 1, row.length).setValues([row]);
   
   return ContentService.createTextOutput(JSON.stringify({
     success: true,
-    message: 'Entry added successfully'
+    message: 'Entry added at row ' + newRow
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -148,7 +153,7 @@ function addEntryRM(data) {
    * P: คงเหลือเฉพาะ Lot - formula
    * Q: Supplier
    * R: หมายเหตุ
-   * S: ถังเบิก (ContainerOut) ← NEW!
+   * S: ถังเบิก (ContainerOut)
    */
   
   var row = [
@@ -170,14 +175,19 @@ function addEntryRM(data) {
     '',                                   // P: Lot Balance (formula)
     entry.supplier || '',                 // Q: Supplier
     entry.remark || '',                   // R: หมายเหตุ
-    entry.containerOut || 0               // S: ถังเบิก (NEW!)
+    entry.containerOut || 0               // S: ถังเบิก
   ];
   
-  sheet.appendRow(row);
+  // Find actual last row with data (in column A)
+  var lastRow = getActualLastRow(sheet, 1); // Column A
+  var newRow = lastRow + 1;
+  
+  // Write data to the next row
+  sheet.getRange(newRow, 1, 1, row.length).setValues([row]);
   
   return ContentService.createTextOutput(JSON.stringify({
     success: true,
-    message: 'RM Entry added successfully'
+    message: 'RM Entry added at row ' + newRow
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -204,6 +214,20 @@ function deleteEntryRM(data) {
 }
 
 // ======================= UTILITY FUNCTIONS =======================
+
+/**
+ * Get actual last row with data in a specific column
+ * This avoids the issue where getLastRow() returns rows with formatting/validation
+ */
+function getActualLastRow(sheet, column) {
+  var data = sheet.getRange(1, column, sheet.getMaxRows(), 1).getValues();
+  for (var i = data.length - 1; i >= 0; i--) {
+    if (data[i][0] !== '' && data[i][0] !== null) {
+      return i + 1;
+    }
+  }
+  return 1; // Return 1 if sheet is empty (header row)
+}
 
 /**
  * Test function to verify script is working

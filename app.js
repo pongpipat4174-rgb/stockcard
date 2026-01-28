@@ -341,6 +341,9 @@ async function init() {
             if (rmSupplierGroup) rmSupplierGroup.style.display = 'flex';
             document.getElementById('labelTotalIn').textContent = 'รับเข้าทั้งหมด (Kg)';
             document.getElementById('labelTotalOut').textContent = 'เบิกออกทั้งหมด (Kg)';
+            // Show Smart Withdraw button for RM on init
+            var smartBtn = document.getElementById('smartWithdrawBtn');
+            if (smartBtn) smartBtn.style.display = 'inline-flex';
 
             await fetchRMData();
         } else {

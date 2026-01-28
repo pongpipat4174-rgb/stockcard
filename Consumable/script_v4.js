@@ -1751,3 +1751,44 @@ window.printPurchaseOrder = () => {
     printWindow.document.write(printContent);
     printWindow.document.close();
 };
+
+window.shareToLine = () => {
+    const inputs = document.querySelectorAll('.po-input');
+    const orderItems = [];
+
+    inputs.forEach(input => {
+        const qty = parseFloat(input.value);
+        if (qty > 0) {
+            orderItems.push({
+                name: input.dataset.name,
+                unit: input.dataset.unit,
+                qty: qty
+            });
+        }
+    });
+
+    if (orderItems.length === 0) {
+        alert("กรุณาระบุจำนวนสินค้าที่ต้องการสั่งซื้ออย่างน้อย 1 รายการ");
+        return;
+    }
+
+    // Construct Message
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('th-TH', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+
+    let message = `🛒 *ใบขอสั่งซื้อสินค้า (PR)*\n📅 วันที่: ${dateStr}\n\nรายการสินค้า:\n`;
+
+    orderItems.forEach((item, index) => {
+        message += `${index + 1}. ${item.name} = ${formatNumber(item.qty, 0)} ${item.unit}\n`;
+    });
+
+    message += `\nรวมทั้งหมด ${orderItems.length} รายการ`;
+
+    // Encode and Open LINE
+    // Using line.me/R/msg/text/?... works on mobile app.
+    const url = `https://line.me/R/msg/text/?${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+};

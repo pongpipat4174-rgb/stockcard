@@ -1074,9 +1074,10 @@ function renderStockCardsRM(products) {
         });
 
         // Sum containers only for expiring lots (≤30 days) with remaining stock
-        var expiringContainers = 0;
+        var exactContainers = 0;  // Lots with NO withdrawals
+        var estimatedContainers = 0;  // Lots WITH withdrawals (estimated remaining)
         var expiringLotCount = 0;
-        var expiringLotNames = [];
+        var hasEstimate = false;
 
         Object.keys(expiringLotData).forEach(function (lotNo) {
             var lot = expiringLotData[lotNo];
@@ -1084,17 +1085,45 @@ function renderStockCardsRM(products) {
 
             // Only count if lot is expiring AND has remaining stock
             if (lot.daysLeft !== null && lot.daysLeft <= 30 && kgRemaining > 0) {
-                expiringContainers += lot.containersIn;
                 expiringLotCount++;
-                expiringLotNames.push(lotNo);
+
+                if (lot.kgOut === 0) {
+                    // No withdrawals - EXACT count
+                    exactContainers += lot.containersIn;
+                } else {
+                    // Has withdrawals - ESTIMATE remaining
+                    hasEstimate = true;
+                    // Estimate: original containers × (remaining Kg / original Kg)
+                    var remainRatio = lot.kgIn > 0 ? kgRemaining / lot.kgIn : 0;
+                    var estContainers = Math.round(lot.containersIn * remainRatio);
+                    estimatedContainers += estContainers;
+                }
             }
         });
 
+        var totalContainers = exactContainers + estimatedContainers;
+
         // Only show if there are expiring lots with containers
-        if (expiringLotCount > 0 && expiringContainers > 0) {
+        if (expiringLotCount > 0 && totalContainers > 0) {
             html += '<div class="summary-item container-lot">';
             html += '<span class="summary-label">📦 ภาชนะใกล้หมดอายุ (' + expiringLotCount + ' Lot)</span>';
-            html += '<span class="summary-value container-value">' + expiringContainers + ' ถัง</span>';
+
+            if (hasEstimate) {
+                // Show breakdown
+                var displayText = '';
+                if (exactContainers > 0) {
+                    displayText += exactContainers + ' ถัง (แน่นอน)';
+                }
+                if (estimatedContainers > 0) {
+                    if (displayText) displayText += ' + ';
+                    displayText += '~' + estimatedContainers + ' ถัง (ประมาณ)';
+                }
+                html += '<span class="summary-value container-value">' + displayText + '</span>';
+                html += '<span class="container-note">* Lot ที่มีการเบิกแล้ว = ประมาณ</span>';
+            } else {
+                // All exact
+                html += '<span class="summary-value container-value">' + exactContainers + ' ถัง ✓</span>';
+            }
             html += '</div>';
         }
 

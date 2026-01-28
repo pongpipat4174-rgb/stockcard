@@ -4360,3 +4360,12 @@ mark.search-highlight {
         grid-template-columns: 1fr;
     }
 }
+
+/* Container Note */
+.container-note {
+    display: block;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-top: 0.25rem;
+    font-style: italic;
+}

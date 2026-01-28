@@ -2320,8 +2320,9 @@ function getSortedActiveLots(productCode) {
     var lotExpDays = {};
     var lotExpDate = {};
     var lotVendor = {};
-    var lotContainerWeight = {};
-    var lotOriginalContainers = {};
+    var lotTotalContainersIn = {};
+    var lotTotalKgIn = {};
+    var lotTotalKgOut = {};
 
     entries.forEach(function (e) {
         if (!e.lotNo) return;
@@ -2329,15 +2330,19 @@ function getSortedActiveLots(productCode) {
             lotBalances[e.lotNo] = 0;
             lotFirstDate[e.lotNo] = e.date;
             lotVendor[e.lotNo] = e.supplier || e.vendorLot;
-            lotContainerWeight[e.lotNo] = 0;
-            lotOriginalContainers[e.lotNo] = 0;
+            lotTotalContainersIn[e.lotNo] = 0;
+            lotTotalKgIn[e.lotNo] = 0;
+            lotTotalKgOut[e.lotNo] = 0;
         }
         lotBalances[e.lotNo] += e.inQty - e.outQty;
 
-        // Track container info from receive entries
-        if (e.inQty > 0 && e.containerWeight > 0) {
-            lotContainerWeight[e.lotNo] = e.containerWeight;
-            lotOriginalContainers[e.lotNo] += e.containerQty || 0;
+        // Track actual containers received
+        if (e.inQty > 0) {
+            lotTotalContainersIn[e.lotNo] += e.containerQty || 0;
+            lotTotalKgIn[e.lotNo] += e.inQty;
+        }
+        if (e.outQty > 0) {
+            lotTotalKgOut[e.lotNo] += e.outQty;
         }
 
         var days = parseInt(e.daysLeft);
@@ -2353,9 +2358,21 @@ function getSortedActiveLots(productCode) {
         .filter(function (lot) { return lotBalances[lot] > 0; })
         .map(function (lot) {
             var balance = Math.round(lotBalances[lot] * 100) / 100;
-            var containerWt = lotContainerWeight[lot] || 0;
-            var fullContainers = containerWt > 0 ? Math.floor(balance / containerWt) : 0;
-            var partialKg = containerWt > 0 ? Math.round((balance % containerWt) * 100) / 100 : balance;
+            var totalContainersIn = lotTotalContainersIn[lot] || 0;
+            var totalKgIn = lotTotalKgIn[lot] || 0;
+            var totalKgOut = lotTotalKgOut[lot] || 0;
+
+            // Calculate average weight per container
+            var avgContainerWeight = totalContainersIn > 0 ? totalKgIn / totalContainersIn : 0;
+
+            // Estimate containers remaining
+            var estimatedContainersOut = avgContainerWeight > 0 ? totalKgOut / avgContainerWeight : 0;
+            var remainingContainers = Math.max(0, totalContainersIn - estimatedContainersOut);
+
+            // Split into full containers and partial
+            var fullContainers = Math.floor(remainingContainers);
+            var partialFraction = remainingContainers - fullContainers;
+            var partialKg = avgContainerWeight > 0 ? Math.round(partialFraction * avgContainerWeight * 100) / 100 : 0;
 
             return {
                 lotNo: lot,
@@ -2364,8 +2381,8 @@ function getSortedActiveLots(productCode) {
                 expDays: lotExpDays[lot],
                 expDate: lotExpDate[lot] || '-',
                 supplier: lotVendor[lot],
-                containerWeight: containerWt,
-                originalContainers: lotOriginalContainers[lot],
+                containerWeight: Math.round(avgContainerWeight * 100) / 100,
+                originalContainers: totalContainersIn,
                 fullContainers: fullContainers,
                 partialKg: partialKg
             };

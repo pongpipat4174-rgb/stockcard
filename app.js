@@ -431,12 +431,8 @@ async function fetchPackageData() {
                 remark: c[12]?.v || ''
             };
         }).filter(function (item) {
-            // Basic check
+            // Basic check - only filter out header row
             if (!item.productCode || item.productCode === 'code') return false;
-
-            // Exclude RM items (misrouted to Package Sheet)
-            if (item.type && typeof item.type === 'string' && item.type.includes('ผลิต')) return false;
-            if (item.pkId && typeof item.pkId === 'string' && item.pkId.startsWith('RM')) return false;
 
             return true;
         });

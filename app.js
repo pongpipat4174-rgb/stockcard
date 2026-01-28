@@ -1424,21 +1424,29 @@ function showExpiryItems(type) {
         return;
     }
 
-    // Group by product
-    var productMap = new Map();
+    // Get unique product codes from filtered items
+    var productCodes = new Set();
     items.forEach(function (item) {
-        if (!productMap.has(item.productCode)) {
-            productMap.set(item.productCode, {
-                code: item.productCode,
-                name: item.productName,
-                entries: []
-            });
-        }
-        productMap.get(item.productCode).entries.push(item);
+        productCodes.add(item.productCode);
     });
 
-    // Filter to show only these products
-    searchedProducts = Array.from(productMap.values()).map(function (prod) {
+    // Get ALL entries for these products (not just the filtered ones)
+    var fullProductData = {};
+    rmStockData.forEach(function (entry) {
+        if (productCodes.has(entry.productCode)) {
+            if (!fullProductData[entry.productCode]) {
+                fullProductData[entry.productCode] = {
+                    code: entry.productCode,
+                    name: entry.productName,
+                    entries: []
+                };
+            }
+            fullProductData[entry.productCode].entries.push(entry);
+        }
+    });
+
+    // Build products with full entries
+    searchedProducts = Object.values(fullProductData).map(function (prod) {
         var entries = prod.entries;
         var totalIn = entries.reduce(function (sum, d) { return sum + d.inQty; }, 0);
         var totalOut = entries.reduce(function (sum, d) { return sum + d.outQty; }, 0);
@@ -1456,7 +1464,7 @@ function showExpiryItems(type) {
     });
 
     renderStockCardsRM(searchedProducts);
-    showToast(title + ' (' + items.length + ' รายการ)');
+    showToast(title + ' (' + productCodes.size + ' สินค้า · ' + items.length + ' รายการ)');
 
     // Scroll to cards
     document.getElementById('cardsContainer')?.scrollIntoView({ behavior: 'smooth' });

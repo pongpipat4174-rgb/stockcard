@@ -1027,6 +1027,27 @@ function renderStockCardsRM(products) {
         html += '</span>';
         html += '</div>';
 
+        // 4. CONTAINER SUMMARY BOX (Teal/Cyan) - Show total containers for Reval labeling
+        var sortedLots = getSortedActiveLots(prod.code);
+        var totalFullContainers = 0;
+        var totalPartialKg = 0;
+        sortedLots.forEach(function (lot) {
+            totalFullContainers += lot.fullContainers || 0;
+            totalPartialKg += lot.partialKg || 0;
+        });
+        totalPartialKg = Math.round(totalPartialKg * 100) / 100;
+
+        if (totalFullContainers > 0 || totalPartialKg > 0) {
+            var containerText = totalFullContainers + ' ถัง';
+            if (totalPartialKg > 0) {
+                containerText += ' + ' + formatNumber(totalPartialKg) + ' Kg';
+            }
+            html += '<div class="summary-item container-lot">';
+            html += '<span class="summary-label">📦 ภาชนะคงเหลือ (ประมาณ)</span>';
+            html += '<span class="summary-value container-value">' + containerText + '</span>';
+            html += '</div>';
+        }
+
         html += '</div>';
         html += '<div class="stock-table-container"><table class="stock-table stock-table-rm"><thead><tr>';
         html += '<th>วันที่</th><th>ประเภท</th><th class="no-print">Cont.</th><th class="no-print">นน./Cont.</th><th class="no-print">เศษ(Kg)</th><th>รับเข้า</th><th>เบิกออก</th><th>คงเหลือ</th><th>Lot No.</th><th class="no-print">Vendor Lot</th><th class="no-print">MFD</th><th>EXP</th><th>Days Left</th><th>Lot Bal.</th><th>Supplier</th><th class="no-print">ลบ</th>';
@@ -2299,6 +2320,8 @@ function getSortedActiveLots(productCode) {
     var lotExpDays = {};
     var lotExpDate = {};
     var lotVendor = {};
+    var lotContainerWeight = {};
+    var lotOriginalContainers = {};
 
     entries.forEach(function (e) {
         if (!e.lotNo) return;
@@ -2306,8 +2329,16 @@ function getSortedActiveLots(productCode) {
             lotBalances[e.lotNo] = 0;
             lotFirstDate[e.lotNo] = e.date;
             lotVendor[e.lotNo] = e.supplier || e.vendorLot;
+            lotContainerWeight[e.lotNo] = 0;
+            lotOriginalContainers[e.lotNo] = 0;
         }
         lotBalances[e.lotNo] += e.inQty - e.outQty;
+
+        // Track container info from receive entries
+        if (e.inQty > 0 && e.containerWeight > 0) {
+            lotContainerWeight[e.lotNo] = e.containerWeight;
+            lotOriginalContainers[e.lotNo] += e.containerQty || 0;
+        }
 
         var days = parseInt(e.daysLeft);
         if (!isNaN(days)) {
@@ -2321,13 +2352,22 @@ function getSortedActiveLots(productCode) {
     var activeLots = Object.keys(lotBalances)
         .filter(function (lot) { return lotBalances[lot] > 0; })
         .map(function (lot) {
+            var balance = Math.round(lotBalances[lot] * 100) / 100;
+            var containerWt = lotContainerWeight[lot] || 0;
+            var fullContainers = containerWt > 0 ? Math.floor(balance / containerWt) : 0;
+            var partialKg = containerWt > 0 ? Math.round((balance % containerWt) * 100) / 100 : balance;
+
             return {
                 lotNo: lot,
-                balance: lotBalances[lot],
+                balance: balance,
                 firstDate: lotFirstDate[lot],
                 expDays: lotExpDays[lot],
                 expDate: lotExpDate[lot] || '-',
-                supplier: lotVendor[lot]
+                supplier: lotVendor[lot],
+                containerWeight: containerWt,
+                originalContainers: lotOriginalContainers[lot],
+                fullContainers: fullContainers,
+                partialKg: partialKg
             };
         });
 
@@ -2700,6 +2740,15 @@ function updateSmartWithdrawStockInfo() {
     var totalStock = lots.reduce(function (sum, lot) { return sum + lot.balance; }, 0);
     totalStock = Math.round(totalStock * 100) / 100;
 
+    // Calculate total containers
+    var totalFullContainers = 0;
+    var totalPartialKg = 0;
+    lots.forEach(function (lot) {
+        totalFullContainers += lot.fullContainers || 0;
+        totalPartialKg += lot.partialKg || 0;
+    });
+    totalPartialKg = Math.round(totalPartialKg * 100) / 100;
+
     // Find nearest expiry lot
     var nearestExpiry = '-';
     if (lots.length > 0) {
@@ -2717,6 +2766,13 @@ function updateSmartWithdrawStockInfo() {
     document.getElementById('swTotalStock').textContent = formatNumber(totalStock) + ' Kg';
     document.getElementById('swTotalLots').textContent = lots.length + ' Lots';
     document.getElementById('swNearExpiry').textContent = nearestExpiry;
+
+    // Show container summary
+    var containerText = totalFullContainers + ' ถัง';
+    if (totalPartialKg > 0) {
+        containerText += ' + ' + formatNumber(totalPartialKg) + ' Kg';
+    }
+    document.getElementById('swTotalContainers').textContent = containerText;
 
     // Check if near expiry warning needed
     var nearExpiryEl = document.getElementById('swNearExpiry');
@@ -2765,14 +2821,24 @@ function calculateSmartAllocation() {
         var take = Math.min(remainingNeeded, lot.balance);
         take = Math.round(take * 100) / 100;
 
+        var afterQty = Math.round((lot.balance - take) * 100) / 100;
+        var containerWt = lot.containerWeight || 0;
+        var afterFullContainers = containerWt > 0 ? Math.floor(afterQty / containerWt) : 0;
+        var afterPartialKg = containerWt > 0 ? Math.round((afterQty % containerWt) * 100) / 100 : afterQty;
+
         allocationPlan.push({
             lotNo: lot.lotNo,
             expDays: lot.expDays,
             expDate: lot.expDate || '-',
             balance: lot.balance,
             takeQty: take,
-            afterQty: Math.round((lot.balance - take) * 100) / 100,
-            supplier: lot.supplier
+            afterQty: afterQty,
+            supplier: lot.supplier,
+            containerWeight: containerWt,
+            fullContainers: lot.fullContainers || 0,
+            partialKg: lot.partialKg || 0,
+            afterFullContainers: afterFullContainers,
+            afterPartialKg: afterPartialKg
         });
 
         remainingNeeded -= take;
@@ -2819,14 +2885,40 @@ function renderAllocationPreview(plan, totalRequested, isPartial, shortfall) {
             }
         }
 
+        // Container size display
+        var containerSizeText = item.containerWeight > 0 ? formatNumber(item.containerWeight) + ' Kg/ถัง' : '-';
+
+        // Current balance with containers
+        var currentBalanceText = '';
+        if (item.containerWeight > 0) {
+            currentBalanceText = item.fullContainers + ' ถัง';
+            if (item.partialKg > 0) {
+                currentBalanceText += ' + ' + formatNumber(item.partialKg) + ' Kg';
+            }
+        } else {
+            currentBalanceText = formatNumber(item.balance) + ' Kg';
+        }
+
+        // After balance with containers
+        var afterBalanceText = '';
+        if (item.containerWeight > 0) {
+            afterBalanceText = item.afterFullContainers + ' ถัง';
+            if (item.afterPartialKg > 0) {
+                afterBalanceText += ' + ' + formatNumber(item.afterPartialKg) + ' Kg';
+            }
+        } else {
+            afterBalanceText = formatNumber(item.afterQty) + ' Kg';
+        }
+
         row.innerHTML = `
             <td>${idx + 1}</td>
             <td><span class="lot-badge">${item.lotNo}</span></td>
             <td>${item.expDate}</td>
             <td class="${daysClass}">${daysDisplay}</td>
-            <td>${formatNumber(item.balance)} Kg</td>
+            <td>${containerSizeText}</td>
+            <td>${currentBalanceText}</td>
             <td class="qty-withdraw">-${formatNumber(item.takeQty)} Kg</td>
-            <td class="qty-after">${formatNumber(item.afterQty)} Kg</td>
+            <td class="qty-after">${afterBalanceText}</td>
         `;
         tbody.appendChild(row);
         totalTake += item.takeQty;

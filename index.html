@@ -11,7 +11,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20">
+    <link rel="stylesheet" href="styles.css?v=21">
 </head>
 
 <body>
@@ -670,6 +670,10 @@
                                     <span class="info-value" id="swTotalLots">0 Lots</span>
                                 </div>
                                 <div class="stock-info-item">
+                                    <span class="info-label">📦 ภาชนะรวม:</span>
+                                    <span class="info-value" id="swTotalContainers">-</span>
+                                </div>
+                                <div class="stock-info-item">
                                     <span class="info-label">Lot ใกล้หมดอายุ:</span>
                                     <span class="info-value info-warning" id="swNearExpiry">-</span>
                                 </div>
@@ -700,9 +704,10 @@
                                         <th>Lot No.</th>
                                         <th>วันหมดอายุ</th>
                                         <th>Days Left</th>
-                                        <th>คงเหลือใน Lot</th>
+                                        <th>ขนาดภาชนะ</th>
+                                        <th>คงเหลือ (ถัง+เศษ)</th>
                                         <th>จะเบิก</th>
-                                        <th>หลังเบิก</th>
+                                        <th>หลังเบิก (ถัง)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="allocationTableBody">
@@ -776,7 +781,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=48"></script>
+    <script src="app.js?v=49"></script>
 
     <script>
         // Integrated Module Switch Logic

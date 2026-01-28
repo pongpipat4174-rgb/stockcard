@@ -1027,23 +1027,30 @@ function renderStockCardsRM(products) {
         html += '</span>';
         html += '</div>';
 
-        // 4. CONTAINER SUMMARY BOX (Teal/Cyan) - Show total containers for Reval labeling
+        // 4. CONTAINER SUMMARY BOX (Teal/Cyan) - Show containers ONLY for lots expiring within 30 days
         var sortedLots = getSortedActiveLots(prod.code);
-        var totalFullContainers = 0;
-        var totalPartialKg = 0;
-        sortedLots.forEach(function (lot) {
-            totalFullContainers += lot.fullContainers || 0;
-            totalPartialKg += lot.partialKg || 0;
-        });
-        totalPartialKg = Math.round(totalPartialKg * 100) / 100;
+        var expiringContainers = 0;
+        var expiringPartialKg = 0;
+        var expiringLotCount = 0;
 
-        if (totalFullContainers > 0 || totalPartialKg > 0) {
-            var containerText = totalFullContainers + ' ถัง';
-            if (totalPartialKg > 0) {
-                containerText += ' + ' + formatNumber(totalPartialKg) + ' Kg';
+        sortedLots.forEach(function (lot) {
+            // Only count lots with ≤30 days left
+            if (lot.expDays !== undefined && lot.expDays <= 30) {
+                expiringContainers += lot.fullContainers || 0;
+                expiringPartialKg += lot.partialKg || 0;
+                expiringLotCount++;
+            }
+        });
+        expiringPartialKg = Math.round(expiringPartialKg * 100) / 100;
+
+        // Only show if there are expiring lots
+        if (expiringLotCount > 0 && (expiringContainers > 0 || expiringPartialKg > 0)) {
+            var containerText = expiringContainers + ' ถัง';
+            if (expiringPartialKg > 0) {
+                containerText += ' + ' + formatNumber(expiringPartialKg) + ' Kg';
             }
             html += '<div class="summary-item container-lot">';
-            html += '<span class="summary-label">📦 ภาชนะคงเหลือ (ประมาณ)</span>';
+            html += '<span class="summary-label">📦 ภาชนะใกล้หมดอายุ (' + expiringLotCount + ' Lot)</span>';
             html += '<span class="summary-value container-value">' + containerText + '</span>';
             html += '</div>';
         }

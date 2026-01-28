@@ -584,7 +584,8 @@ const loadData = async () => {
                     kgPerCarton: Number(item.kgPerCarton || 25),
                     pcsPerKg: Number(item.pcsPerKg || 0),
                     minThreshold: Number(item.min || item.minThreshold || 0),
-                    pcsPerPack: Number(item.pcsPerPack || 1),
+                    // Fix: Do not force default 1 if value is 0 or valid number. Only if undefined/null.
+                    pcsPerPack: (item.pcsPerPack !== undefined && item.pcsPerPack !== null) ? Number(item.pcsPerPack) : 1,
                     fgPcsPerCarton: Number(item.fgPerCarton || item.fgPcsPerCarton || 1),
                     rollLength: Number(item.rollLength || 0),
                     cutLength: Number(item.cutLength || 0),

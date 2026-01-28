@@ -253,12 +253,12 @@ table {
 
 th,
 td {
-    padding: 8px 10px;
-    /* Reduced from 14px 16px */
+    padding: 4px 3px;
+    /* Tighter padding */
     text-align: left;
     border-bottom: 1px solid var(--border-color);
-    font-size: 0.9rem;
-    /* Slightly smaller font */
+    font-size: 0.75rem;
+    /* Compact font */
 }
 
 th {

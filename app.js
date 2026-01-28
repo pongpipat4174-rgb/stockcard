@@ -1027,31 +1027,62 @@ function renderStockCardsRM(products) {
         html += '</span>';
         html += '</div>';
 
-        // 4. CONTAINER SUMMARY BOX (Teal/Cyan) - Show containers ONLY for lots expiring within 30 days
-        var sortedLots = getSortedActiveLots(prod.code);
-        var expiringContainers = 0;
-        var expiringPartialKg = 0;
-        var expiringLotCount = 0;
+        // 4. CONTAINER SUMMARY BOX - Show ACTUAL containers for lots expiring within 30 days
+        // Calculate directly from entries to get exact container counts
+        var expiringLotData = {};
 
-        sortedLots.forEach(function (lot) {
-            // Only count lots with ≤30 days left
-            if (lot.expDays !== undefined && lot.expDays <= 30) {
-                expiringContainers += lot.fullContainers || 0;
-                expiringPartialKg += lot.partialKg || 0;
-                expiringLotCount++;
+        // First, identify which lots are expiring (≤30 days) and have remaining balance
+        prod.entries.forEach(function (entry) {
+            if (!entry.lotNo) return;
+            var daysLeft = parseInt(entry.daysLeft);
+
+            // Initialize lot tracking
+            if (!expiringLotData[entry.lotNo]) {
+                expiringLotData[entry.lotNo] = {
+                    daysLeft: null,
+                    containersIn: 0,
+                    kgIn: 0,
+                    kgOut: 0
+                };
+            }
+
+            // Track days left (use first valid value)
+            if (!isNaN(daysLeft) && expiringLotData[entry.lotNo].daysLeft === null) {
+                expiringLotData[entry.lotNo].daysLeft = daysLeft;
+            }
+
+            // Track containers and Kg
+            if (entry.inQty > 0) {
+                expiringLotData[entry.lotNo].containersIn += entry.containerQty || 0;
+                expiringLotData[entry.lotNo].kgIn += entry.inQty;
+            }
+            if (entry.outQty > 0) {
+                expiringLotData[entry.lotNo].kgOut += entry.outQty;
             }
         });
-        expiringPartialKg = Math.round(expiringPartialKg * 100) / 100;
 
-        // Only show if there are expiring lots
-        if (expiringLotCount > 0 && (expiringContainers > 0 || expiringPartialKg > 0)) {
-            var containerText = expiringContainers + ' ถัง';
-            if (expiringPartialKg > 0) {
-                containerText += ' + ' + formatNumber(expiringPartialKg) + ' Kg';
+        // Sum containers only for expiring lots (≤30 days) with remaining stock
+        var expiringContainers = 0;
+        var expiringLotCount = 0;
+        var expiringLotNames = [];
+
+        Object.keys(expiringLotData).forEach(function (lotNo) {
+            var lot = expiringLotData[lotNo];
+            var kgRemaining = lot.kgIn - lot.kgOut;
+
+            // Only count if lot is expiring AND has remaining stock
+            if (lot.daysLeft !== null && lot.daysLeft <= 30 && kgRemaining > 0) {
+                expiringContainers += lot.containersIn;
+                expiringLotCount++;
+                expiringLotNames.push(lotNo);
             }
+        });
+
+        // Only show if there are expiring lots with containers
+        if (expiringLotCount > 0 && expiringContainers > 0) {
             html += '<div class="summary-item container-lot">';
             html += '<span class="summary-label">📦 ภาชนะใกล้หมดอายุ (' + expiringLotCount + ' Lot)</span>';
-            html += '<span class="summary-value container-value">' + containerText + '</span>';
+            html += '<span class="summary-value container-value">' + expiringContainers + ' ถัง</span>';
             html += '</div>';
         }
 

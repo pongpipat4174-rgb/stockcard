@@ -1570,34 +1570,60 @@ window.openPurchaseOrderModal = () => {
     if (!modal || !tbody) return;
 
     tbody.innerHTML = '';
-    
-    // Sort items by name for easier finding
-    const sortedItems = [...items].sort((a, b) => a.name.localeCompare(b.name));
+
+    // Sort items: Put Low Stock items FIRST, then Alphabetical
+    const sortedItems = [...items].sort((a, b) => {
+        const totalKgA = (a.stockCartons * a.kgPerCarton) + (a.stockPartialKg || 0);
+        const isLowA = totalKgA < a.minThreshold;
+
+        const totalKgB = (b.stockCartons * b.kgPerCarton) + (b.stockPartialKg || 0);
+        const isLowB = totalKgB < b.minThreshold;
+
+        // Sort by Low Stock status first (True comes first)
+        if (isLowA && !isLowB) return -1;
+        if (!isLowA && isLowB) return 1;
+
+        // Then by Name
+        return a.name.localeCompare(b.name);
+    });
 
     sortedItems.forEach((item, index) => {
         const tr = document.createElement('tr');
-        
+
+        // Calculate Logic matching Table
         let unit = 'หน่วย';
-        let stock = 0;
+        let stockDisplay = 0;
+        let totalKg = (item.stockCartons * item.kgPerCarton) + (item.stockPartialKg || 0);
 
         if (item.category === 'unit') {
             unit = 'ม้วน';
-            stock = item.stockCartons; 
+            stockDisplay = item.stockCartons;
         } else {
             unit = 'กก.';
-            stock = Number(item.stockCartons * item.kgPerCarton) + Number(item.stockPartialKg || 0);
+            stockDisplay = totalKg;
         }
-        
+
+        const isLow = totalKg < item.minThreshold;
+
+        // Highlight Style
+        const rowStyle = isLow ? 'background-color: #fef2f2; color: #dc2626;' : '';
+        const nameStyle = isLow ? 'font-weight: 700; color: #dc2626;' : 'font-weight: 600;';
+        const iconAlert = isLow ? '<i class="fa-solid fa-triangle-exclamation" style="margin-right:4px;"></i>' : '';
+
+        tr.style.cssText = rowStyle;
         tr.innerHTML = `
             <td class="center">${index + 1}</td>
             <td>
-                <div class="font-bold">${item.name}</div>
+                <div style="${nameStyle}">${iconAlert}${item.name}</div>
+                <div style="font-size:0.75rem; color: ${isLow ? '#ef4444' : '#94a3b8'};">
+                    Min: ${formatNumber(item.minThreshold)} กก. (คงเหลือรวม: ${formatNumber(totalKg, 0)} กก.)
+                </div>
             </td>
-            <td class="center">${formatNumber(stock, 0)}</td>
+            <td class="center" style="font-weight:600;">${formatNumber(stockDisplay, 0)}</td>
             <td class="center text-sm">${unit}</td>
             <td class="center">
                 <input type="number" class="po-input" data-name="${item.name}" data-unit="${unit}" 
-                    style="width: 100px; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px;"
+                    style="width: 100px; text-align: center; border: 1px solid ${isLow ? '#fca5a5' : '#cbd5e1'}; border-radius: 4px; padding: 4px; ${isLow ? 'background-color:#fff;' : ''}"
                     placeholder="" min="0">
             </td>
         `;
@@ -1632,7 +1658,7 @@ window.printPurchaseOrder = () => {
     }
 
     const today = new Date();
-    const dateStr = today.toLocaleDateString('th-TH', { 
+    const dateStr = today.toLocaleDateString('th-TH', {
         year: 'numeric', month: 'long', day: 'numeric',
         hour: '2-digit', minute: '2-digit'
     });
@@ -1656,12 +1682,13 @@ window.printPurchaseOrder = () => {
             <title>ใบขอสั่งซื้อสินค้า (PR)</title>
             <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
             <style>
-                body { font-family: 'Sarabun', sans-serif; padding: 40px; }
+                @page { size: A4 portrait; margin: 2cm; }
+                body { font-family: 'Sarabun', sans-serif; padding: 20px; }
                 h1 { text-align: center; margin-bottom: 5px; font-size: 24px; }
                 h2 { text-align: center; margin-bottom: 30px; font-size: 16px; color: #555; font-weight: normal; }
                 .meta { margin-bottom: 20px; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
                 table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                th, td { border: 1px solid #000; padding: 12px; font-size: 16px; }
+                th, td { border: 1px solid #000; padding: 10px; font-size: 14px; }
                 th { background-color: #f3f3f3; font-weight: bold; }
                 .footer { margin-top: 60px; display: flex; justify-content: space-between; text-align: center; }
                 .sig-box { width: 30%; }
@@ -1681,11 +1708,11 @@ window.printPurchaseOrder = () => {
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 50px;">ลำดับ</th>
+                        <th style="width: 40px;">ลำดับ</th>
                         <th>รายการสินค้า</th>
-                        <th style="width: 100px;">จำนวน</th>
-                        <th style="width: 80px;">หน่วย</th>
-                        <th style="width: 200px;">หมายเหตุ</th>
+                        <th style="width: 80px;">จำนวน</th>
+                        <th style="width: 60px;">หน่วย</th>
+                        <th style="width: 150px;">หมายเหตุ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1714,7 +1741,6 @@ window.printPurchaseOrder = () => {
             <script>
                 window.onload = function() { 
                     window.print(); 
-                    // Optional: window.close(); // Don't close immediately to let user see
                 }
             </script>
         </body>

@@ -657,8 +657,16 @@ window.saveData = async () => {
     // 2. If Online, Sync to Cloud
     if (API_URL) {
         try {
+            // SAFETY FILTER
+            const validItems = items.filter(item => item.name && item.name.trim() !== "");
+            if (validItems.length < items.length) {
+                console.error("Stopping save: Missing item names detected.");
+                alert("เกิดข้อผิดพลาด: ข้อมูลไม่สมบูรณ์ (ชื่อหาย) กรุณารีเฟรช");
+                return;
+            }
+
             // Map to Thai Headers matching Web Page EXACTLY
-            const sheetItems = items.map(item => {
+            const sheetItems = validItems.map(item => {
                 const isRoll = item.category === 'unit';
                 const stockPartial = isRoll ? 0 : (item.stockPartialKg || 0);
 

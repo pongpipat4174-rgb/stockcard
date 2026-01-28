@@ -446,6 +446,11 @@
                     <button class="btn secondary" onclick="window.print()" style="white-space: nowrap;">
                         <i class="fa-solid fa-print"></i> พิมพ์
                     </button>
+                    <!-- New PO Button -->
+                    <button id="po-btn" class="btn secondary" onclick="openPurchaseOrderModal()"
+                        style="color: #047857; border-color: #6ee7b7; background-color: #ecfdf5; white-space: nowrap;">
+                        <i class="fa-solid fa-file-invoice"></i> ใบสั่งซื้อ
+                    </button>
                     <button id="calc-btn" class="btn secondary"
                         style="color: #854d0e; border-color: #fcd34d; background-color: #fffbeb; white-space: nowrap;"><i
                             class="fa-solid fa-calculator"></i> คำนวณถุง</button>
@@ -898,6 +903,44 @@
             }
         </style>
 
+        <!-- Purchase Order Modal -->
+        <div id="po-modal" class="modal">
+            <div class="modal-content"
+                style="max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
+                <span class="close-btn" onclick="closePurchaseOrderModal()">&times;</span>
+                <div class="section-title text-blue">
+                    <i class="fa-solid fa-cart-shopping"></i> รายการสั่งซื้อสินค้า (Purchase Order)
+                </div>
+
+                <div style="margin-bottom: 12px; flex-shrink: 0;">
+                    <p class="help-text">กรอกจำนวนที่ต้องการสั่งซื้อ สำหรับรายการที่ต้องการ</p>
+                </div>
+
+                <div class="table-container" style="overflow-y: auto; flex-grow: 1; border: 1px solid #e2e8f0;">
+                    <table id="po-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;" class="center">#</th>
+                                <th>ชื่อสินค้า</th>
+                                <th class="center" style="width: 100px;">คงเหลือ</th>
+                                <th class="center" style="width: 80px;">หน่วย</th>
+                                <th class="center" style="width: 120px;">จำนวนสั่งซื้อ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="po-table-body">
+                            <!-- JS Populate -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-actions" style="margin-top: 20px; flex-shrink: 0;">
+                    <button class="btn secondary" onclick="closePurchaseOrderModal()">ปิด</button>
+                    <button class="btn primary" onclick="printPurchaseOrder()">
+                        <i class="fa-solid fa-print"></i> พิมพ์ใบสั่งซื้อ
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <script src="script_v4.js"></script>
 </body>

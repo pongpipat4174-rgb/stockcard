@@ -1559,3 +1559,169 @@ function openActionSheet(index) {
 
     modal.style.display = 'flex';
 }
+
+// ==========================================
+// PURCHASE ORDER (PO) LOGIC
+// ==========================================
+
+window.openPurchaseOrderModal = () => {
+    const modal = document.getElementById('po-modal');
+    const tbody = document.getElementById('po-table-body');
+    if (!modal || !tbody) return;
+
+    tbody.innerHTML = '';
+    
+    // Sort items by name for easier finding
+    const sortedItems = [...items].sort((a, b) => a.name.localeCompare(b.name));
+
+    sortedItems.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        
+        let unit = 'หน่วย';
+        let stock = 0;
+
+        if (item.category === 'unit') {
+            unit = 'ม้วน';
+            stock = item.stockCartons; 
+        } else {
+            unit = 'กก.';
+            stock = Number(item.stockCartons * item.kgPerCarton) + Number(item.stockPartialKg || 0);
+        }
+        
+        tr.innerHTML = `
+            <td class="center">${index + 1}</td>
+            <td>
+                <div class="font-bold">${item.name}</div>
+            </td>
+            <td class="center">${formatNumber(stock, 0)}</td>
+            <td class="center text-sm">${unit}</td>
+            <td class="center">
+                <input type="number" class="po-input" data-name="${item.name}" data-unit="${unit}" 
+                    style="width: 100px; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px;"
+                    placeholder="" min="0">
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    modal.style.display = 'flex';
+};
+
+window.closePurchaseOrderModal = () => {
+    document.getElementById('po-modal').style.display = 'none';
+};
+
+window.printPurchaseOrder = () => {
+    const inputs = document.querySelectorAll('.po-input');
+    const orderItems = [];
+
+    inputs.forEach(input => {
+        const qty = parseFloat(input.value);
+        if (qty > 0) {
+            orderItems.push({
+                name: input.dataset.name,
+                unit: input.dataset.unit,
+                qty: qty
+            });
+        }
+    });
+
+    if (orderItems.length === 0) {
+        alert("กรุณาระบุจำนวนสินค้าที่ต้องการสั่งซื้ออย่างน้อย 1 รายการ");
+        return;
+    }
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('th-TH', { 
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+
+    let tableRows = '';
+    orderItems.forEach((item, index) => {
+        tableRows += `
+            <tr>
+                <td style="text-align: center;">${index + 1}</td>
+                <td>${item.name}</td>
+                <td style="text-align: center;">${formatNumber(item.qty, 0)}</td>
+                <td style="text-align: center;">${item.unit}</td>
+                <td style="text-align: center;"></td>
+            </tr>
+        `;
+    });
+
+    const printContent = `
+        <html>
+        <head>
+            <title>ใบขอสั่งซื้อสินค้า (PR)</title>
+            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Sarabun', sans-serif; padding: 40px; }
+                h1 { text-align: center; margin-bottom: 5px; font-size: 24px; }
+                h2 { text-align: center; margin-bottom: 30px; font-size: 16px; color: #555; font-weight: normal; }
+                .meta { margin-bottom: 20px; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #000; padding: 12px; font-size: 16px; }
+                th { background-color: #f3f3f3; font-weight: bold; }
+                .footer { margin-top: 60px; display: flex; justify-content: space-between; text-align: center; }
+                .sig-box { width: 30%; }
+                .sig-line { border-top: 1px solid #000; width: 100%; margin: 40px auto 10px; }
+                tr:nth-child(even) { background-color: #fafafa; }
+            </style>
+        </head>
+        <body>
+            <h1>ใบขอสั่งซื้อสินค้า (Purchase Requisition)</h1>
+            <h2>รายการวัสดุสิ้นเปลือง (Consumables)</h2>
+            
+            <div class="meta">
+                <div><strong>วันที่รายการ:</strong> ${dateStr}</div>
+                <div><strong>แผนก:</strong> คลังสินค้า/ผลิต</div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">ลำดับ</th>
+                        <th>รายการสินค้า</th>
+                        <th style="width: 100px;">จำนวน</th>
+                        <th style="width: 80px;">หน่วย</th>
+                        <th style="width: 200px;">หมายเหตุ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRows}
+                </tbody>
+            </table>
+
+            <div class="footer">
+                <div class="sig-box">
+                    <div class="sig-line"></div>
+                    <div>ผู้ขอซื้อ / ผู้เบิก</div>
+                    <div style="font-size: 12px; margin-top: 5px; color: #888;">วันที่ ..............................</div>
+                </div>
+                <div class="sig-box">
+                    <div class="sig-line"></div>
+                    <div>หัวหน้าแผนก / ผู้อนุมัติ</div>
+                    <div style="font-size: 12px; margin-top: 5px; color: #888;">วันที่ ..............................</div>
+                </div>
+                <div class="sig-box">
+                    <div class="sig-line"></div>
+                    <div>ฝ่ายจัดซื้อ / ผู้รับเรื่อง</div>
+                    <div style="font-size: 12px; margin-top: 5px; color: #888;">วันที่ ..............................</div>
+                </div>
+            </div>
+            
+            <script>
+                window.onload = function() { 
+                    window.print(); 
+                    // Optional: window.close(); // Don't close immediately to let user see
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+};

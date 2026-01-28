@@ -2610,19 +2610,28 @@ function autoFillRMForm(productCode) {
     var type = document.getElementById('entryTypeRM').value;
     var isWithdrawal = type && type.includes('เบิก');
 
-    // 1. Always Auto-Fill Container Weight based on history
+    // 1. Find product info from existing data
     var foundWeight = null;
     var lastVendor = '-';
-    // ... (Keep existing weight find logic) ...
+    var productName = '';
+
     for (var i = rmStockData.length - 1; i >= 0; i--) {
         var item = rmStockData[i];
         if (item.productCode === productCode) {
+            if (!productName && item.productName) productName = item.productName;
             if (foundWeight === null && item.containerWeight > 0) foundWeight = item.containerWeight;
             if (lastVendor === '-' && item.supplier) lastVendor = item.supplier;
-            if (foundWeight !== null && lastVendor !== '-') break;
+            if (productName && foundWeight !== null && lastVendor !== '-') break;
         }
     }
 
+    // Auto-fill product name
+    var nameInput = document.getElementById('entryProductNameRM');
+    if (nameInput && !nameInput.value && productName) {
+        nameInput.value = productName;
+    }
+
+    // Auto-fill container weight
     var weightInput = document.getElementById('entryContainerWeightRM');
     if (weightInput && !weightInput.value && foundWeight !== null) {
         weightInput.value = foundWeight;
@@ -2640,10 +2649,6 @@ function autoFillRMForm(productCode) {
 
             if (lotInput && !lotInput.value) {
                 lotInput.value = bestLot.lotNo;
-                // Reason text generation
-                var reason = '';
-                // (Simplification: Just show it works)
-                // We could check if it was Reval or FEFO again but getSortedActiveLots already did the work.
                 showToast('แนะนำ Lot: ' + bestLot.lotNo + ' (เหลือ ' + formatNumber(bestLot.balance) + ' Kg)');
             }
             if (vendorInput && !vendorInput.value && bestLot.supplier) {
@@ -2651,7 +2656,7 @@ function autoFillRMForm(productCode) {
             }
         }
     } else {
-        // Receive logic ...
+        // Receive: Auto-fill last vendor
         var vendorInput = document.getElementById('entryVendorRM');
         if (vendorInput && !vendorInput.value && lastVendor !== '-') {
             vendorInput.value = lastVendor;
@@ -2746,14 +2751,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // RM Auto-Fill on Product Change (Logic updated to include Lot/Vendor)
     document.getElementById('entryProductCodeRM')?.addEventListener('change', function () {
-        var prod = rmProductMasterData.find(function (p) { return p.code === this.value; }.bind(this));
-        if (prod) {
-            var nameInput = document.getElementById('entryProductNameRM');
-            if (nameInput) nameInput.value = prod.name;
-
-            // Trigger Auto-Fill Logic
-            autoFillRMForm(this.value);
-        }
+        autoFillRMForm(this.value);
+        calculateRMTotal(); // Also trigger form visibility update
     });
 
     // Also trigger on Type change (e.g., if user selected product first, then switched to withdrawal)

@@ -2283,13 +2283,17 @@ function calculateRMTotal() {
 
     // Hide container input row for withdrawals (only needed for receiving)
     var containerInputRow = document.getElementById('containerInputRow');
-    var inQtyGroup = document.getElementById('entryInQtyRM').parentElement;
+    var inQtyGroup = document.getElementById('inQtyGroup');
+    var balanceGroup = document.getElementById('balanceGroup');
 
     if (containerInputRow) {
         containerInputRow.style.display = isWithdrawal ? 'none' : 'grid';
     }
     if (inQtyGroup) {
         inQtyGroup.style.display = isWithdrawal ? 'none' : 'block';
+    }
+    if (balanceGroup) {
+        balanceGroup.style.display = isWithdrawal ? 'none' : 'block';
     }
 
     var containerQty = parseFloat(document.getElementById('entryContainerQtyRM').value) || 0;

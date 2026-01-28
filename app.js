@@ -1349,7 +1349,8 @@ function updateExpiryAlerts() {
         }
 
         var daysNum = parseInt(item.daysLeft);
-        if (!isNaN(daysNum) && daysNum > 0) {
+        if (!isNaN(daysNum)) {
+            // Include both already expired (<=0) and soon to expire (1-30)
             if (daysNum <= 30) {
                 criticalItems.push(item);
             } else if (daysNum <= 90) {
@@ -1409,7 +1410,7 @@ function showExpiryItems(type) {
 
     if (type === 'critical') {
         items = window.expiryData.critical;
-        title = '⚠️ รายการหมดอายุภายใน 30 วัน';
+        title = '🚨 รายการหมดอายุ/ใกล้หมดอายุ (≤30 วัน)';
     } else if (type === 'warning') {
         items = window.expiryData.warning;
         title = '⏰ รายการหมดอายุภายใน 90 วัน';

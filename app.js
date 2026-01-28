@@ -1022,7 +1022,7 @@ function renderStockCardsRM(products) {
         // User wants to see ALL 3 boxes if possible. But if they are identical, it's redundant.
         // Let's show it but maybe adjust styling if it's not the priority.
 
-        var isFifoRedundant = (isRevalPriority && fifoLot === revalLot) || (showFefo && fifoLot === fefoLot);
+        var isFifoRedundant = (isRevalPriority && fifoLot === revalLot) || (urgentLots.length > 0 && fifoLot === fefoLot);
         // Show anyway as requested ("Show 3 boxes"), but maybe logic implies "If meaningful"
         // Let's standardise: FIFO box always shows.
 

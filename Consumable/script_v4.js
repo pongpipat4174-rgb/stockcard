@@ -839,9 +839,9 @@ window.renderTable = () => {
                 </span>
             </td>
             <td style="text-align: left; font-weight: 500;">
-                <div class="product-name-container">
-                     ${item.name}
-                     ${isLowStock ? '<i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;" title="Low Stock"></i>' : ''}
+                <div class="product-name-container" style="display: block; line-height: 1.1;">
+                     ${item.name.replace(/\s*\(/, '<br><span style="font-size:0.85em; color:#64748b;">(').replace(/\)$/, ')</span>')}
+                     ${isLowStock ? '<i class="fa-solid fa-triangle-exclamation" style="color: #ef4444; margin-left:2px;" title="Low Stock"></i>' : ''}
                 </div>
             </td>
             <td class="center bg-shrink">${formatNumber(item.stockCartons, 1)}</td>

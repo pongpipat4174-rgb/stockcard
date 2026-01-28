@@ -980,27 +980,39 @@ function renderStockCardsRM(products) {
             html += '</div>';
         }
 
-        // 2. FEFO Box (Red) - Urgent Expiry or Conflict
-        // Show if there is a conflict OR if it's urgent (and not same as Reval)
-        var showFefo = (fefoConflict && fefoLot !== '-' && fefoExpDays !== null) || (fefoUrgent && fefoLot !== '-');
+        // 2. FEFO Box (Red) - Show ALL lots expiring within 30 days
+        // Find all lots with ≤30 days
+        var urgentLots = fefoSorted.filter(function (lot) {
+            return lotExpDays[lot] !== undefined && lotExpDays[lot] <= 30;
+        });
 
-        // Avoid duplicate showing if Red box is exactly the same lot as Purple box
-        if (showFefo && isRevalPriority && fefoLot === revalLot) {
-            showFefo = false;
+        // Exclude reval lots from this display (they're shown in purple box)
+        if (isRevalPriority) {
+            urgentLots = urgentLots.filter(function (lot) {
+                return !revalLots.includes(lot);
+            });
         }
 
-        if (showFefo) {
-            var fefoClass = 'fefo-lot';
-            if (fefoUrgent) fefoClass += ' fefo-urgent'; // Red Pulse
-            if (fefoConflict) fefoClass += ' fefo-conflict';
+        if (urgentLots.length > 0) {
+            var fefoClass = 'fefo-lot fefo-urgent';
 
             html += '<div class="summary-item ' + fefoClass + '">';
-            html += '<span class="summary-label">' + (fefoUrgent ? '� FEFO: หมดอายุเร็ว!' : '⏰ FEFO: หมดอายุก่อน') + '</span>';
+            html += '<span class="summary-label">🚨 FEFO: หมดอายุเร็ว! (' + urgentLots.length + ' Lot)</span>';
+
+            // Show all urgent lots
+            urgentLots.forEach(function (lot, idx) {
+                html += '<span class="summary-value fefo-value">' + lot + '</span>';
+                html += '<span class="fefo-note">เหลือ ' + formatNumber(lotBalances[lot]) + ' Kg · หมดอายุ ' + lotExpDate[lot] + ' (' + lotExpDays[lot] + ' วัน)</span>';
+            });
+
+            html += '</div>';
+        } else if (fefoConflict && fefoLot !== '-') {
+            // Show FEFO conflict box if no urgent lots but FEFO differs from FIFO
+            html += '<div class="summary-item fefo-lot fefo-conflict">';
+            html += '<span class="summary-label">⏰ FEFO: หมดอายุก่อน</span>';
             html += '<span class="summary-value fefo-value">' + fefoLot + '</span>';
             html += '<span class="fefo-note">เหลือ ' + formatNumber(fefoBalance) + ' Kg · หมดอายุ ' + fefoExpDate + ' (' + fefoExpDays + ' วัน)</span>';
-            if (fefoConflict) {
-                html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
-            }
+            html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
             html += '</div>';
         }
 

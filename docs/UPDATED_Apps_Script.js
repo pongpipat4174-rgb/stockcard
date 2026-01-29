@@ -148,14 +148,16 @@ function doPost(e) {
             map[4] = (entry.containerQty !== undefined && entry.containerQty !== "") ? entry.containerQty : null;
             map[5] = (entry.containerWeight !== undefined && entry.containerWeight !== "") ? entry.containerWeight : null;
 
-            // G, H -> Skip (formula)
-            map[6] = null;
-            map[7] = null;
+            // G (Remainder) - ต้องเขียน
+            map[6] = (entry.remainder !== undefined && entry.remainder !== "") ? entry.remainder : null;
+
+            // H (In Qty) - ต้องเขียน
+            map[7] = (entry.inQty !== undefined && entry.inQty !== "") ? entry.inQty : null;
 
             // I (Out)
             map[8] = (entry.outQty !== undefined && entry.outQty !== "") ? entry.outQty : null;
 
-            // J Balance -> Skip
+            // J Balance -> Skip (formula)
             map[9] = null;
 
             map[10] = entry.lotNo || "";
@@ -163,10 +165,12 @@ function doPost(e) {
             map[12] = (entry.mfgDate !== undefined && entry.mfgDate !== "") ? entry.mfgDate : null;
             map[13] = (entry.expDate !== undefined && entry.expDate !== "") ? entry.expDate : null;
 
-            // O, P, Q -> Skip (formula)
+            // O, P -> Skip (formula)
             map[14] = null;
             map[15] = null;
-            map[16] = null;
+
+            // Q (Supplier) - ต้องเขียน
+            map[16] = entry.supplier || "";
 
             map[17] = entry.remark || "";
 
@@ -326,17 +330,17 @@ function transferToProduction(dataArray) {
                 map[3] = "รับเข้า (โอนจาก Center)";
                 map[4] = (item.containerQty !== undefined) ? item.containerQty : null;
                 map[5] = (item.containerWeight !== undefined) ? item.containerWeight : null;
-                map[6] = null; // G
+                map[6] = (item.remainder !== undefined) ? item.remainder : null; // G (Remainder)
                 map[7] = item.quantity || 0; // H (IN)
                 map[8] = null; // I (OUT)
-                map[9] = null; // J Balance
+                map[9] = null; // J Balance (formula)
                 map[10] = item.lotNo || "";
                 map[11] = item.vendorLot || "";
                 map[12] = item.mfgDate || "";
                 map[13] = item.expDate || "";
-                map[14] = null; // O
-                map[15] = null; // P
-                map[16] = null; // Q
+                map[14] = null; // O (formula)
+                map[15] = null; // P (formula)
+                map[16] = item.supplier || ""; // Q (Supplier)
                 map[17] = "โอนจาก Center: " + (item.originalDate || "");
 
                 // Write data (skip formula cells)

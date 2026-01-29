@@ -1714,6 +1714,12 @@ function deleteEntryRM(rowIndex, productCode, type) {
     showLoading();
     showToast('กำลังลบ...');
 
+    // Determine sheet based on current module
+    var config = SHEET_CONFIG.rm;
+    if (currentModule === 'rm_production') {
+        config = SHEET_CONFIG.rm_production;
+    }
+
     // Send delete request to RM sheet
     fetch(APPS_SCRIPT_URL, {
         method: 'POST',
@@ -1721,13 +1727,19 @@ function deleteEntryRM(rowIndex, productCode, type) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             action: 'delete_rm',
+            spreadsheetId: config.id,
+            sheetName: config.sheetName,
             rowIndex: rowIndex,
             criteria: { productCode: productCode, type: type }
         })
     }).then(function () {
         setTimeout(async function () {
             showToast('ลบรายการวัตถุดิบเรียบร้อย!');
-            await fetchRMData();
+            if (currentModule === 'rm_production') {
+                await fetchRMProductionData();
+            } else {
+                await fetchRMData();
+            }
             hideLoading();
         }, 2000);
     }).catch(function (e) { alert(e); hideLoading(); });

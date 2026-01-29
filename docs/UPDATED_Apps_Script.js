@@ -190,10 +190,11 @@ function doPost(e) {
                         // Convert Thai year to AD if > 2500
                         if (expYear > 2500) expYear = expYear - 543;
                         var expDateObj = new Date(expYear, expMonth, expDay);
+                        expDateObj.setHours(0, 0, 0, 0);
                         var today = new Date();
                         today.setHours(0, 0, 0, 0);
                         var diffTime = expDateObj.getTime() - today.getTime();
-                        daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        daysLeft = Math.floor(diffTime / (1000 * 60 * 60 * 24));
                     }
                 } catch (e) {
                     daysLeft = "";
@@ -402,10 +403,11 @@ function transferToProduction(dataArray) {
                             var expYearPD = parseInt(expPartsPD[2]);
                             if (expYearPD > 2500) expYearPD = expYearPD - 543;
                             var expDateObjPD = new Date(expYearPD, expMonthPD, expDayPD);
+                            expDateObjPD.setHours(0, 0, 0, 0);
                             var todayPD = new Date();
                             todayPD.setHours(0, 0, 0, 0);
                             var diffTimePD = expDateObjPD.getTime() - todayPD.getTime();
-                            daysLeftPD = Math.ceil(diffTimePD / (1000 * 60 * 60 * 24));
+                            daysLeftPD = Math.floor(diffTimePD / (1000 * 60 * 60 * 24));
                         }
                     } catch (e) {
                         daysLeftPD = "";

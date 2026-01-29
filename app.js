@@ -2400,26 +2400,25 @@ async function saveEntryRM() {
         });
         console.log('Transfer entries found:', transferEntries.length, transferEntries);
 
+        // Ask about transfer BEFORE cleanup
+        var shouldTransfer = false;
         if (transferEntries.length > 0) {
-            // Ask user if they want to transfer to Production
-            setTimeout(function () {
-                if (confirm('รายการ "เบิกผลิต" ' + transferEntries.length + ' รายการ\n\nต้องการโอนข้อมูลไป RM Production ด้วยหรือไม่?\n\n(ข้อมูลจะถูกบันทึกเป็น "รับเข้า" ใน Production)')) {
-                    // Transfer to Production
-                    transferToProductionAuto(transferEntries);
-                }
-            }, 500);
+            shouldTransfer = confirm('รายการ "เบิกผลิต" ' + transferEntries.length + ' รายการ\n\nต้องการโอนข้อมูลไป RM Production ด้วยหรือไม่?\n\n(ข้อมูลจะถูกบันทึกเป็น "รับเข้า" ใน Production)');
         }
 
         // Success Cleanup
-        setTimeout(async function () {
-            closeEntryModalRM();
-            document.getElementById('entryFormRM').reset();
-            window.currentSplitPlan = null;
-            document.getElementById('lotSplitWarning').style.display = 'none';
+        closeEntryModalRM();
+        document.getElementById('entryFormRM').reset();
+        window.currentSplitPlan = null;
+        document.getElementById('lotSplitWarning').style.display = 'none';
 
-            await fetchRMData();
-            hideLoading();
-        }, 1000);
+        // Transfer after cleanup if user confirmed
+        if (shouldTransfer && transferEntries.length > 0) {
+            await transferToProductionAuto(transferEntries);
+        }
+
+        await fetchRMData();
+        hideLoading();
 
     } catch (e) {
         console.error('Save Error:', e);

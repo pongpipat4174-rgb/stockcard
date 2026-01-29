@@ -583,15 +583,10 @@
                         </div>
                     </div>
                     <!-- In Qty Row (for receive) -->
-                    <div class="form-grid" id="inQtyBalanceRow" style="display: none;">
+                    <div id="inQtyBalanceRow" style="display: none;">
                         <div class="form-group" id="inQtyGroup">
-                            <label for="entryInQtyRM">รับเข้า (Kg)</label>
+                            <label for="entryInQtyRM">รับเข้า (Kg) <span style="color:red;">*</span></label>
                             <input type="number" id="entryInQtyRM" name="inQty" min="0" step="0.01" placeholder="0">
-                        </div>
-                        <div class="form-group" id="balanceGroupReceive">
-                            <label for="entryBalanceRMReceive">คงเหลือ (Kg)</label>
-                            <input type="number" id="entryBalanceRMReceive" name="balanceReceive" step="0.01"
-                                placeholder="คำนวณอัตโนมัติ" readonly>
                         </div>
                     </div>
                     <!-- Balance Row (for withdrawal) -->
@@ -832,7 +827,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=85"></script>
+    <script src="app.js?v=86"></script>
 
     <script>
         // Integrated Module Switch Logic

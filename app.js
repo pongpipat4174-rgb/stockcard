@@ -2177,6 +2177,14 @@ async function saveEntryRM() {
         }
     }
 
+    // Validate required fields for receive
+    if (!isWithdrawal && type === 'รับเข้า') {
+        if (inQty <= 0) {
+            alert('⚠️ กรุณากรอก รับเข้า (Kg)');
+            return;
+        }
+    }
+
     showLoading();
 
     var entriesToSave = [];

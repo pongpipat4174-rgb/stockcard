@@ -435,6 +435,11 @@ th {
     color: var(--text-main);
 }
 
+/* Hide inline stock on desktop */
+.stock-inline {
+    display: none;
+}
+
 .btn.icon {
     padding: 8px;
     border-radius: 6px;

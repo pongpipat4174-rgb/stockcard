@@ -194,6 +194,7 @@
 
     .stock-inline {
         min-width: 50px;
+        display: block !important;
     }
 
     /* --- NAV BAR ADJUSTMENT (Red Box Area) --- */

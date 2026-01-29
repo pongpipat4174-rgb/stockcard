@@ -2738,10 +2738,22 @@ function showContainerInfoForWithdraw(productCode, sortedLots) {
         html += '</small><br><small style="color:#0369a1;">';
         sortedLots.forEach(function (lot, idx) {
             var containers = lot.fullContainers || 0;
-            if (containers > 0) {
-                html += 'Lot ' + lot.lotNo + ': ' + containers + ' ภาชนะ';
-                if (lot.containerWeight) html += ' (' + lot.containerWeight + ' Kg/ภาชนะ)';
-                if (lot.partialKg > 0) html += ' + เศษ ' + lot.partialKg + ' Kg';
+            if (containers > 0 || lot.balance > 0) {
+                html += '<b>Lot ' + lot.lotNo + '</b>: ';
+                if (containers > 0) {
+                    html += containers + ' ภาชนะ';
+                    if (lot.containerWeight) html += ' (' + lot.containerWeight + ' Kg/ภาชนะ)';
+                    if (lot.partialKg > 0) html += ' + เศษ ' + lot.partialKg + ' Kg';
+                } else {
+                    html += formatNumber(lot.balance) + ' Kg';
+                }
+                // Add expiry info
+                if (lot.expDate && lot.expDate !== '-') {
+                    var expStyle = lot.expDays <= 30 ? 'color:#dc2626;font-weight:bold;' : 'color:#666;';
+                    html += ' <span style="' + expStyle + '">| EXP: ' + lot.expDate;
+                    if (lot.expDays !== undefined) html += ' (' + lot.expDays + ' วัน)';
+                    html += '</span>';
+                }
                 if (idx < sortedLots.length - 1) html += '<br>';
             }
         });

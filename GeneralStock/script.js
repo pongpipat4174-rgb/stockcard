@@ -188,7 +188,6 @@ function renderTable() {
                     <button class="btn icon out" title="เบิกออก" onclick="openTransModal(${realIndex}, 'OUT')"><i class="fa-solid fa-minus"></i></button>
                     <button class="btn icon hist" title="ประวัติ" onclick="openHistoryModal(${realIndex})"><i class="fa-solid fa-clock-rotate-left"></i></button>
                     <button class="btn icon secondary" title="แก้ไข" onclick="editItem(${realIndex})"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn icon secondary" style="color:red" title="ลบ" onclick="deleteItem(${realIndex})"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </td>
         `;

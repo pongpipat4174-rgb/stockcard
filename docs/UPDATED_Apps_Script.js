@@ -157,17 +157,62 @@ function doPost(e) {
             // I (Out)
             map[8] = (entry.outQty !== undefined && entry.outQty !== "") ? entry.outQty : null;
 
-            // J Balance -> Skip (formula)
-            map[9] = null;
+            // J Balance -> Calculate from previous balance + in - out
+            var prevBalance = 0;
+            if (targetRow > 2) {
+                // Get previous row's balance for same product
+                var allData = sheet.getDataRange().getValues();
+                for (var r = targetRow - 2; r >= 1; r--) {
+                    if (allData[r][1] === entry.productCode) { // Column B = productCode
+                        prevBalance = parseFloat(allData[r][9]) || 0; // Column J = balance
+                        break;
+                    }
+                }
+            }
+            var inQty = parseFloat(entry.inQty) || 0;
+            var outQty = parseFloat(entry.outQty) || 0;
+            map[9] = prevBalance + inQty - outQty; // J Balance
 
             map[10] = entry.lotNo || "";
             map[11] = (entry.vendorLot !== undefined && entry.vendorLot !== "") ? entry.vendorLot : null;
             map[12] = (entry.mfgDate !== undefined && entry.mfgDate !== "") ? entry.mfgDate : null;
             map[13] = (entry.expDate !== undefined && entry.expDate !== "") ? entry.expDate : null;
 
-            // O, P -> Skip (formula)
-            map[14] = null;
-            map[15] = null;
+            // O (Days Left) -> Calculate from EXP date
+            var daysLeft = "";
+            if (entry.expDate && entry.expDate !== "-") {
+                try {
+                    var expParts = String(entry.expDate).split("/");
+                    if (expParts.length === 3) {
+                        var expDay = parseInt(expParts[0]);
+                        var expMonth = parseInt(expParts[1]) - 1;
+                        var expYear = parseInt(expParts[2]);
+                        // Convert Thai year to AD if > 2500
+                        if (expYear > 2500) expYear = expYear - 543;
+                        var expDateObj = new Date(expYear, expMonth, expDay);
+                        var today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        var diffTime = expDateObj.getTime() - today.getTime();
+                        daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    }
+                } catch (e) {
+                    daysLeft = "";
+                }
+            }
+            map[14] = (daysLeft !== "") ? daysLeft : null;
+
+            // P (Lot Balance) -> Calculate for this lot
+            var lotBalance = 0;
+            if (entry.lotNo) {
+                var allData2 = sheet.getDataRange().getValues();
+                for (var r2 = 1; r2 < targetRow - 1; r2++) {
+                    if (allData2[r2][1] === entry.productCode && allData2[r2][10] === entry.lotNo) {
+                        lotBalance += (parseFloat(allData2[r2][7]) || 0) - (parseFloat(allData2[r2][8]) || 0);
+                    }
+                }
+                lotBalance += inQty - outQty;
+            }
+            map[15] = lotBalance;
 
             // Q (Supplier) - ต้องเขียน
             map[16] = entry.supplier || "";
@@ -179,14 +224,12 @@ function doPost(e) {
             var currentBatchVal = [];
             var currentBatchStart = -1;
 
+            // Write ALL columns (no formula check since sheet has no formulas)
             for (var i = 0; i < 18; i++) {
-                var hasFormula = (formulas[i] !== "");
+                // Skip only Column C (Name) which should be formula or vlookup
+                var skipColumn = (i === 2); // Skip C (index 2)
 
-                // Column A (date) - ALWAYS write, never skip
-                // Column B (productCode) - ALWAYS write
-                var forceWrite = (i === 0 || i === 1);
-
-                if (hasFormula && !forceWrite) {
+                if (skipColumn) {
                     if (currentBatchStart !== -1) {
                         requests.push({ col: currentBatchStart + 1, vals: [currentBatchVal] });
                         currentBatchVal = [];
@@ -335,15 +378,63 @@ function transferToProduction(dataArray) {
                 map[4] = (item.containerQty !== undefined) ? item.containerQty : null;
                 map[5] = (item.containerWeight !== undefined) ? item.containerWeight : null;
                 map[6] = (item.remainder !== undefined) ? item.remainder : null; // G (Remainder)
-                map[7] = item.quantity || 0; // H (IN)
-                map[8] = null; // I (OUT)
-                map[9] = null; // J Balance (formula)
+                var inQtyPD = item.quantity || 0;
+                map[7] = inQtyPD; // H (IN)
+                map[8] = 0; // I (OUT) = 0 for receive
+
+                // J Balance -> Calculate
+                var prevBalancePD = 0;
+                if (targetRow > 2) {
+                    var allDataPD = productionSheet.getDataRange().getValues();
+                    for (var rPD = targetRow - 2; rPD >= 1; rPD--) {
+                        if (allDataPD[rPD][1] === item.productCode) {
+                            prevBalancePD = parseFloat(allDataPD[rPD][9]) || 0;
+                            break;
+                        }
+                    }
+                }
+                map[9] = prevBalancePD + inQtyPD; // J Balance
+
                 map[10] = item.lotNo || "";
                 map[11] = item.vendorLot || "";
                 map[12] = item.mfgDate || "";
                 map[13] = item.expDate || "";
-                map[14] = null; // O (formula)
-                map[15] = null; // P (formula)
+
+                // O (Days Left) -> Calculate
+                var daysLeftPD = "";
+                if (item.expDate && item.expDate !== "-") {
+                    try {
+                        var expPartsPD = String(item.expDate).split("/");
+                        if (expPartsPD.length === 3) {
+                            var expDayPD = parseInt(expPartsPD[0]);
+                            var expMonthPD = parseInt(expPartsPD[1]) - 1;
+                            var expYearPD = parseInt(expPartsPD[2]);
+                            if (expYearPD > 2500) expYearPD = expYearPD - 543;
+                            var expDateObjPD = new Date(expYearPD, expMonthPD, expDayPD);
+                            var todayPD = new Date();
+                            todayPD.setHours(0, 0, 0, 0);
+                            var diffTimePD = expDateObjPD.getTime() - todayPD.getTime();
+                            daysLeftPD = Math.ceil(diffTimePD / (1000 * 60 * 60 * 24));
+                        }
+                    } catch (e) {
+                        daysLeftPD = "";
+                    }
+                }
+                map[14] = (daysLeftPD !== "") ? daysLeftPD : null;
+
+                // P (Lot Balance) -> Calculate
+                var lotBalancePD = 0;
+                if (item.lotNo) {
+                    var allDataPD2 = productionSheet.getDataRange().getValues();
+                    for (var rPD2 = 1; rPD2 < targetRow - 1; rPD2++) {
+                        if (allDataPD2[rPD2][1] === item.productCode && allDataPD2[rPD2][10] === item.lotNo) {
+                            lotBalancePD += (parseFloat(allDataPD2[rPD2][7]) || 0) - (parseFloat(allDataPD2[rPD2][8]) || 0);
+                        }
+                    }
+                    lotBalancePD += inQtyPD;
+                }
+                map[15] = lotBalancePD;
+
                 map[16] = item.supplier || ""; // Q (Supplier)
                 map[17] = "โอนจาก Center: " + (item.originalDate || "");
 
@@ -352,13 +443,12 @@ function transferToProduction(dataArray) {
                 var currentBatchVal = [];
                 var currentBatchStart = -1;
 
+                // Write ALL columns (no formula check since sheet has no formulas)
                 for (var k = 0; k < 18; k++) {
-                    var hasFormula = (formulas[k] !== "");
+                    // Skip only Column C (Name) which should be formula or vlookup
+                    var skipColumnPD = (k === 2); // Skip C (index 2)
 
-                    // Column A (date) and B (productCode) - ALWAYS write
-                    var forceWrite = (k === 0 || k === 1);
-
-                    if (hasFormula && !forceWrite) {
+                    if (skipColumnPD) {
                         if (currentBatchStart !== -1) {
                             requests.push({ col: currentBatchStart + 1, vals: [currentBatchVal] });
                             currentBatchVal = [];

@@ -2193,10 +2193,11 @@ async function saveEntryRM() {
             var estContainerOut = avgWeight > 0 ? Math.ceil(chunkQty / avgWeight) : 0;
             estContainerOut = Math.min(estContainerOut, lotInfo.containersAvailable);
 
-            // Get MFD/EXP from lot data
+            // Get MFD/EXP/VendorLot from lot data
             var lotData = lotDataMap[item.lotNo] || {};
             var mfgDate = lotData.mfdDate || '';
             var expDate = lotData.expDate || '';
+            var vendorLotVal = lotData.vendorLot || '';
 
             entriesToSave.push({
                 date: formatDateThai(date),
@@ -2209,6 +2210,7 @@ async function saveEntryRM() {
                 inQty: 0,
                 outQty: chunkQty,
                 lotNo: item.lotNo,
+                vendorLot: vendorLotVal,
                 mfgDate: mfgDate !== '-' ? mfgDate : '',
                 expDate: expDate !== '-' ? expDate : '',
                 supplier: item.supplier || vendor,
@@ -2538,6 +2540,7 @@ function getSortedActiveLots(productCode) {
     var lotTotalContainersIn = {};
     var lotTotalKgIn = {};
     var lotTotalKgOut = {};
+    var lotVendorLot = {};  // Add Vendor Lot tracking
 
     entries.forEach(function (e) {
         if (!e.lotNo) return;
@@ -2549,10 +2552,11 @@ function getSortedActiveLots(productCode) {
             lotTotalKgIn[e.lotNo] = 0;
             lotTotalKgOut[e.lotNo] = 0;
         }
-        // Track MFD and EXP from receive entries
+        // Track MFD, EXP, and VendorLot from receive entries
         if (e.inQty > 0) {
             if (!lotMfdDate[e.lotNo] && e.mfgDate) lotMfdDate[e.lotNo] = e.mfgDate;
             if (!lotExpDate[e.lotNo] && e.expDate) lotExpDate[e.lotNo] = e.expDate;
+            if (!lotVendorLot[e.lotNo] && e.vendorLot) lotVendorLot[e.lotNo] = e.vendorLot;
         }
         lotBalances[e.lotNo] += e.inQty - e.outQty;
 
@@ -2601,6 +2605,7 @@ function getSortedActiveLots(productCode) {
                 mfdDate: lotMfdDate[lot] || '-',  // Add MFD
                 expDays: lotExpDays[lot],
                 expDate: lotExpDate[lot] || '-',
+                vendorLot: lotVendorLot[lot] || '',  // Add Vendor Lot
                 supplier: lotVendor[lot],
                 containerWeight: Math.round(avgContainerWeight * 100) / 100,
                 originalContainers: totalContainersIn,

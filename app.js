@@ -2655,9 +2655,9 @@ function autoFillRMForm(productCode) {
         nameInput.value = productName;
     }
 
-    // Auto-fill container weight
+    // Auto-fill container weight (only for withdrawal, not receive)
     var weightInput = document.getElementById('entryContainerWeightRM');
-    if (weightInput && !weightInput.value && foundWeight !== null) {
+    if (isWithdrawal && weightInput && !weightInput.value && foundWeight !== null) {
         weightInput.value = foundWeight;
         calculateRMTotal();
     }

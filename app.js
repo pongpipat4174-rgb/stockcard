@@ -2730,6 +2730,25 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('entryModalBackdropRM')?.addEventListener('click', closeEntryModalRM);
     document.getElementById('cancelEntryRM')?.addEventListener('click', closeEntryModalRM);
 
+    // Clear Form Button
+    document.getElementById('clearFormRM')?.addEventListener('click', function () {
+        // Reset all form fields except date and type
+        var form = document.getElementById('entryFormRM');
+        var savedDate = document.getElementById('entryDateRM').value;
+        var savedType = document.getElementById('entryTypeRM').value;
+
+        form.reset();
+
+        // Restore date and type
+        document.getElementById('entryDateRM').value = savedDate;
+        document.getElementById('entryTypeRM').value = savedType;
+
+        // Trigger type change to reset visibility
+        document.getElementById('entryTypeRM').dispatchEvent(new Event('change'));
+
+        showToast('🗑️ ล้างข้อมูลแล้ว');
+    });
+
     // RM Product Dropdown
     document.getElementById('rmProductSelect')?.addEventListener('change', function () {
         var value = this.value;
@@ -2818,6 +2837,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (inQtyGroup) inQtyGroup.style.display = 'block';
             if (outQtyGroup) outQtyGroup.style.display = 'none';
 
+            // Hide balance for receive (auto-calculated)
+            var balanceGroup = document.getElementById('balanceGroup');
+            if (balanceGroup) balanceGroup.style.display = 'none';
+
             // Clear out qty
             var outQtyInput = document.getElementById('entryOutQtyRM');
             if (outQtyInput) outQtyInput.value = '';
@@ -2827,6 +2850,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (mfdExpRow) mfdExpRow.style.display = 'none';
             if (inQtyGroup) inQtyGroup.style.display = 'none';
             if (outQtyGroup) outQtyGroup.style.display = 'block';
+
+            // Show balance for withdrawal
+            var balanceGroup = document.getElementById('balanceGroup');
+            if (balanceGroup) balanceGroup.style.display = 'block';
 
             // Clear in qty
             var inQtyInput = document.getElementById('entryInQtyRM');

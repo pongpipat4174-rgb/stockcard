@@ -2757,12 +2757,28 @@ function autoFillRMForm(productCode) {
                 expInput.value = bestLot.expDate;
             }
 
-            // Store container weight for calculation and show hint
+            // Check if lot is new (after 28/1/2026)
+            var newSystemDate = new Date(2026, 0, 28);
+            var isNewLot = false;
+            if (bestLot.firstDate) {
+                var dateParts = bestLot.firstDate.split('/');
+                if (dateParts.length === 3) {
+                    var lotDate = new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
+                    isNewLot = lotDate >= newSystemDate;
+                }
+            }
+
+            // Store container weight and auto-fill for NEW lots only
             if (bestLot.containerWeight && bestLot.containerWeight > 0) {
                 window.currentLotContainerWeight = bestLot.containerWeight;
-                var hint = document.getElementById('containerWeightHint');
-                if (hint) {
-                    hint.textContent = '@ ' + bestLot.containerWeight + ' Kg/ใบ';
+
+                // Auto-fill container weight for NEW lots
+                if (isNewLot) {
+                    var containerWeightInput = document.getElementById('entryContainerWeightOutRM');
+                    if (containerWeightInput) {
+                        containerWeightInput.value = bestLot.containerWeight;
+                    }
+                    showToast('✅ Lot ใหม่: น.น./ภาชนะ = ' + bestLot.containerWeight + ' Kg');
                 }
             }
 

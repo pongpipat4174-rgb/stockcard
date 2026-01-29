@@ -89,19 +89,21 @@
     }
 
     /* --- 5. Table to Ultra Compact Card View (2 rows) --- */
-    table,
-    thead,
+    table {
+        display: block;
+    }
+
+    thead {
+        display: none !important;
+    }
+
     tbody,
-    th,
-    td,
     tr {
         display: block;
     }
 
-    thead tr {
-        position: absolute;
-        top: -9999px;
-        left: -9999px;
+    th {
+        display: none !important;
     }
 
     tr {

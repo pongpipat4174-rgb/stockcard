@@ -2875,7 +2875,7 @@ function showContainerInfoForWithdraw(productCode, sortedLots) {
         html += '<b>Lot ' + lot.lotNo + '</b>: ';
 
         if (isOldLot) {
-            // OLD LOT: Only show Lot, MFD, EXP - no container info
+            // OLD LOT: Show MFD, EXP + container hint for reference
             if (lot.mfdDate && lot.mfdDate !== '-') {
                 html += 'MFD: ' + lot.mfdDate + ' | ';
             }
@@ -2884,6 +2884,10 @@ function showContainerInfoForWithdraw(productCode, sortedLots) {
                 html += '<span style="' + expStyle + '">EXP: ' + lot.expDate;
                 if (lot.expDays !== undefined) html += ' (' + lot.expDays + ' วัน)';
                 html += '</span>';
+            }
+            // Add container hint for reference (gray text)
+            if (containers > 0 && lot.containerWeight) {
+                html += ' <span style="color:#888;">| ' + containers + '×' + lot.containerWeight + 'Kg</span>';
             }
         } else {
             // NEW LOT: Show full container info

@@ -163,14 +163,17 @@ function renderTable() {
                 </span>
             </td>
             <td style="cursor: pointer;" onclick="viewItemDetails(${realIndex})" title="คลิกเพื่อดูรายละเอียด" data-label="รายการ / สเปก">
-                <div class="product-info" style="display: flex; flex-direction: row; align-items: center; gap: 12px;">
-                    ${item.image ? `<img src="${item.image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;">` : '<div style="width:50px;height:50px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#cbd5e1;"><i class="fa-solid fa-image"></i></div>'}
-                    <div>
-                        <span class="product-name" style="color: var(--primary-color); text-decoration: underline;">${item.name}</span>
-                        <div class="product-spec" style="font-size: 0.8rem; color: #64748b;">
-                            ${item.spec || '-'} 
-                            ${item.leadTime ? ` | 🚚 ${item.leadTime}` : ''}
+                <div class="product-info" style="display: flex; flex-direction: row; align-items: center; gap: 10px;">
+                    ${item.image ? `<img src="${item.image}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; border: 1px solid #eee;">` : '<div style="width:45px;height:45px;background:#f1f5f9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#cbd5e1;"><i class="fa-solid fa-image"></i></div>'}
+                    <div style="flex:1;">
+                        <span class="product-name" style="color: var(--primary-color);">${item.name}</span>
+                        <div class="product-spec" style="font-size: 0.75rem; color: #64748b;">
+                            ${item.spec || '-'}${item.leadTime ? ` | 🚚 ${item.leadTime}` : ''}
                         </div>
+                    </div>
+                    <div class="stock-inline" style="text-align:right;">
+                        <span style="font-size:1.1rem; font-weight:700; color:${isLow ? 'var(--danger)' : 'var(--primary-color)'}">${item.stock}</span>
+                        <span style="font-size:0.7rem; color:#64748b; display:block;">${item.unit}</span>
                     </div>
                 </div>
             </td>

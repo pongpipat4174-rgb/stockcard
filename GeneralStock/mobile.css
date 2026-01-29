@@ -88,7 +88,7 @@
         white-space: nowrap;
     }
 
-    /* --- 5. Table to Compact Card View --- */
+    /* --- 5. Table to Ultra Compact Card View (2 rows) --- */
     table,
     thead,
     tbody,
@@ -105,85 +105,49 @@
     }
 
     tr {
-        margin-bottom: 12px;
+        margin-bottom: 10px;
         background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         border: 1px solid var(--border-color);
-        padding: 12px;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto auto;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
         gap: 8px;
     }
 
-    /* Row 1: Status + Name (span full width) */
-    td:nth-child(1) {
-        /* สถานะ - hide on mobile, show as badge instead */
+    /* Hide status, category columns */
+    td:nth-child(1),
+    td:nth-child(3) {
         display: none;
     }
 
+    /* Row 1: Product info + Stock inline */
     td:nth-child(2) {
-        /* ชื่อรายการ/สเปก - full width row 1 */
-        grid-column: 1 / -1;
+        order: 1;
         border: none;
         padding: 0;
-        text-align: left;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
     td:nth-child(2):before {
         display: none;
     }
 
-    td:nth-child(3) {
-        /* หมวดหมู่ - hide, shown in name row */
+    /* Stock & Min - inline with product */
+    td:nth-child(4),
+    td:nth-child(5) {
         display: none;
     }
 
-    /* Row 2: Stock & Min - side by side */
-    td:nth-child(4) {
-        /* คงเหลือ */
-        grid-column: 1;
-        border: none;
-        padding: 8px 0;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        text-align: left;
-    }
-
-    td:nth-child(4):before {
-        content: 'คงเหลือ';
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        margin-bottom: 2px;
-    }
-
-    td:nth-child(5) {
-        /* จุดสั่งซื้อ */
-        grid-column: 2;
-        border: none;
-        padding: 8px 0;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        text-align: right;
-    }
-
-    td:nth-child(5):before {
-        content: 'จุดสั่งซื้อ';
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        margin-bottom: 2px;
-    }
-
-    /* Row 3: Actions - full width */
+    /* Row 2: Actions */
     td:nth-child(6) {
-        /* จัดการ */
-        grid-column: 1 / -1;
+        order: 2;
         display: flex;
         justify-content: center;
-        gap: 8px;
+        gap: 6px;
         padding-top: 8px;
         border-top: 1px solid #f1f5f9;
     }
@@ -195,32 +159,29 @@
     .product-info {
         flex-direction: row;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
+        flex: 1;
     }
 
     .product-info img {
-        width: 50px;
-        height: 50px;
+        width: 45px;
+        height: 45px;
         object-fit: cover;
-        border-radius: 8px;
+        border-radius: 6px;
     }
 
     .product-name {
-        font-size: 1rem;
+        font-size: 0.95rem;
         font-weight: 600;
     }
 
     .product-spec {
-        font-size: 0.8rem;
-    }
-
-    .stock-badge {
-        font-size: 1.1rem;
-        padding: 4px 8px;
+        font-size: 0.75rem;
     }
 
     .btn.icon {
-        padding: 8px 10px;
+        padding: 6px 10px;
+        font-size: 0.9rem;
     }
 
     /* --- NAV BAR ADJUSTMENT (Red Box Area) --- */

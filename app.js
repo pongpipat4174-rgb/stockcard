@@ -2678,6 +2678,9 @@ function autoFillRMForm(productCode) {
             if (vendorInput && !vendorInput.value && bestLot.supplier) {
                 vendorInput.value = bestLot.supplier;
             }
+
+            // Show available containers for this RM
+            showContainerInfoForWithdraw(productCode, sortedLots);
         }
     } else {
         // Receive: Auto-fill supplier (from master first, then stock history)
@@ -2686,6 +2689,65 @@ function autoFillRMForm(productCode) {
             vendorInput.value = supplier;
             showToast('📦 Supplier: ' + supplier);
         }
+    }
+}
+
+// Show container info for withdrawal
+function showContainerInfoForWithdraw(productCode, sortedLots) {
+    // Get or create container info div
+    var containerInfoDiv = document.getElementById('withdrawContainerInfo');
+    if (!containerInfoDiv) {
+        containerInfoDiv = document.createElement('div');
+        containerInfoDiv.id = 'withdrawContainerInfo';
+        containerInfoDiv.style.cssText = 'background: #e0f2fe; border: 1px solid #0ea5e9; border-radius: 8px; padding: 10px; margin-top: 10px; font-size: 0.9em;';
+
+        var formRM = document.getElementById('entryFormRM');
+        var lotSplitWarning = document.getElementById('lotSplitWarning');
+        if (lotSplitWarning) {
+            formRM.insertBefore(containerInfoDiv, lotSplitWarning);
+        } else {
+            formRM.appendChild(containerInfoDiv);
+        }
+    }
+
+    // Calculate total containers and typical weight
+    var totalContainers = 0;
+    var containerWeights = {};
+
+    sortedLots.forEach(function (lot) {
+        if (lot.containerBalance && lot.containerBalance > 0) {
+            totalContainers += lot.containerBalance;
+            var weight = lot.containerWeight || 'ไม่ระบุ';
+            if (!containerWeights[weight]) containerWeights[weight] = 0;
+            containerWeights[weight] += lot.containerBalance;
+        }
+    });
+
+    if (totalContainers > 0) {
+        var html = '<strong>🫙 ภาชนะคงเหลือ:</strong> ' + totalContainers + ' ภาชนะ<br>';
+        html += '<small>';
+
+        Object.keys(containerWeights).forEach(function (weight) {
+            if (weight !== 'ไม่ระบุ') {
+                html += containerWeights[weight] + ' ภาชนะ × ' + weight + ' Kg | ';
+            }
+        });
+
+        // Show per lot breakdown
+        html += '</small><br><small style="color:#0369a1;">';
+        sortedLots.forEach(function (lot, idx) {
+            if (lot.containerBalance > 0) {
+                html += 'Lot ' + lot.lotNo + ': ' + lot.containerBalance + ' ภาชนะ';
+                if (lot.containerWeight) html += ' (' + lot.containerWeight + ' Kg/ภาชนะ)';
+                if (idx < sortedLots.length - 1) html += ' | ';
+            }
+        });
+        html += '</small>';
+
+        containerInfoDiv.innerHTML = html;
+        containerInfoDiv.style.display = 'block';
+    } else {
+        containerInfoDiv.style.display = 'none';
     }
 }
 

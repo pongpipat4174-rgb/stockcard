@@ -2917,6 +2917,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (withdrawContainerInfo) withdrawContainerInfo.style.display = 'none';
         if (lotSplitWarning) lotSplitWarning.style.display = 'none';
 
+        // Hide container out group
+        var containerOutGroup = document.getElementById('containerOutGroup');
+        if (containerOutGroup) containerOutGroup.style.display = 'none';
+
         showToast('🗑️ ล้างข้อมูลแล้ว');
     });
 
@@ -3012,6 +3016,10 @@ document.addEventListener('DOMContentLoaded', function () {
             var balanceGroup = document.getElementById('balanceGroup');
             if (balanceGroup) balanceGroup.style.display = 'none';
 
+            // Hide container out for receive
+            var containerOutGroup = document.getElementById('containerOutGroup');
+            if (containerOutGroup) containerOutGroup.style.display = 'none';
+
             // Clear out qty
             var outQtyInput = document.getElementById('entryOutQtyRM');
             if (outQtyInput) outQtyInput.value = '';
@@ -3025,6 +3033,10 @@ document.addEventListener('DOMContentLoaded', function () {
             // Show balance for withdrawal
             var balanceGroup = document.getElementById('balanceGroup');
             if (balanceGroup) balanceGroup.style.display = 'block';
+
+            // Show container out for withdrawal
+            var containerOutGroup = document.getElementById('containerOutGroup');
+            if (containerOutGroup) containerOutGroup.style.display = 'block';
 
             // Clear in qty
             var inQtyInput = document.getElementById('entryInQtyRM');

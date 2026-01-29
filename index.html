@@ -578,8 +578,12 @@
                                 placeholder="คำนวณอัตโนมัติ">
                         </div>
                     </div>
-                    <!-- Hidden input for containerOut (calculated automatically) -->
-                    <input type="hidden" id="entryContainerOutRM" name="containerOut" value="0">
+                    <!-- Container Out field (visible for withdrawal) -->
+                    <div class="form-group" id="containerOutGroup" style="display: none;">
+                        <label for="entryContainerOutRM">ภาชนะที่เบิก (ใบ)</label>
+                        <input type="number" id="entryContainerOutRM" name="containerOut" step="1" min="0"
+                            placeholder="ระบุจำนวนภาชนะ" value="0">
+                    </div>
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="entryLotNoRM">Lot No./FIFO ID</label>
@@ -810,7 +814,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=79"></script>
+    <script src="app.js?v=80"></script>
 
     <script>
         // Integrated Module Switch Logic

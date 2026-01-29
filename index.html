@@ -115,6 +115,15 @@
                     </svg>
                     🔄 Recalculate
                 </button>
+                <!-- Transfer to Production Button (RM Center Only) -->
+                <button class="btn" id="transferBtn" style="display: none; background: #3b82f6; color: white;"
+                    onclick="openTransferModal()" title="โอนรายการเบิกผลิตไป RM Production">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14" />
+                        <path d="M12 5l7 7-7 7" />
+                    </svg>
+                    🔄 โอนไป Production
+                </button>
                 <button class="btn btn-primary" id="printAllBtn" onclick="printAll()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="6 9 6 2 18 2 18 9" />
@@ -836,7 +845,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=89"></script>
+    <script src="app.js?v=90"></script>
 
     <script>
         // Integrated Module Switch Logic

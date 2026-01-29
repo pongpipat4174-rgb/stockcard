@@ -209,6 +209,11 @@ function switchModule(module, event) {
         // Show Recalculate button for RM
         const recalcBtn = document.getElementById('recalculateBtn');
         if (recalcBtn) recalcBtn.style.display = 'inline-flex';
+        // Transfer button - show only for RM Center, hide for RM Production
+        const transferBtn = document.getElementById('transferBtn');
+        if (transferBtn) {
+            transferBtn.style.display = (module === 'rm') ? 'inline-flex' : 'none';
+        }
     } else {
         if (banner) banner.classList.remove('rm-mode', 'rm-production-mode');
         if (rmFilterGroup) rmFilterGroup.style.display = 'none';
@@ -221,6 +226,9 @@ function switchModule(module, event) {
         // Hide Recalculate button for Package
         const recalcBtn = document.getElementById('recalculateBtn');
         if (recalcBtn) recalcBtn.style.display = 'none';
+        // Hide Transfer button for Package
+        const transferBtn = document.getElementById('transferBtn');
+        if (transferBtn) transferBtn.style.display = 'none';
     }
 
     // Reset inputs
@@ -3744,6 +3752,229 @@ async function recalculateAllBalances() {
     } catch (e) {
         console.error('Recalculate Error:', e);
         alert('เกิดข้อผิดพลาด: ' + e);
+        hideLoading();
+    }
+}
+
+// ======================= TRANSFER TO PRODUCTION =======================
+
+// เปิด Modal โอนไป Production
+function openTransferModal() {
+    // ตรวจสอบว่าอยู่ใน RM Center หรือไม่
+    if (currentModule !== 'rm') {
+        alert('ฟังก์ชันนี้ใช้ได้เฉพาะใน RM Center เท่านั้น');
+        return;
+    }
+
+    // ค้นหารายการที่มีคำว่า "เบิกผลิต"
+    var transferableItems = rmStockData.filter(function (item) {
+        return item.type && item.type.includes('เบิกผลิต');
+    });
+
+    if (transferableItems.length === 0) {
+        alert('ไม่พบรายการ "เบิกผลิต" ที่สามารถโอนได้');
+        return;
+    }
+
+    // สร้าง Modal HTML
+    var modalHtml = `
+        <div id="transferModal" class="modal" style="display: flex;">
+            <div class="modal-backdrop" onclick="closeTransferModal()"></div>
+            <div class="modal-content" style="max-width: 900px; max-height: 85vh;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                    <h2>🔄 โอนข้อมูลไป RM Production</h2>
+                    <button class="modal-close" onclick="closeTransferModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body" style="overflow-y: auto; max-height: 55vh; padding: 1rem;">
+                    <div style="background: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                        <strong>📋 วิธีการทำงาน:</strong><br>
+                        • รายการ "เบิกผลิต" จาก Center จะถูกโอนเป็น "รับเข้า" ใน Production<br>
+                        • วันที่รับเข้าจะเป็นวันที่โอน (วันนี้)<br>
+                        • ข้อมูลอื่นๆ จะเหมือนกัน (Lot, จำนวน, Supplier)
+                    </div>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="selectAllTransfer" onchange="toggleSelectAllTransfer()" checked>
+                            <strong>เลือกทั้งหมด (${transferableItems.length} รายการ)</strong>
+                        </label>
+                    </div>
+                    
+                    <div id="transferItemsList" style="max-height: 300px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead style="position: sticky; top: 0; background: #f3f4f6;">
+                                <tr>
+                                    <th style="padding: 8px; text-align: center; border-bottom: 2px solid #e5e7eb;">✓</th>
+                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e5e7eb;">วันที่</th>
+                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e5e7eb;">รหัส</th>
+                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e5e7eb;">ชื่อสินค้า</th>
+                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e5e7eb;">ประเภท</th>
+                                    <th style="padding: 8px; text-align: right; border-bottom: 2px solid #e5e7eb;">จำนวน (Kg)</th>
+                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e5e7eb;">Lot No.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${transferableItems.map(function (item, idx) {
+        return `
+                                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                                            <td style="padding: 8px; text-align: center;">
+                                                <input type="checkbox" class="transfer-item-checkbox" data-idx="${idx}" checked>
+                                            </td>
+                                            <td style="padding: 8px;">${item.date || '-'}</td>
+                                            <td style="padding: 8px; font-weight: 600;">${item.productCode || '-'}</td>
+                                            <td style="padding: 8px;">${item.productName || '-'}</td>
+                                            <td style="padding: 8px;">${item.type || '-'}</td>
+                                            <td style="padding: 8px; text-align: right; color: #dc2626; font-weight: 600;">-${formatNumber(item.outQty)}</td>
+                                            <td style="padding: 8px;">${item.lotNo || '-'}</td>
+                                        </tr>
+                                    `;
+    }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="margin-top: 16px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px;">
+                        <strong>⚠️ หมายเหตุ:</strong><br>
+                        • รายการที่โอนแล้วจะไม่ถูกลบออกจาก Center<br>
+                        • ควรตรวจสอบไม่ให้โอนซ้ำ
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <span id="transferSelectedCount" style="margin-right: auto; color: #6b7280;">เลือก ${transferableItems.length} รายการ</span>
+                    <button class="btn btn-outline" onclick="closeTransferModal()">ยกเลิก</button>
+                    <button class="btn btn-success" onclick="confirmTransferToProduction()" style="background: #3b82f6;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        ยืนยันโอนข้อมูล
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // เก็บข้อมูลไว้ใน global variable
+    window.transferableItems = transferableItems;
+
+    // เพิ่ม Modal เข้าไปใน DOM
+    var modalContainer = document.createElement('div');
+    modalContainer.id = 'transferModalContainer';
+    modalContainer.innerHTML = modalHtml;
+    document.body.appendChild(modalContainer);
+
+    // เพิ่ม event listeners สำหรับ checkboxes
+    document.querySelectorAll('.transfer-item-checkbox').forEach(function (checkbox) {
+        checkbox.addEventListener('change', updateTransferSelectedCount);
+    });
+}
+
+// ปิด Modal
+function closeTransferModal() {
+    var container = document.getElementById('transferModalContainer');
+    if (container) {
+        container.remove();
+    }
+    window.transferableItems = null;
+}
+
+// เลือก/ยกเลิกทั้งหมด
+function toggleSelectAllTransfer() {
+    var selectAll = document.getElementById('selectAllTransfer');
+    var checkboxes = document.querySelectorAll('.transfer-item-checkbox');
+    checkboxes.forEach(function (cb) {
+        cb.checked = selectAll.checked;
+    });
+    updateTransferSelectedCount();
+}
+
+// อัพเดทจำนวนที่เลือก
+function updateTransferSelectedCount() {
+    var checked = document.querySelectorAll('.transfer-item-checkbox:checked').length;
+    var countEl = document.getElementById('transferSelectedCount');
+    if (countEl) {
+        countEl.textContent = 'เลือก ' + checked + ' รายการ';
+    }
+}
+
+// ยืนยันการโอน
+async function confirmTransferToProduction() {
+    var checkedBoxes = document.querySelectorAll('.transfer-item-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        alert('กรุณาเลือกรายการที่ต้องการโอน');
+        return;
+    }
+
+    if (!confirm('ยืนยันการโอน ' + checkedBoxes.length + ' รายการ ไปยัง RM Production?')) {
+        return;
+    }
+
+    showLoading();
+    showToast('🔄 กำลังโอนข้อมูลไป Production...');
+
+    try {
+        // รวบรวมข้อมูลที่เลือก
+        var selectedItems = [];
+        var today = new Date().toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+
+        checkedBoxes.forEach(function (cb) {
+            var idx = parseInt(cb.dataset.idx);
+            var item = window.transferableItems[idx];
+            selectedItems.push({
+                transferDate: today,
+                originalDate: item.date,
+                productCode: item.productCode,
+                productName: item.productName,
+                quantity: item.outQty, // จำนวนที่เบิกออก = จำนวนที่รับเข้า
+                containerQty: item.containerQty,
+                containerWeight: item.containerWeight,
+                remainder: item.remainder,
+                lotNo: item.lotNo,
+                vendorLot: item.vendorLot,
+                mfgDate: item.mfgDate,
+                expDate: item.expDate,
+                daysLeft: item.daysLeft,
+                supplier: item.supplier,
+                containerOut: item.containerOut
+            });
+        });
+
+        // เรียก Apps Script
+        var response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'transferToProduction',
+                data: selectedItems
+            })
+        });
+
+        // เนื่องจากใช้ no-cors จะไม่ได้ response กลับมา
+        closeTransferModal();
+        hideLoading();
+
+        showToast('✅ โอนข้อมูลสำเร็จ ' + selectedItems.length + ' รายการ!');
+
+        // ถ้าต้องการดูผลลัพธ์ใน Production
+        if (confirm('โอนข้อมูลเรียบร้อย!\n\nต้องการสลับไปดูข้อมูลใน RM Production หรือไม่?')) {
+            switchModule('rm_production', null);
+        }
+
+    } catch (e) {
+        console.error('Transfer Error:', e);
+        alert('เกิดข้อผิดพลาด: ' + e.message);
         hideLoading();
     }
 }

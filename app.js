@@ -1483,172 +1483,8 @@ function showExpiryItems(type) {
     document.getElementById('cardsContainer')?.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Print Expiry Items (Critical + Warning + Reval)
-function printExpiryItems(type) {
-    if (currentModule !== 'rm') {
-        showToast('ฟังก์ชันนี้ใช้งานได้เฉพาะโหมดวัตถุดิบ (RM)');
-        return;
-    }
-
-    if (!window.expiryData) {
-        showToast('ไม่มีข้อมูลหมดอายุ');
-        return;
-    }
-
-    var items = [];
-    var title = '';
-    var headerColor = '';
-
-    if (type === 'critical') {
-        items = window.expiryData.critical || [];
-        title = '⚠️ รายการหมดอายุภายใน 30 วัน (วิกฤต)';
-        headerColor = '#dc2626';
-    } else if (type === 'warning') {
-        items = window.expiryData.warning || [];
-        title = '⏰ รายการหมดอายุภายใน 90 วัน (เตือน)';
-        headerColor = '#f59e0b';
-    } else if (type === 'reval') {
-        items = window.expiryData.reval || [];
-        title = '🔄 รายการต่ออายุ (ต้องใช้ก่อน)';
-        headerColor = '#7c3aed';
-    } else if (type === 'all') {
-        items = (window.expiryData.reval || [])
-            .concat(window.expiryData.critical || [])
-            .concat(window.expiryData.warning || []);
-        title = '🔔 รายการที่ต้องเฝ้าระวังทั้งหมด (ต่ออายุ + หมดอายุเร็ว)';
-        headerColor = '#4f46e5';
-    }
-
-    if (items.length === 0) {
-        showToast('ไม่มีรายการที่จะพิมพ์');
-        return;
-    }
-
-    // Group by product
-    var productMap = new Map();
-    items.forEach(function (item) {
-        if (!productMap.has(item.productCode)) {
-            productMap.set(item.productCode, {
-                code: item.productCode,
-                name: item.productName,
-                entries: []
-            });
-        }
-        productMap.get(item.productCode).entries.push(item);
-    });
-
-    // Build print content
-    var printWindow = window.open('', '_blank');
-    var printContent = `
-        <!DOCTYPE html>
-        <html lang="th">
-        <head>
-            <meta charset="UTF-8">
-            <title>${title}</title>
-            <style>
-                body { font-family: 'Sarabun', 'Inter', sans-serif; padding: 15px; margin: 0; }
-                .print-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
-                .print-header img { height: 45px; }
-                .print-header h1 { margin: 0; font-size: 16px; }
-                .print-header p { margin: 3px 0 0; color: #666; font-size: 11px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; table-layout: fixed; }
-                th { background: ${headerColor}; color: white; padding: 6px 4px; text-align: center; font-weight: 600; white-space: nowrap; }
-                td { padding: 5px 4px; border-bottom: 1px solid #e5e7eb; text-align: center; word-wrap: break-word; }
-                tr:nth-child(even) { background: #f9fafb; }
-                .product-header { background: #f3f4f6; padding: 8px 10px; margin-top: 15px; border-radius: 6px; }
-                .product-header h3 { margin: 0; font-size: 12px; }
-                .days-critical { color: #dc2626; font-weight: bold; }
-                .days-warning { color: #d97706; font-weight: bold; }
-                .qty-in { color: #059669; font-weight: 600; }
-                .qty-out { color: #dc2626; font-weight: 600; }
-                .badge-reval { display: inline-block; background: #8b5cf6; color: white; font-size: 8px; padding: 1px 3px; border-radius: 3px; }
-                @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } }
-            </style>
-        </head>
-        <body>
-            <div class="print-header">
-                <img src="logo.png" alt="Logo">
-                <div>
-                    <h1>🧪 ${title}</h1>
-                    <p>TAN PRODUCTION | พิมพ์เมื่อ: ${new Date().toLocaleDateString('th-TH')} ${new Date().toLocaleTimeString('th-TH')}</p>
-                    <p>จำนวน: ${items.length} รายการ จาก ${productMap.size} สินค้า</p>
-                </div>
-            </div>
-    `;
-
-    productMap.forEach(function (prod) {
-        printContent += `
-            <div class="product-header">
-                <h3>🧪 ${prod.name} (${prod.code})</h3>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width:7%">วันที่</th>
-                        <th style="width:6%">ประเภท</th>
-                        <th style="width:5%">Cont.</th>
-                        <th style="width:5%">นน./Cont.</th>
-                        <th style="width:5%">เศษ(Kg)</th>
-                        <th style="width:6%">รับเข้า</th>
-                        <th style="width:6%">เบิกออก</th>
-                        <th style="width:6%">คงเหลือ</th>
-                        <th style="width:10%">Lot No.</th>
-                        <th style="width:8%">Vendor Lot</th>
-                        <th style="width:7%">MFD</th>
-                        <th style="width:7%">EXP</th>
-                        <th style="width:5%">Days</th>
-                        <th style="width:6%">Lot Bal.</th>
-                        <th style="width:11%">Supplier</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        prod.entries.forEach(function (entry) {
-            var daysClass = parseInt(entry.daysLeft) <= 30 ? 'days-critical' : 'days-warning';
-            var isReval = entry.remark && /(ต่ออายุ|reval|extend)/i.test(entry.remark);
-            var lotHtml = entry.lotNo || '-';
-            if (isReval) lotHtml += ' <span class="badge-reval">🔄</span>';
-
-            printContent += `
-                <tr>
-                    <td>${entry.date || '-'}</td>
-                    <td>${entry.type || '-'}</td>
-                    <td>${entry.containerQty > 0 ? formatNumber(entry.containerQty) : '-'}</td>
-                    <td>${entry.containerWeight > 0 ? formatNumber(entry.containerWeight) : '-'}</td>
-                    <td>${entry.remainder > 0 ? formatNumber(entry.remainder) : '-'}</td>
-                    <td class="qty-in">${entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-'}</td>
-                    <td class="qty-out">${entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-'}</td>
-                    <td>${formatNumber(entry.balance)}</td>
-                    <td>${lotHtml}</td>
-                    <td>${entry.vendorLot || '-'}</td>
-                    <td>${entry.mfgDate || '-'}</td>
-                    <td>${entry.expDate || '-'}</td>
-                    <td class="${daysClass}">${entry.daysLeft || '-'}</td>
-                    <td>${entry.lotBalance ? formatNumber(entry.lotBalance) : '-'}</td>
-                    <td>${entry.supplier || '-'}</td>
-                </tr>
-            `;
-        });
-
-        printContent += '</tbody></table>';
-    });
-
-    printContent += `
-            <script>
-                window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };
-            </script>
-        </body>
-        </html>
-    `;
-
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-
-    showToast('กำลังพิมพ์รายการ ' + type + ' (' + items.length + ' รายการ)');
-}
-
 // ==================== DATE FILTER ====================
+
 
 function filterByDate(dateStr) {
     if (!dateStr) {
@@ -1899,7 +1735,7 @@ function printAll() {
     showToast('พิมพ์ทั้งหมด ' + cards.length + ' รายการ');
 }
 
-// Print Expiry Items (Critical + Warning)
+// Print Expiry Items (Critical + Warning + Reval)
 function printExpiryItems(type) {
     if (currentModule !== 'rm') {
         showToast('ฟังก์ชันนี้ใช้งานได้เฉพาะโหมดวัตถุดิบ (RM)');
@@ -1913,16 +1749,26 @@ function printExpiryItems(type) {
 
     var items = [];
     var title = '';
+    var headerColor = '#dc2626';
 
     if (type === 'critical') {
         items = window.expiryData.critical || [];
         title = '⚠️ รายการหมดอายุภายใน 30 วัน (วิกฤต)';
+        headerColor = '#dc2626';
     } else if (type === 'warning') {
         items = window.expiryData.warning || [];
         title = '⏰ รายการหมดอายุภายใน 90 วัน (เตือน)';
+        headerColor = '#f59e0b';
+    } else if (type === 'reval') {
+        items = window.expiryData.reval || [];
+        title = '🔄 รายการต่ออายุ (ต้องใช้ก่อน)';
+        headerColor = '#7c3aed';
     } else if (type === 'all') {
-        items = (window.expiryData.critical || []).concat(window.expiryData.warning || []);
-        title = '🔔 รายการที่ต้องใช้ก่อน (หมดอายุภายใน 90 วัน)';
+        items = (window.expiryData.reval || [])
+            .concat(window.expiryData.critical || [])
+            .concat(window.expiryData.warning || []);
+        title = '🔔 รายการที่ต้องเฝ้าระวังทั้งหมด (ต่ออายุ + หมดอายุเร็ว)';
+        headerColor = '#4f46e5';
     }
 
     if (items.length === 0) {
@@ -1952,20 +1798,23 @@ function printExpiryItems(type) {
             <meta charset="UTF-8">
             <title>${title}</title>
             <style>
-                body { font-family: 'Sarabun', 'Inter', sans-serif; padding: 20px; }
-                .print-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb; }
-                .print-header img { height: 50px; }
-                .print-header h1 { margin: 0; font-size: 18px; }
-                .print-header p { margin: 5px 0 0; color: #666; font-size: 12px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
-                th { background: ${type === 'critical' ? '#dc2626' : '#f59e0b'}; color: white; padding: 8px; text-align: left; }
-                td { padding: 8px; border-bottom: 1px solid #e5e7eb; }
+                body { font-family: 'Sarabun', 'Inter', sans-serif; padding: 15px; margin: 0; }
+                .print-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
+                .print-header img { height: 45px; }
+                .print-header h1 { margin: 0; font-size: 16px; }
+                .print-header p { margin: 3px 0 0; color: #666; font-size: 11px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; table-layout: fixed; }
+                th { background: ${headerColor}; color: white; padding: 6px 4px; text-align: center; font-weight: 600; white-space: nowrap; }
+                td { padding: 5px 4px; border-bottom: 1px solid #e5e7eb; text-align: center; word-wrap: break-word; }
                 tr:nth-child(even) { background: #f9fafb; }
-                .product-header { background: #f3f4f6; padding: 10px; margin-top: 20px; border-radius: 8px; }
-                .product-header h3 { margin: 0; font-size: 14px; }
+                .product-header { background: #f3f4f6; padding: 8px 10px; margin-top: 15px; border-radius: 6px; }
+                .product-header h3 { margin: 0; font-size: 12px; }
                 .days-critical { color: #dc2626; font-weight: bold; }
                 .days-warning { color: #d97706; font-weight: bold; }
-                @media print { @page { size: A4 landscape; margin: 10mm; } }
+                .qty-in { color: #059669; font-weight: 600; }
+                .qty-out { color: #dc2626; font-weight: 600; }
+                .badge-reval { display: inline-block; background: #8b5cf6; color: white; font-size: 8px; padding: 1px 3px; border-radius: 3px; }
+                @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } }
             </style>
         </head>
         <body>
@@ -1987,21 +1836,21 @@ function printExpiryItems(type) {
             <table>
                 <thead>
                     <tr>
-                        <th>วันที่</th>
-                        <th>ประเภท</th>
-                        <th>Cont.</th>
-                        <th>นน./Cont.</th>
-                        <th>เศษ(Kg)</th>
-                        <th>รับเข้า</th>
-                        <th>เบิกออก</th>
-                        <th>คงเหลือ</th>
-                        <th>Lot No.</th>
-                        <th>Vendor Lot</th>
-                        <th>MFD</th>
-                        <th>EXP Date</th>
-                        <th>Days Left</th>
-                        <th>Lot Balance</th>
-                        <th>Supplier</th>
+                        <th style="width:7%">วันที่</th>
+                        <th style="width:6%">ประเภท</th>
+                        <th style="width:5%">Cont.</th>
+                        <th style="width:5%">นน./Cont.</th>
+                        <th style="width:5%">เศษ(Kg)</th>
+                        <th style="width:6%">รับเข้า</th>
+                        <th style="width:6%">เบิกออก</th>
+                        <th style="width:6%">คงเหลือ</th>
+                        <th style="width:10%">Lot No.</th>
+                        <th style="width:8%">Vendor Lot</th>
+                        <th style="width:7%">MFD</th>
+                        <th style="width:7%">EXP</th>
+                        <th style="width:5%">Days</th>
+                        <th style="width:6%">Lot Bal.</th>
+                        <th style="width:11%">Supplier</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -2009,6 +1858,10 @@ function printExpiryItems(type) {
 
         prod.entries.forEach(function (entry) {
             var daysClass = parseInt(entry.daysLeft) <= 30 ? 'days-critical' : 'days-warning';
+            var isReval = entry.remark && /(ต่ออายุ|reval|extend)/i.test(entry.remark);
+            var lotHtml = entry.lotNo || '-';
+            if (isReval) lotHtml += ' <span class="badge-reval">🔄</span>';
+
             printContent += `
                 <tr>
                     <td>${entry.date || '-'}</td>
@@ -2016,15 +1869,15 @@ function printExpiryItems(type) {
                     <td>${entry.containerQty > 0 ? formatNumber(entry.containerQty) : '-'}</td>
                     <td>${entry.containerWeight > 0 ? formatNumber(entry.containerWeight) : '-'}</td>
                     <td>${entry.remainder > 0 ? formatNumber(entry.remainder) : '-'}</td>
-                    <td>${entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-'}</td>
-                    <td>${entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-'}</td>
+                    <td class="qty-in">${entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-'}</td>
+                    <td class="qty-out">${entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-'}</td>
                     <td>${formatNumber(entry.balance)}</td>
-                    <td>${entry.lotNo || '-'}</td>
+                    <td>${lotHtml}</td>
                     <td>${entry.vendorLot || '-'}</td>
                     <td>${entry.mfgDate || '-'}</td>
                     <td>${entry.expDate || '-'}</td>
-                    <td class="${daysClass}">${entry.daysLeft || '-'} วัน</td>
-                    <td>${entry.lotBalance ? formatNumber(entry.lotBalance) : '-'} Kg</td>
+                    <td class="${daysClass}">${entry.daysLeft || '-'}</td>
+                    <td>${entry.lotBalance ? formatNumber(entry.lotBalance) : '-'}</td>
                     <td>${entry.supplier || '-'}</td>
                 </tr>
             `;

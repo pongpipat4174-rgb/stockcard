@@ -2403,6 +2403,58 @@ async function saveEntryRM() {
 }
 
 
+// Transfer entries to Production sheet
+async function transferToProductionAuto(entries) {
+    try {
+        showLoading();
+        showToast('กำลังโอนข้อมูลไป Production...');
+
+        // Prepare data for transfer
+        var transferData = entries.map(function (e) {
+            return {
+                transferDate: e.date,
+                productCode: e.productCode,
+                productName: e.productName,
+                containerQty: e.containerQty || 0,
+                containerWeight: e.containerWeight || 0,
+                remainder: e.remainder || 0,
+                quantity: e.outQty || 0,
+                lotNo: e.lotNo || '',
+                vendorLot: e.vendorLot || '',
+                mfgDate: e.mfgDate || '',
+                expDate: e.expDate || '',
+                supplier: e.supplier || '',
+                originalDate: e.date,
+                containerOut: e.containerOut || 0
+            };
+        });
+
+        // Send to Apps Script
+        await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            redirect: "follow",
+            body: JSON.stringify({
+                action: 'transferToProduction',
+                data: transferData
+            })
+        });
+
+        showToast('โอนข้อมูลไป Production สำเร็จ!');
+        console.log('Transfer to Production completed', transferData);
+
+    } catch (e) {
+        console.error('Transfer Error:', e);
+        alert('เกิดข้อผิดพลาดในการโอนข้อมูล: ' + e);
+    } finally {
+        hideLoading();
+    }
+}
+
+
 // Auto-Calculate RM Totals
 function calculateRMTotal() {
     var type = document.getElementById('entryTypeRM').value;

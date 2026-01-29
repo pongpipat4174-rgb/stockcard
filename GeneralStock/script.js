@@ -45,17 +45,46 @@ function resizeImage(file, maxWidth, maxHeight, callback) {
     reader.readAsDataURL(file);
 }
 
-// Image Input Listener
-document.getElementById('input-image').addEventListener('change', function (e) {
-    const file = e.target.files[0];
+// Image Input Listener - Camera
+document.getElementById('input-image-camera').addEventListener('change', function (e) {
+    handleImageUpload(e.target.files[0]);
+});
+
+// Image Input Listener - File Picker
+document.getElementById('input-image-file').addEventListener('change', function (e) {
+    handleImageUpload(e.target.files[0]);
+});
+
+function handleImageUpload(file) {
     if (file) {
         resizeImage(file, 300, 300, (base64) => {
             document.getElementById('image-preview').src = base64;
             document.getElementById('image-preview').style.display = 'block';
             document.getElementById('input-image-base64').value = base64;
+            document.getElementById('remove-image-btn').style.display = 'block';
         });
     }
-});
+}
+
+// Capture Image (Camera)
+window.captureImage = function () {
+    document.getElementById('input-image-camera').click();
+};
+
+// Pick Image (File)
+window.pickImage = function () {
+    document.getElementById('input-image-file').click();
+};
+
+// Remove Image
+window.removeImage = function () {
+    document.getElementById('image-preview').src = '';
+    document.getElementById('image-preview').style.display = 'none';
+    document.getElementById('input-image-base64').value = '';
+    document.getElementById('remove-image-btn').style.display = 'none';
+    document.getElementById('input-image-camera').value = '';
+    document.getElementById('input-image-file').value = '';
+};
 
 // --- INITIALIZATION ---
 async function initApp() {
@@ -216,16 +245,19 @@ window.openModal = (index = null) => {
             document.getElementById('image-preview').src = item.image;
             document.getElementById('image-preview').style.display = 'block';
             document.getElementById('input-image-base64').value = item.image;
+            document.getElementById('remove-image-btn').style.display = 'block';
         } else {
             document.getElementById('image-preview').style.display = 'none';
             document.getElementById('image-preview').src = '';
             document.getElementById('input-image-base64').value = '';
+            document.getElementById('remove-image-btn').style.display = 'none';
         }
     } else {
         // Clear image on new item
         document.getElementById('image-preview').style.display = 'none';
         document.getElementById('image-preview').src = '';
         document.getElementById('input-image-base64').value = '';
+        document.getElementById('remove-image-btn').style.display = 'none';
     }
 
     modal.style.display = 'flex';

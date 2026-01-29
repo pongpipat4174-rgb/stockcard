@@ -158,11 +158,26 @@
                 </div>
 
                 <div class="form-group">
-                    <label>รูปภาพสินค้า (อัปโหลด หรือ ถ่ายภาพ)</label>
-                    <input type="file" id="input-image" accept="image/*" capture="environment">
-                    <div id="image-preview-container" style="margin-top: 10px;">
+                    <label>รูปภาพสินค้า</label>
+                    <div class="image-upload-options" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <button type="button" class="btn secondary" onclick="captureImage()">
+                            <i class="fa-solid fa-camera"></i> ถ่ายรูป
+                        </button>
+                        <button type="button" class="btn secondary" onclick="pickImage()">
+                            <i class="fa-solid fa-folder-open"></i> เลือกไฟล์
+                        </button>
+                    </div>
+                    <input type="file" id="input-image-camera" accept="image/*" capture="environment"
+                        style="display:none;">
+                    <input type="file" id="input-image-file" accept="image/*" style="display:none;">
+                    <div id="image-preview-container"
+                        style="margin-top: 10px; position: relative; display: inline-block;">
                         <img id="image-preview" src=""
-                            style="max-height: 150px; border-radius: 8px; display: none; border: 1px solid #ddd;">
+                            style="max-height: 120px; border-radius: 8px; display: none; border: 1px solid #ddd;">
+                        <button type="button" id="remove-image-btn" onclick="removeImage()"
+                            style="display:none; position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px;">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
                         <input type="hidden" id="input-image-base64">
                     </div>
                 </div>

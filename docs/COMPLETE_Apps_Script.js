@@ -95,26 +95,27 @@ function doPost(e) {
 function getRMMasterData() {
     try {
         var ss = SpreadsheetApp.getActiveSpreadsheet();
-        var masterSheet = ss.getSheetByName('Master');
+        // ใช้ชีต RawMaterial ที่มีอยู่แล้ว (หรือ Master ถ้ามี)
+        var masterSheet = ss.getSheetByName('RawMaterial') || ss.getSheetByName('Master');
 
         if (!masterSheet) {
             return ContentService.createTextOutput(JSON.stringify({
                 success: false,
-                message: 'Master sheet not found'
+                message: 'RawMaterial or Master sheet not found'
             })).setMimeType(ContentService.MimeType.JSON);
         }
 
         var data = masterSheet.getDataRange().getValues();
-        var headers = data[0];
         var masterData = [];
 
+        // RawMaterial columns: A=Product Code1, B=Product Name, C=โรงงานผลิต (Supplier)
         for (var i = 1; i < data.length; i++) {
             var row = data[i];
             if (row[0]) { // Check if has product code
                 masterData.push({
-                    code: row[0] || '',
-                    name: row[1] || '',
-                    supplier: row[2] || ''
+                    code: row[0] || '',      // Column A: Product Code1
+                    name: row[1] || '',       // Column B: Product Name
+                    supplier: row[2] || ''    // Column C: โรงงานผลิต
                 });
             }
         }

@@ -2817,7 +2817,13 @@ function showContainerInfoForWithdraw(productCode, sortedLots) {
     // Store typical weight for calculation
     window.currentLotContainerWeight = typicalContainerWeight;
 
-    var html = '<strong>📦 ภาชนะคงเหลือ:</strong> ' + totalContainers + ' ภาชนะ<br>';
+    var html = '';
+
+    // Only show container count header for new lots
+    if (!hasOldLot && totalContainers > 0) {
+        html = '<strong>📦 ภาชนะคงเหลือ:</strong> ' + totalContainers + ' ภาชนะ<br>';
+    }
+
     html += '<small style="color:#0369a1;">';
 
     sortedLots.forEach(function (lot, idx) {
@@ -3008,10 +3014,10 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById(id)?.addEventListener('change', reverseCalculateRM);
     });
 
-    // Calculate Kg from Container Out (for old lots)
-    document.getElementById('entryContainerOutRM')?.addEventListener('input', function () {
-        var containerCount = parseFloat(this.value) || 0;
-        var containerWeight = window.currentLotContainerWeight || 0;
+    // Calculate Kg from Container Out and Weight per Container
+    function calculateKgFromContainers() {
+        var containerCount = parseFloat(document.getElementById('entryContainerOutRM')?.value) || 0;
+        var containerWeight = parseFloat(document.getElementById('entryContainerWeightOutRM')?.value) || 0;
 
         if (containerCount > 0 && containerWeight > 0) {
             var totalKg = containerCount * containerWeight;
@@ -3019,13 +3025,11 @@ document.addEventListener('DOMContentLoaded', function () {
             if (outQtyInput) {
                 outQtyInput.value = totalKg.toFixed(2);
             }
-            // Update hint
-            var hint = document.getElementById('containerWeightHint');
-            if (hint) {
-                hint.textContent = '= ' + totalKg.toFixed(2) + ' Kg';
-            }
         }
-    });
+    }
+
+    document.getElementById('entryContainerOutRM')?.addEventListener('input', calculateKgFromContainers);
+    document.getElementById('entryContainerWeightOutRM')?.addEventListener('input', calculateKgFromContainers);
 
 
     // RM Auto-Fill on Product Change (Logic updated to include Lot/Vendor)

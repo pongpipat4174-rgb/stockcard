@@ -52,6 +52,7 @@ let stockData = [];
 let rmStockData = [];
 let productMasterData = [];
 let rmProductMasterData = [];
+let rmMasterWithSupplier = []; // Master data from sheet: code, name, supplier
 let rmSuppliersList = [];
 let searchedProducts = [];
 let currentSearchQuery = ''; // For highlighting search results
@@ -269,6 +270,29 @@ function refreshData() {
     }
 }
 
+// Fetch RM Master Data (code, name, supplier) from master sheet
+async function fetchRMMasterData() {
+    try {
+        var response = await fetch(APPS_SCRIPT_URL + '?action=getRMMaster');
+        var result = await response.json();
+
+        if (result.success && result.data) {
+            rmMasterWithSupplier = result.data;
+            console.log('Loaded RM Master Data:', rmMasterWithSupplier.length, 'products');
+
+            // Update rmProductMasterData with master data
+            rmProductMasterData = rmMasterWithSupplier.map(function (p) {
+                return { code: p.code, name: p.name };
+            });
+
+            // Populate dropdown
+            populateProductDropdownRM();
+        }
+    } catch (error) {
+        console.error('Error fetching RM Master:', error);
+    }
+}
+
 // Initialize
 async function init() {
     console.log('Initializing Stock Card System V.14...');
@@ -354,6 +378,8 @@ async function init() {
             var recalcBtn = document.getElementById('recalculateBtn');
             if (recalcBtn) recalcBtn.style.display = 'inline-flex';
 
+            // Load RM Master Data (code, name, supplier) first
+            await fetchRMMasterData();
             await fetchRMData();
         } else {
             await fetchPackageData();
@@ -2587,20 +2613,29 @@ function autoFillRMForm(productCode) {
     var type = document.getElementById('entryTypeRM').value;
     var isWithdrawal = type && type.includes('เบิก');
 
-    // 1. Find product info from existing data
+    // 1. Find product info from MASTER SHEET first
+    var masterProduct = rmMasterWithSupplier.find(function (p) { return p.code === productCode; });
+    var masterName = masterProduct ? masterProduct.name : '';
+    var masterSupplier = masterProduct ? masterProduct.supplier : '';
+
+    // 2. Find product info from existing STOCK DATA (for weight, last vendor)
     var foundWeight = null;
-    var lastVendor = '-';
-    var productName = '';
+    var lastVendorFromStock = '-';
+    var productNameFromStock = '';
 
     for (var i = rmStockData.length - 1; i >= 0; i--) {
         var item = rmStockData[i];
         if (item.productCode === productCode) {
-            if (!productName && item.productName) productName = item.productName;
+            if (!productNameFromStock && item.productName) productNameFromStock = item.productName;
             if (foundWeight === null && item.containerWeight > 0) foundWeight = item.containerWeight;
-            if (lastVendor === '-' && item.supplier) lastVendor = item.supplier;
-            if (productName && foundWeight !== null && lastVendor !== '-') break;
+            if (lastVendorFromStock === '-' && item.supplier) lastVendorFromStock = item.supplier;
+            if (productNameFromStock && foundWeight !== null && lastVendorFromStock !== '-') break;
         }
     }
+
+    // Use master data first, fallback to stock data
+    var productName = masterName || productNameFromStock;
+    var supplier = masterSupplier || lastVendorFromStock;
 
     // Auto-fill product name
     var nameInput = document.getElementById('entryProductNameRM');
@@ -2615,7 +2650,7 @@ function autoFillRMForm(productCode) {
         calculateRMTotal();
     }
 
-    // 2. Intelligent Auto-Fill for Withdrawal
+    // 3. Intelligent Auto-Fill for Withdrawal
     if (isWithdrawal) {
         var sortedLots = getSortedActiveLots(productCode);
 
@@ -2633,11 +2668,11 @@ function autoFillRMForm(productCode) {
             }
         }
     } else {
-        // Receive: Auto-fill last vendor
+        // Receive: Auto-fill supplier (from master first, then stock history)
         var vendorInput = document.getElementById('entryVendorRM');
-        if (vendorInput && !vendorInput.value && lastVendor !== '-') {
-            vendorInput.value = lastVendor;
-            showToast('📦 Supplier ล่าสุด: ' + lastVendor);
+        if (vendorInput && !vendorInput.value && supplier && supplier !== '-') {
+            vendorInput.value = supplier;
+            showToast('📦 Supplier: ' + supplier);
         }
     }
 }

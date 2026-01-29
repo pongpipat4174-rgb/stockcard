@@ -54,11 +54,66 @@ function doPost(e) {
 }
 
 function doGet(e) {
+  // Check if requesting master data
+  var action = e && e.parameter ? e.parameter.action : null;
+  
+  if (action === 'getRMMaster') {
+    return getRMMasterData();
+  }
+  
   return ContentService.createTextOutput(JSON.stringify({
     status: 'OK',
     message: 'Stock Card API v3 - With Auto-Trigger',
     timestamp: new Date().toISOString()
   })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Get RM Master Data from the master sheet
+ * Returns: code, name, supplier for dropdown
+ */
+function getRMMasterData() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var masterSheet = ss.getSheetByName('สต๊อคการ์ด สาร Center จ้า');
+    
+    if (!masterSheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Master sheet not found'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var data = masterSheet.getDataRange().getValues();
+    var products = [];
+    
+    // Skip header row (row 1), start from row 2
+    for (var i = 1; i < data.length; i++) {
+      var code = data[i][0]; // Column A
+      var name = data[i][1]; // Column B
+      var supplier = data[i][2]; // Column C
+      
+      if (code && code.toString().trim() !== '') {
+        products.push({
+          code: code.toString().trim(),
+          name: name ? name.toString().trim() : '',
+          supplier: supplier ? supplier.toString().trim() : ''
+        });
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      data: products,
+      count: products.length
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 // ======================= AUTO-TRIGGER ON EDIT =======================

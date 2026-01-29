@@ -2179,8 +2179,67 @@ async function saveEntryRM() {
 
     // Validate required fields for receive
     if (!isWithdrawal && type === 'รับเข้า') {
+        var missingFields = [];
+        var firstMissingField = null;
+
+        // Check Container Qty
+        var containerQty = parseFloat(document.getElementById('entryContainerQtyRM')?.value) || 0;
+        if (containerQty <= 0) {
+            missingFields.push('จำนวน Container');
+            if (!firstMissingField) firstMissingField = 'entryContainerQtyRM';
+        }
+
+        // Check Container Weight
+        var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM')?.value) || 0;
+        if (containerWeight <= 0) {
+            missingFields.push('น.น. Container (Kg)');
+            if (!firstMissingField) firstMissingField = 'entryContainerWeightRM';
+        }
+
+        // Check In Qty
         if (inQty <= 0) {
-            alert('⚠️ กรุณากรอก รับเข้า (Kg)');
+            missingFields.push('รับเข้า (Kg)');
+            if (!firstMissingField) firstMissingField = 'entryInQtyRM';
+        }
+
+        // Check Lot No
+        var lotNo = document.getElementById('entryLotNoRM')?.value?.trim() || '';
+        if (!lotNo) {
+            missingFields.push('Lot No./FIFO ID');
+            if (!firstMissingField) firstMissingField = 'entryLotNoRM';
+        }
+
+        // Check Vendor
+        var vendorCheck = document.getElementById('entryVendorRM')?.value?.trim() || '';
+        if (!vendorCheck || vendorCheck === '-') {
+            missingFields.push('ผู้ส่ง/Vendor');
+            if (!firstMissingField) firstMissingField = 'entryVendorRM';
+        }
+
+        // Check MFD
+        var mfdDate = document.getElementById('entryMfgDateRM')?.value?.trim() || '';
+        if (!mfdDate) {
+            missingFields.push('วันผลิต (MFD)');
+            if (!firstMissingField) firstMissingField = 'entryMfgDateRM';
+        }
+
+        // Check EXP
+        var expDate = document.getElementById('entryExpDateRM')?.value?.trim() || '';
+        if (!expDate) {
+            missingFields.push('วันหมดอายุ (EXP)');
+            if (!firstMissingField) firstMissingField = 'entryExpDateRM';
+        }
+
+        // If any fields are missing, show alert and focus
+        if (missingFields.length > 0) {
+            alert('⚠️ กรุณากรอกข้อมูลให้ครบ:\n\n• ' + missingFields.join('\n• '));
+            if (firstMissingField) {
+                var el = document.getElementById(firstMissingField);
+                if (el) {
+                    el.focus();
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
             return;
         }
     }

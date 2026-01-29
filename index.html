@@ -552,11 +552,12 @@
                     </div>
                     <div class="form-grid" id="containerInputRow" style="display: none;">
                         <div class="form-group">
-                            <label for="entryContainerQtyRM">จำนวน Container</label>
+                            <label for="entryContainerQtyRM">จำนวน Container <span style="color:red;">*</span></label>
                             <input type="number" id="entryContainerQtyRM" name="containerQty" min="0" placeholder="0">
                         </div>
                         <div class="form-group">
-                            <label for="entryContainerWeightRM">นน. Container (Kg)</label>
+                            <label for="entryContainerWeightRM">นน. Container (Kg) <span
+                                    style="color:red;">*</span></label>
                             <input type="number" id="entryContainerWeightRM" name="containerWeight" min="0" step="0.01"
                                 placeholder="0">
                         </div>
@@ -599,11 +600,11 @@
                     </div>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="entryLotNoRM">Lot No./FIFO ID</label>
+                            <label for="entryLotNoRM">Lot No./FIFO ID <span style="color:red;">*</span></label>
                             <input type="text" id="entryLotNoRM" name="lotNo" placeholder="เช่น RM2511033">
                         </div>
                         <div class="form-group">
-                            <label for="entryVendorRM">ผู้ส่ง/Vendor</label>
+                            <label for="entryVendorRM">ผู้ส่ง/Vendor <span style="color:red;">*</span></label>
                             <input type="text" id="entryVendorRM" name="vendor" placeholder="เช่น CHEMICO">
                         </div>
                     </div>
@@ -613,11 +614,11 @@
                             <input type="text" id="entryVendorLotRM" name="vendorLot" placeholder="Lot จาก Supplier">
                         </div>
                         <div class="form-group">
-                            <label for="entryMfgDateRM">วันผลิต (MFD)</label>
+                            <label for="entryMfgDateRM">วันผลิต (MFD) <span style="color:red;">*</span></label>
                             <input type="date" id="entryMfgDateRM" name="mfgDate">
                         </div>
                         <div class="form-group">
-                            <label for="entryExpDateRM">วันหมดอายุ (EXP)</label>
+                            <label for="entryExpDateRM">วันหมดอายุ (EXP) <span style="color:red;">*</span></label>
                             <input type="date" id="entryExpDateRM" name="expDate">
                         </div>
                     </div>
@@ -827,7 +828,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=86"></script>
+    <script src="app.js?v=87"></script>
 
     <script>
         // Integrated Module Switch Logic

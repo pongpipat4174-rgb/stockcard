@@ -239,7 +239,10 @@ function switchModule(module, event) {
                     isSwitchingModule = false;
                 } else {
                     showLoading();
-                    fetchRMData().then(() => {
+                    // Load master data first, then stock data
+                    fetchRMMasterData().then(() => {
+                        return fetchRMData();
+                    }).then(() => {
                         // Success
                     }).catch(err => {
                         console.error('RM Fetch Error during switch:', err);

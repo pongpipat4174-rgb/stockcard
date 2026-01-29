@@ -655,6 +655,13 @@ function addEntryRM(data) {
   var newRow = lastRow + 1;
   sheet.getRange(newRow, 1, 1, row.length).setValues([row]);
   
+  // Recalculate all balances after adding new entry
+  try {
+    manualRecalculateSheet(sheet);
+  } catch (e) {
+    Logger.log('Recalculate error: ' + e.message);
+  }
+  
   return ContentService.createTextOutput(JSON.stringify({
     success: true,
     message: 'RM Entry added at row ' + newRow

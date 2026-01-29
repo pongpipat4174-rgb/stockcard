@@ -2740,6 +2740,15 @@ function autoFillRMForm(productCode) {
                 expInput.value = bestLot.expDate;
             }
 
+            // Store container weight for calculation and show hint
+            if (bestLot.containerWeight && bestLot.containerWeight > 0) {
+                window.currentLotContainerWeight = bestLot.containerWeight;
+                var hint = document.getElementById('containerWeightHint');
+                if (hint) {
+                    hint.textContent = '@ ' + bestLot.containerWeight + ' Kg/ใบ';
+                }
+            }
+
             // Show available containers for this RM
             showContainerInfoForWithdraw(productCode, sortedLots);
         } else {
@@ -2773,76 +2782,105 @@ function showContainerInfoForWithdraw(productCode, sortedLots) {
         }
     }
 
+    var newSystemDate = new Date(2026, 0, 28); // 28/1/2026
+
     // Calculate total containers and typical weight
     var totalContainers = 0;
     var containerWeights = {};
+    var hasOldLot = false;
+    var typicalContainerWeight = 0;
 
     sortedLots.forEach(function (lot) {
-        var containers = lot.fullContainers || 0;
-        if (containers > 0) {
-            totalContainers += containers;
-            var weight = lot.containerWeight || 'ไม่ระบุ';
-            if (!containerWeights[weight]) containerWeights[weight] = 0;
-            containerWeights[weight] += containers;
-        }
-    });
-
-    if (totalContainers > 0) {
-        var html = '<strong>🫙 ภาชนะคงเหลือ:</strong> ' + totalContainers + ' ภาชนะ<br>';
-        html += '<small>';
-
-        Object.keys(containerWeights).forEach(function (weight) {
-            if (weight !== 'ไม่ระบุ' && weight !== '0') {
-                html += containerWeights[weight] + ' ภาชนะ × ' + weight + ' Kg | ';
-            }
-        });
-
-        // Show per lot breakdown
-        html += '</small><br><small style="color:#0369a1;">';
-        sortedLots.forEach(function (lot, idx) {
-            var containers = lot.fullContainers || 0;
-            if (containers > 0 || lot.balance > 0) {
-                html += '<b>Lot ' + lot.lotNo + '</b>: ';
-                if (containers > 0) {
-                    html += containers + ' ภาชนะ';
-                    if (lot.containerWeight) html += ' (' + lot.containerWeight + ' Kg/ภาชนะ)';
-                    if (lot.partialKg > 0) html += ' + เศษ ' + lot.partialKg + ' Kg';
-                } else {
-                    html += formatNumber(lot.balance) + ' Kg';
-                }
-                // Add expiry info
-                if (lot.expDate && lot.expDate !== '-') {
-                    var expStyle = lot.expDays <= 30 ? 'color:#dc2626;font-weight:bold;' : 'color:#666;';
-                    html += ' <span style="' + expStyle + '">| EXP: ' + lot.expDate;
-                    if (lot.expDays !== undefined) html += ' (' + lot.expDays + ' วัน)';
-                    html += '</span>';
-                }
-                if (idx < sortedLots.length - 1) html += '<br>';
-            }
-        });
-        html += '</small>';
-
-        // Check if first lot is old (before new system date)
-        var newSystemDate = new Date(2026, 0, 28); // 28/1/2026
-        var firstLot = sortedLots[0];
-        if (firstLot && firstLot.firstDate) {
-            var dateParts = firstLot.firstDate.split('/');
+        // Check if lot is old
+        if (lot.firstDate) {
+            var dateParts = lot.firstDate.split('/');
             if (dateParts.length === 3) {
                 var lotDate = new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
                 if (lotDate < newSystemDate) {
-                    html += '<br><span style="color:#dc2626;font-weight:bold;">⚠️ Lot นี้รับเข้าก่อน 28/1/2026 - กรุณาระบุจำนวนภาชนะที่เบิกเอง</span>';
+                    hasOldLot = true;
                 }
             }
         }
 
-        containerInfoDiv.innerHTML = html;
-        containerInfoDiv.style.display = 'block';
-    } else {
-        // No containers tracked, show balance only
-        var totalBalance = sortedLots.reduce(function (sum, lot) { return sum + (lot.balance || 0); }, 0);
-        containerInfoDiv.innerHTML = '<strong>📦 คงเหลือ:</strong> ' + formatNumber(totalBalance) + ' Kg';
-        containerInfoDiv.style.display = 'block';
+        var containers = lot.fullContainers || 0;
+        if (containers > 0) {
+            totalContainers += containers;
+            var weight = lot.containerWeight || 0;
+            if (weight > 0) {
+                if (!containerWeights[weight]) containerWeights[weight] = 0;
+                containerWeights[weight] += containers;
+                typicalContainerWeight = weight; // Use last known weight
+            }
+        }
+    });
+
+    // Store typical weight for calculation
+    window.currentLotContainerWeight = typicalContainerWeight;
+
+    var html = '<strong>📦 ภาชนะคงเหลือ:</strong> ' + totalContainers + ' ภาชนะ<br>';
+    html += '<small style="color:#0369a1;">';
+
+    sortedLots.forEach(function (lot, idx) {
+        var containers = lot.fullContainers || 0;
+
+        // Check if this lot is old
+        var isOldLot = false;
+        if (lot.firstDate) {
+            var dateParts = lot.firstDate.split('/');
+            if (dateParts.length === 3) {
+                var lotDate = new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
+                isOldLot = lotDate < newSystemDate;
+            }
+        }
+
+        html += '<b>Lot ' + lot.lotNo + '</b>: ';
+
+        if (isOldLot) {
+            // OLD LOT: Only show Lot, MFD, EXP - no container info
+            if (lot.mfdDate && lot.mfdDate !== '-') {
+                html += 'MFD: ' + lot.mfdDate + ' | ';
+            }
+            if (lot.expDate && lot.expDate !== '-') {
+                var expStyle = lot.expDays <= 30 ? 'color:#dc2626;font-weight:bold;' : '';
+                html += '<span style="' + expStyle + '">EXP: ' + lot.expDate;
+                if (lot.expDays !== undefined) html += ' (' + lot.expDays + ' วัน)';
+                html += '</span>';
+            }
+        } else {
+            // NEW LOT: Show full container info
+            if (containers > 0) {
+                html += containers + ' ภาชนะ';
+                if (lot.containerWeight) html += ' (' + lot.containerWeight + ' Kg/ภาชนะ)';
+                if (lot.partialKg > 0) html += ' + เศษ ' + lot.partialKg + ' Kg';
+            } else {
+                html += formatNumber(lot.balance) + ' Kg';
+            }
+            // Add expiry info
+            if (lot.expDate && lot.expDate !== '-') {
+                var expStyle = lot.expDays <= 30 ? 'color:#dc2626;font-weight:bold;' : 'color:#666;';
+                html += ' <span style="' + expStyle + '">| EXP: ' + lot.expDate;
+                if (lot.expDays !== undefined) html += ' (' + lot.expDays + ' วัน)';
+                html += '</span>';
+            }
+        }
+
+        if (idx < sortedLots.length - 1) html += '<br>';
+    });
+    html += '</small>';
+
+    // Warning for old lots
+    if (hasOldLot) {
+        html += '<br><span style="color:#dc2626;font-weight:bold;">⚠️ Lot นี้รับเข้าก่อน 28/1/2026 - กรุณาระบุจำนวนภาชนะที่เบิกเอง</span>';
+
+        // Mark container input as required
+        var containerLabel = document.querySelector('label[for="entryContainerOutRM"]');
+        if (containerLabel && !containerLabel.innerHTML.includes('*')) {
+            containerLabel.innerHTML = 'ภาชนะที่เบิก (ใบ) <span style="color:red;">*</span>';
+        }
     }
+
+    containerInfoDiv.innerHTML = html;
+    containerInfoDiv.style.display = 'block';
 }
 
 
@@ -2970,6 +3008,25 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById(id)?.addEventListener('change', reverseCalculateRM);
     });
 
+    // Calculate Kg from Container Out (for old lots)
+    document.getElementById('entryContainerOutRM')?.addEventListener('input', function () {
+        var containerCount = parseFloat(this.value) || 0;
+        var containerWeight = window.currentLotContainerWeight || 0;
+
+        if (containerCount > 0 && containerWeight > 0) {
+            var totalKg = containerCount * containerWeight;
+            var outQtyInput = document.getElementById('entryOutQtyRM');
+            if (outQtyInput) {
+                outQtyInput.value = totalKg.toFixed(2);
+            }
+            // Update hint
+            var hint = document.getElementById('containerWeightHint');
+            if (hint) {
+                hint.textContent = '= ' + totalKg.toFixed(2) + ' Kg';
+            }
+        }
+    });
+
 
     // RM Auto-Fill on Product Change (Logic updated to include Lot/Vendor)
     // Trigger on both 'change' (dropdown select) and 'input' (typing)
@@ -3009,16 +3066,16 @@ document.addEventListener('DOMContentLoaded', function () {
             // Show receive-specific fields
             if (containerRow) containerRow.style.display = 'grid';
             if (mfdExpRow) mfdExpRow.style.display = 'grid';
-            if (inQtyGroup) inQtyGroup.style.display = 'block';
-            if (outQtyGroup) outQtyGroup.style.display = 'none';
 
-            // Hide balance for receive (auto-calculated)
-            var balanceGroup = document.getElementById('balanceGroup');
-            if (balanceGroup) balanceGroup.style.display = 'none';
+            // Show receive rows
+            var inQtyBalanceRow = document.getElementById('inQtyBalanceRow');
+            if (inQtyBalanceRow) inQtyBalanceRow.style.display = 'grid';
 
-            // Hide container out for receive
-            var containerOutGroup = document.getElementById('containerOutGroup');
-            if (containerOutGroup) containerOutGroup.style.display = 'none';
+            // Hide withdrawal rows
+            var outQtyContainerRow = document.getElementById('outQtyContainerRow');
+            if (outQtyContainerRow) outQtyContainerRow.style.display = 'none';
+            var balanceRow = document.getElementById('balanceRow');
+            if (balanceRow) balanceRow.style.display = 'none';
 
             // Clear out qty
             var outQtyInput = document.getElementById('entryOutQtyRM');
@@ -3027,16 +3084,16 @@ document.addEventListener('DOMContentLoaded', function () {
             // Show withdrawal-specific fields
             if (containerRow) containerRow.style.display = 'none';
             if (mfdExpRow) mfdExpRow.style.display = 'none';
-            if (inQtyGroup) inQtyGroup.style.display = 'none';
-            if (outQtyGroup) outQtyGroup.style.display = 'block';
 
-            // Show balance for withdrawal
-            var balanceGroup = document.getElementById('balanceGroup');
-            if (balanceGroup) balanceGroup.style.display = 'block';
+            // Show withdrawal rows
+            var outQtyContainerRow = document.getElementById('outQtyContainerRow');
+            if (outQtyContainerRow) outQtyContainerRow.style.display = 'grid';
+            var balanceRow = document.getElementById('balanceRow');
+            if (balanceRow) balanceRow.style.display = 'grid';
 
-            // Show container out for withdrawal
-            var containerOutGroup = document.getElementById('containerOutGroup');
-            if (containerOutGroup) containerOutGroup.style.display = 'block';
+            // Hide receive rows
+            var inQtyBalanceRow = document.getElementById('inQtyBalanceRow');
+            if (inQtyBalanceRow) inQtyBalanceRow.style.display = 'none';
 
             // Clear in qty
             var inQtyInput = document.getElementById('entryInQtyRM');

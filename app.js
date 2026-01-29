@@ -2381,15 +2381,34 @@ function reverseCalculateRM() {
 
     // Calculate containerOut for hidden field (used when saving)
     var containerOutInput = document.getElementById('entryContainerOutRM');
+    // Date when new container tracking system started (29/1/2026)
+    var newSystemDate = new Date(2026, 0, 29); // January is 0
+
     if (isWithdrawal && outQty > 0) {
         var lotNo = document.getElementById('entryLotNoRM').value;
         if (productCode && lotNo) {
             var lotInfo = getLotContainerInfo(productCode, lotNo);
-            if (lotInfo.containersAvailable > 0) {
+
+            // Check if lot was received on/after new system date
+            var isNewLot = false;
+            if (lotInfo.firstDate) {
+                var dateParts = lotInfo.firstDate.split('/');
+                if (dateParts.length === 3) {
+                    // Format: DD/MM/YYYY
+                    var lotDate = new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
+                    isNewLot = lotDate >= newSystemDate;
+                }
+            }
+
+            if (isNewLot && lotInfo.containersAvailable > 0) {
+                // New lot: auto-fill container out
                 var avgWeight = lotInfo.totalKgIn > 0 ? lotInfo.totalKgIn / lotInfo.containersIn : 0;
                 var suggestedContainers = avgWeight > 0 ? Math.ceil(outQty / avgWeight) : 0;
                 suggestedContainers = Math.min(suggestedContainers, lotInfo.containersAvailable);
                 containerOutInput.value = suggestedContainers;
+            } else {
+                // Old lot: clear container out, user must enter manually
+                containerOutInput.value = '';
             }
         }
     } else {
@@ -2411,12 +2430,15 @@ function getLotContainerInfo(productCode, lotNo) {
     var containersOut = 0;
     var totalKgIn = 0;
     var totalKgOut = 0;
+    var firstDate = null;
 
     rmStockData.forEach(function (entry) {
         if (entry.productCode === productCode && entry.lotNo === lotNo) {
             if (entry.inQty > 0) {
                 containersIn += entry.containerQty || 0;
                 totalKgIn += entry.inQty;
+                // Track first receive date
+                if (!firstDate) firstDate = entry.date;
             }
             if (entry.outQty > 0) {
                 containersOut += entry.containerOut || 0;
@@ -2430,7 +2452,8 @@ function getLotContainerInfo(productCode, lotNo) {
         containersOut: containersOut,
         containersAvailable: Math.max(0, containersIn - containersOut),
         totalKgIn: totalKgIn,
-        totalKgOut: totalKgOut
+        totalKgOut: totalKgOut,
+        firstDate: firstDate  // Date when lot was first received
     };
 }
 
@@ -2798,6 +2821,19 @@ function showContainerInfoForWithdraw(productCode, sortedLots) {
             }
         });
         html += '</small>';
+
+        // Check if first lot is old (before new system date)
+        var newSystemDate = new Date(2026, 0, 29);
+        var firstLot = sortedLots[0];
+        if (firstLot && firstLot.firstDate) {
+            var dateParts = firstLot.firstDate.split('/');
+            if (dateParts.length === 3) {
+                var lotDate = new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
+                if (lotDate < newSystemDate) {
+                    html += '<br><span style="color:#dc2626;font-weight:bold;">⚠️ Lot นี้รับเข้าก่อน 29/1/2026 - กรุณาระบุจำนวนภาชนะที่เบิกเอง</span>';
+                }
+            }
+        }
 
         containerInfoDiv.innerHTML = html;
         containerInfoDiv.style.display = 'block';

@@ -275,13 +275,20 @@ function refreshData() {
 
 // Fetch RM Master Data (code, name, supplier) from master sheet
 async function fetchRMMasterData() {
+    console.log('[RM Master] Fetching from API...');
     try {
-        var response = await fetch(APPS_SCRIPT_URL + '?action=getRMMaster');
+        var url = APPS_SCRIPT_URL + '?action=getRMMaster';
+        console.log('[RM Master] URL:', url);
+
+        var response = await fetch(url);
+        console.log('[RM Master] Response status:', response.status);
+
         var result = await response.json();
+        console.log('[RM Master] Result:', result);
 
         if (result.success && result.data) {
             rmMasterWithSupplier = result.data;
-            console.log('Loaded RM Master Data:', rmMasterWithSupplier.length, 'products');
+            console.log('[RM Master] Loaded:', rmMasterWithSupplier.length, 'products');
 
             // Update rmProductMasterData with master data
             rmProductMasterData = rmMasterWithSupplier.map(function (p) {
@@ -290,9 +297,11 @@ async function fetchRMMasterData() {
 
             // Populate dropdown
             populateProductDropdownRM();
+        } else {
+            console.warn('[RM Master] API returned:', result);
         }
     } catch (error) {
-        console.error('Error fetching RM Master:', error);
+        console.error('[RM Master] Error:', error);
     }
 }
 

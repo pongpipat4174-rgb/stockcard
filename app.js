@@ -2369,6 +2369,21 @@ async function saveEntryRM() {
 
         showToast('บันทึกสำเร็จทั้งหมด!');
 
+        // Check if any entry contains "เบิกผลิต" - ask to transfer to Production
+        var transferEntries = entriesToSave.filter(function (e) {
+            return e.type && e.type.includes('เบิกผลิต');
+        });
+
+        if (transferEntries.length > 0) {
+            // Ask user if they want to transfer to Production
+            setTimeout(function () {
+                if (confirm('รายการ "เบิกผลิต" ' + transferEntries.length + ' รายการ\n\nต้องการโอนข้อมูลไป RM Production ด้วยหรือไม่?\n\n(ข้อมูลจะถูกบันทึกเป็น "รับเข้า" ใน Production)')) {
+                    // Transfer to Production
+                    transferToProductionAuto(transferEntries);
+                }
+            }, 500);
+        }
+
         // Success Cleanup
         setTimeout(async function () {
             closeEntryModalRM();
@@ -3975,6 +3990,71 @@ async function confirmTransferToProduction() {
     } catch (e) {
         console.error('Transfer Error:', e);
         alert('เกิดข้อผิดพลาด: ' + e.message);
+        hideLoading();
+    }
+}
+
+// ======================= AUTO TRANSFER TO PRODUCTION =======================
+// Called automatically after saving "เบิกผลิต" entries
+
+async function transferToProductionAuto(entries) {
+    showLoading();
+    showToast('🔄 กำลังโอนข้อมูลไป Production...');
+
+    try {
+        // Transform entries for Production (change "เบิก" to "รับเข้า")
+        var today = new Date().toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+
+        var transferData = entries.map(function (entry) {
+            return {
+                transferDate: today,
+                originalDate: entry.date,
+                productCode: entry.productCode,
+                productName: entry.productName,
+                quantity: entry.outQty, // จำนวนที่เบิกออก = จำนวนที่รับเข้า
+                containerQty: entry.containerQty,
+                containerWeight: entry.containerWeight,
+                remainder: entry.remainder,
+                lotNo: entry.lotNo,
+                vendorLot: entry.vendorLot,
+                mfgDate: entry.mfgDate,
+                expDate: entry.expDate,
+                daysLeft: '',
+                supplier: entry.supplier,
+                containerOut: entry.containerOut
+            };
+        });
+
+        // Call Apps Script
+        await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'transferToProduction',
+                data: transferData
+            })
+        });
+
+        hideLoading();
+        showToast('✅ โอนข้อมูลไป Production สำเร็จ ' + transferData.length + ' รายการ!');
+
+        // Ask if want to view Production
+        setTimeout(function () {
+            if (confirm('โอนข้อมูลไป RM Production เรียบร้อย!\n\nต้องการสลับไปดูข้อมูลหรือไม่?')) {
+                switchModule('rm_production', null);
+            }
+        }, 500);
+
+    } catch (e) {
+        console.error('Auto Transfer Error:', e);
+        alert('เกิดข้อผิดพลาดในการโอนข้อมูล: ' + e.message);
         hideLoading();
     }
 }

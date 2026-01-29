@@ -2519,6 +2519,7 @@ function getSortedActiveLots(productCode) {
     var lotFirstDate = {};
     var lotExpDays = {};
     var lotExpDate = {};
+    var lotMfdDate = {};  // Add MFD tracking
     var lotVendor = {};
     var lotTotalContainersIn = {};
     var lotTotalKgIn = {};
@@ -2533,6 +2534,11 @@ function getSortedActiveLots(productCode) {
             lotTotalContainersIn[e.lotNo] = 0;
             lotTotalKgIn[e.lotNo] = 0;
             lotTotalKgOut[e.lotNo] = 0;
+        }
+        // Track MFD and EXP from receive entries
+        if (e.inQty > 0) {
+            if (!lotMfdDate[e.lotNo] && e.mfgDate) lotMfdDate[e.lotNo] = e.mfgDate;
+            if (!lotExpDate[e.lotNo] && e.expDate) lotExpDate[e.lotNo] = e.expDate;
         }
         lotBalances[e.lotNo] += e.inQty - e.outQty;
 
@@ -2578,6 +2584,7 @@ function getSortedActiveLots(productCode) {
                 lotNo: lot,
                 balance: balance,
                 firstDate: lotFirstDate[lot],
+                mfdDate: lotMfdDate[lot] || '-',  // Add MFD
                 expDays: lotExpDays[lot],
                 expDate: lotExpDate[lot] || '-',
                 supplier: lotVendor[lot],
@@ -2673,6 +2680,8 @@ function autoFillRMForm(productCode) {
 
             var lotInput = document.getElementById('entryLotNoRM');
             var vendorInput = document.getElementById('entryVendorRM');
+            var mfdInput = document.getElementById('entryMfdDateRM');
+            var expInput = document.getElementById('entryExpDateRM');
 
             if (lotInput && !lotInput.value) {
                 lotInput.value = bestLot.lotNo;
@@ -2680,6 +2689,13 @@ function autoFillRMForm(productCode) {
             }
             if (vendorInput && !vendorInput.value && bestLot.supplier) {
                 vendorInput.value = bestLot.supplier;
+            }
+            // Auto-fill MFD and EXP from lot data
+            if (mfdInput && !mfdInput.value && bestLot.mfdDate && bestLot.mfdDate !== '-') {
+                mfdInput.value = bestLot.mfdDate;
+            }
+            if (expInput && !expInput.value && bestLot.expDate && bestLot.expDate !== '-') {
+                expInput.value = bestLot.expDate;
             }
 
             // Show available containers for this RM

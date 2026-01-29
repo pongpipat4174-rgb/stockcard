@@ -884,27 +884,33 @@ mark.search-highlight {
     font-size: 0.7rem;
 }
 
-/* Container Section (Blue stripe at bottom of FEFO box) */
+/* Container Section (Red theme, inside FEFO box) */
 .container-section {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
     padding: 0.6rem 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
-    border-top: 2px dashed #93c5fd;
+    border-top: 2px dashed #fca5a5;
 }
 
 .container-section .summary-label {
-    color: #1d4ed8;
+    color: #b91c1c;
     font-size: 0.7rem;
     font-weight: 600;
 }
 
 .container-section .container-value {
-    color: #1e40af;
+    color: #991b1b;
     font-family: 'Consolas', monospace;
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 1.3rem;
+    font-weight: 800;
+    background: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    display: inline-block;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    border: 2px solid #ef4444;
 }
 
 /* FEFO Section (Red area at top) */

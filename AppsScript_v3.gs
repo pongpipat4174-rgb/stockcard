@@ -75,7 +75,7 @@ function doGet(e) {
 function getRMMasterData() {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var masterSheet = ss.getSheetByName('สต๊อคการ์ด สาร Center จ้า');
+    var masterSheet = ss.getSheetByName('RawMaterial');
     
     if (!masterSheet) {
       return ContentService.createTextOutput(JSON.stringify({

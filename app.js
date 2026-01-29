@@ -2160,6 +2160,23 @@ async function saveEntryRM() {
         return;
     }
 
+    // Validate required fields for withdrawal
+    if (isWithdrawal) {
+        var containerOut = parseFloat(document.getElementById('entryContainerOutRM').value) || 0;
+        var containerWeightOut = parseFloat(document.getElementById('entryContainerWeightOutRM').value) || 0;
+
+        if (containerOut <= 0 || containerWeightOut <= 0) {
+            alert('⚠️ กรุณากรอกข้อมูลให้ครบ:\n• ภาชนะที่เบิก (ใบ)\n• น.น./ภาชนะ (Kg)');
+            return;
+        }
+
+        // If outQty is empty, calculate from container
+        if (outQty <= 0) {
+            outQty = containerOut * containerWeightOut;
+            document.getElementById('entryOutQtyRM').value = outQty.toFixed(2);
+        }
+    }
+
     showLoading();
 
     var entriesToSave = [];

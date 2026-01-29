@@ -56,7 +56,15 @@
                         <line x1="3" y1="6" x2="21" y2="6" />
                         <path d="M16 10a4 4 0 0 1-8 0" />
                     </svg>
-                    🧪 วัตถุดิบ (RM)
+                    🧪 RM Center
+                </button>
+                <button class="module-tab" data-module="rm_production" type="button" id="tabRMProduction">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <path d="M16 10a4 4 0 0 1-8 0" />
+                    </svg>
+                    🏭 RM Production
                 </button>
                 <button class="module-tab" data-module="consumable" type="button" id="tabConsumable"
                     onclick="switchExternalModule('consumable')">
@@ -828,7 +836,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=87"></script>
+    <script src="app.js?v=88"></script>
 
     <script>
         // Integrated Module Switch Logic
@@ -847,6 +855,7 @@
             const tabs = {
                 'package': document.getElementById('tabPackage'),
                 'rm': document.getElementById('tabRM'),
+                'rm_production': document.getElementById('tabRMProduction'),
                 'consumable': document.getElementById('tabConsumable'),
                 'general': document.getElementById('tabGeneral')
             };
@@ -879,6 +888,9 @@
         // Let's bind here for safety and redundancy.
         document.getElementById('tabConsumable').onclick = () => switchExternalModule('consumable');
         document.getElementById('tabGeneral').onclick = () => switchExternalModule('general');
+
+        // RM Production uses app.js switchModule (same as RM Center)
+        document.getElementById('tabRMProduction').onclick = (e) => switchModule('rm_production', e);
     </script>
 </body>
 

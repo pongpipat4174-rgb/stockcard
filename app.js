@@ -35,11 +35,20 @@ const SHEET_CONFIG = {
     rm: {
         id: '1C3mPPxucPueSOfW4Hh7m4k3BjJ4ZHonqzc8j-JfQOfs',
         sheetName: 'Sheet1',
-        title: 'Stock Card วัตถุดิบ (RM)',
-        subtitle: 'ระบบจัดการสต็อกวัตถุดิบและสารเคมี',
+        title: 'Stock Card วัตถุดิบ (RM Center)',
+        subtitle: 'คลัง Center - ระบบจัดการสต็อกวัตถุดิบและสารเคมี',
         icon: '🧪',
         unit: 'Kg',
         color: '#10b981'
+    },
+    rm_production: {
+        id: '1C3mPPxucPueSOfW4Hh7m4k3BjJ4ZHonqzc8j-JfQOfs',
+        sheetName: 'Production',
+        title: 'Stock Card วัตถุดิบ (RM Production)',
+        subtitle: 'คลัง Production - ระบบจัดการสต็อกวัตถุดิบและสารเคมี',
+        icon: '🏭',
+        unit: 'Kg',
+        color: '#f59e0b'
     }
 };
 
@@ -50,6 +59,7 @@ let isSwitchingModule = false; // Prevent double-tap on mobile
 // Data containers
 let stockData = [];
 let rmStockData = [];
+let rmProductionStockData = []; // Data for RM Production
 let productMasterData = [];
 let rmProductMasterData = [];
 let rmMasterWithSupplier = []; // Master data from sheet: code, name, supplier
@@ -130,6 +140,7 @@ function switchModule(module, event) {
     // 1. VISUAL UPDATE (Immediate & Smooth)
     const tabPackage = document.getElementById('tabPackage');
     const tabRM = document.getElementById('tabRM');
+    const tabRMProduction = document.getElementById('tabRMProduction');
     const tabConsumable = document.getElementById('tabConsumable');
 
     // Explicitly hide consumable view and show main view (Safety)
@@ -147,6 +158,7 @@ function switchModule(module, event) {
     // Remove active from ALL tabs
     if (tabPackage) tabPackage.classList.remove('active');
     if (tabRM) tabRM.classList.remove('active');
+    if (tabRMProduction) tabRMProduction.classList.remove('active');
     if (tabConsumable) tabConsumable.classList.remove('active');
 
     // Add active to current
@@ -154,6 +166,8 @@ function switchModule(module, event) {
         tabPackage.classList.add('active');
     } else if (module === 'rm' && tabRM) {
         tabRM.classList.add('active');
+    } else if (module === 'rm_production' && tabRMProduction) {
+        tabRMProduction.classList.add('active');
     }
 
     // Update Strings
@@ -174,7 +188,7 @@ function switchModule(module, event) {
     const labelIn = document.getElementById('labelTotalIn');
     const labelOut = document.getElementById('labelTotalOut');
 
-    if (module === 'rm') {
+    if (module === 'rm' || module === 'rm_production') {
         if (banner) banner.classList.add('rm-mode');
         if (rmFilterGroup) rmFilterGroup.style.display = 'flex';
         if (rmSupplierGroup) rmSupplierGroup.style.display = 'flex';
@@ -231,25 +245,20 @@ function switchModule(module, event) {
                         isSwitchingModule = false;
                     });
                 }
-            } else {
-                // RM Module
-                if (rmStockData.length > 0) {
-                    updateStatsRM();
-                    showAllProductsRM();
+            } else if (module === 'rm' || module === 'rm_production') {
+                // Always reload data when switching between rm modules (they use different sheets)
+                showLoading();
+                rmStockData = []; // Clear existing data to force reload
+                // Load master data first, then stock data
+                fetchRMMasterData().then(() => {
+                    return fetchRMData();
+                }).then(() => {
+                    // Success
+                }).catch(err => {
+                    console.error('RM Fetch Error during switch:', err);
+                }).finally(() => {
                     isSwitchingModule = false;
-                } else {
-                    showLoading();
-                    // Load master data first, then stock data
-                    fetchRMMasterData().then(() => {
-                        return fetchRMData();
-                    }).then(() => {
-                        // Success
-                    }).catch(err => {
-                        console.error('RM Fetch Error during switch:', err);
-                    }).finally(() => {
-                        isSwitchingModule = false;
-                    });
-                }
+                });
             }
         } catch (e) {
             console.error('Error during module switch execution:', e);
@@ -266,7 +275,7 @@ function refreshData() {
         showLoading();
         stockData = [];
         fetchPackageData();
-    } else {
+    } else if (currentModule === 'rm' || currentModule === 'rm_production') {
         showLoading();
         rmStockData = [];
         fetchRMData();
@@ -543,9 +552,12 @@ function showAllProducts() {
 
 async function fetchRMData() {
     try {
+        // Use current module config (rm or rm_production)
+        var moduleKey = (currentModule === 'rm_production') ? 'rm_production' : 'rm';
+        var config = SHEET_CONFIG[moduleKey];
         var timestamp = new Date().getTime();
-        var sheetName = encodeURIComponent(SHEET_CONFIG.rm.sheetName);
-        var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_CONFIG.rm.id + '/gviz/tq?tqx=out:json&sheet=' + sheetName + '&tq=SELECT%20*&_=' + timestamp;
+        var sheetName = encodeURIComponent(config.sheetName);
+        var url = 'https://docs.google.com/spreadsheets/d/' + config.id + '/gviz/tq?tqx=out:json&sheet=' + sheetName + '&tq=SELECT%20*&_=' + timestamp;
 
         var response = await fetch(url);
         if (!response.ok) {

@@ -976,9 +976,9 @@ function renderStockCardsRM(products) {
             entriesHtml += '<tr>';
             entriesHtml += '<td class="col-date"><span class="date-full">' + highlightText(entry.date, q) + '</span><span class="date-short">' + highlightText(toShortDate(entry.date), q) + '</span></td>';
             entriesHtml += '<td class="col-type"><span class="type-cell ' + (entry.type === 'รับเข้า' ? 'type-in' : 'type-out') + '">' + highlightText(entry.type, q) + '</span></td>';
-            entriesHtml += '<td class="col-num no-print">' + (entry.containerQty > 0 ? formatNumber(entry.containerQty) : '-') + '</td>';
-            entriesHtml += '<td class="col-num no-print">' + (entry.containerWeight > 0 ? formatNumber(entry.containerWeight) : '-') + '</td>';
-            entriesHtml += '<td class="col-num no-print">' + (entry.remainder > 0 ? formatNumber(entry.remainder) : '-') + '</td>';
+            entriesHtml += '<td class="col-num">' + (entry.containerQty > 0 ? formatNumber(entry.containerQty) : '-') + '</td>';
+            entriesHtml += '<td class="col-num">' + (entry.containerWeight > 0 ? formatNumber(entry.containerWeight) : '-') + '</td>';
+            entriesHtml += '<td class="col-num">' + (entry.remainder > 0 ? formatNumber(entry.remainder) : '-') + '</td>';
             entriesHtml += '<td class="col-num qty-in">' + (entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-') + '</td>';
             entriesHtml += '<td class="col-num qty-out">' + (entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-') + '</td>';
             entriesHtml += '<td class="col-num">' + formatNumber(entry.balance) + '</td>';
@@ -990,10 +990,10 @@ function renderStockCardsRM(products) {
             }
             entriesHtml += '<td class="col-lot">' + lotHtml + '</td>';
 
-            entriesHtml += '<td class="col-vendor no-print">' + highlightText(entry.vendorLot || '-', q) + '</td>';
+            entriesHtml += '<td class="col-vendor">' + highlightText(entry.vendorLot || '-', q) + '</td>';
 
             // MFD & EXP with Short Date
-            entriesHtml += '<td class="col-date no-print"><span class="date-full">' + highlightText(entry.mfgDate || '-', q) + '</span><span class="date-short">' + highlightText(toShortDate(entry.mfgDate), q) + '</span></td>';
+            entriesHtml += '<td class="col-date"><span class="date-full">' + highlightText(entry.mfgDate || '-', q) + '</span><span class="date-short">' + highlightText(toShortDate(entry.mfgDate), q) + '</span></td>';
             entriesHtml += '<td class="col-date"><span class="date-full">' + highlightText(entry.expDate || '-', q) + '</span><span class="date-short">' + highlightText(toShortDate(entry.expDate), q) + '</span></td>';
             entriesHtml += '<td class="col-num ' + daysLeftClass + '">' + highlightText(entry.daysLeft || '-', q) + '</td>';
             entriesHtml += '<td class="col-num">' + (entry.lotBalance > 0 ? formatNumber(entry.lotBalance) : '-') + '</td>';
@@ -1142,7 +1142,7 @@ function renderStockCardsRM(products) {
 
         html += '</div>';
         html += '<div class="stock-table-container"><table class="stock-table stock-table-rm"><thead><tr>';
-        html += '<th>วันที่</th><th>ประเภท</th><th class="no-print">Cont.</th><th class="no-print">นน./Cont.</th><th class="no-print">เศษ(Kg)</th><th>รับเข้า</th><th>เบิกออก</th><th>คงเหลือ</th><th>Lot No.</th><th class="no-print">Vendor Lot</th><th class="no-print">MFD</th><th>EXP</th><th>Days Left</th><th>Lot Bal.</th><th>Supplier</th><th class="no-print">ลบ</th>';
+        html += '<th>วันที่</th><th>ประเภท</th><th>Cont.</th><th>นน./Cont.</th><th>เศษ(Kg)</th><th>รับเข้า</th><th>เบิกออก</th><th>คงเหลือ</th><th>Lot No.</th><th>Vendor Lot</th><th>MFD</th><th>EXP</th><th>Days Left</th><th>Lot Bal.</th><th>Supplier</th><th class="no-print">ลบ</th>';
         html += '</tr></thead>';
         html += '<tbody>' + entriesHtml + '</tbody></table></div>';
         html += '</div>';
@@ -1546,21 +1546,23 @@ function printExpiryItems(type) {
             <meta charset="UTF-8">
             <title>${title}</title>
             <style>
-                body { font-family: 'Sarabun', 'Inter', sans-serif; padding: 20px; }
-                .print-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb; }
-                .print-header img { height: 50px; }
-                .print-header h1 { margin: 0; font-size: 18px; }
-                .print-header p { margin: 5px 0 0; color: #666; font-size: 12px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
-                th { background: ${headerColor}; color: white; padding: 8px; text-align: left; }
-                td { padding: 8px; border-bottom: 1px solid #e5e7eb; }
+                body { font-family: 'Sarabun', 'Inter', sans-serif; padding: 15px; margin: 0; }
+                .print-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
+                .print-header img { height: 45px; }
+                .print-header h1 { margin: 0; font-size: 16px; }
+                .print-header p { margin: 3px 0 0; color: #666; font-size: 11px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; table-layout: fixed; }
+                th { background: ${headerColor}; color: white; padding: 6px 4px; text-align: center; font-weight: 600; white-space: nowrap; }
+                td { padding: 5px 4px; border-bottom: 1px solid #e5e7eb; text-align: center; word-wrap: break-word; }
                 tr:nth-child(even) { background: #f9fafb; }
-                .product-header { background: #f3f4f6; padding: 10px; margin-top: 20px; border-radius: 8px; }
-                .product-header h3 { margin: 0; font-size: 14px; }
+                .product-header { background: #f3f4f6; padding: 8px 10px; margin-top: 15px; border-radius: 6px; }
+                .product-header h3 { margin: 0; font-size: 12px; }
                 .days-critical { color: #dc2626; font-weight: bold; }
                 .days-warning { color: #d97706; font-weight: bold; }
-                .badge-reval { display: inline-block; background: #8b5cf6; color: white; font-size: 10px; padding: 2px 4px; border-radius: 4px; margin-left: 5px; }
-                @media print { @page { size: A4 landscape; margin: 10mm; } }
+                .qty-in { color: #059669; font-weight: 600; }
+                .qty-out { color: #dc2626; font-weight: 600; }
+                .badge-reval { display: inline-block; background: #8b5cf6; color: white; font-size: 8px; padding: 1px 3px; border-radius: 3px; }
+                @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } }
             </style>
         </head>
         <body>
@@ -1582,13 +1584,21 @@ function printExpiryItems(type) {
             <table>
                 <thead>
                     <tr>
-                        <th>วันที่</th>
-                        <th>ประเภท</th>
-                        <th>Lot No.</th>
-                        <th>EXP Date</th>
-                        <th>Days Left</th>
-                        <th>Lot Balance</th>
-                        <th>Supplier</th>
+                        <th style="width:7%">วันที่</th>
+                        <th style="width:6%">ประเภท</th>
+                        <th style="width:5%">Cont.</th>
+                        <th style="width:5%">นน./Cont.</th>
+                        <th style="width:5%">เศษ(Kg)</th>
+                        <th style="width:6%">รับเข้า</th>
+                        <th style="width:6%">เบิกออก</th>
+                        <th style="width:6%">คงเหลือ</th>
+                        <th style="width:10%">Lot No.</th>
+                        <th style="width:8%">Vendor Lot</th>
+                        <th style="width:7%">MFD</th>
+                        <th style="width:7%">EXP</th>
+                        <th style="width:5%">Days</th>
+                        <th style="width:6%">Lot Bal.</th>
+                        <th style="width:11%">Supplier</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1598,16 +1608,24 @@ function printExpiryItems(type) {
             var daysClass = parseInt(entry.daysLeft) <= 30 ? 'days-critical' : 'days-warning';
             var isReval = entry.remark && /(ต่ออายุ|reval|extend)/i.test(entry.remark);
             var lotHtml = entry.lotNo || '-';
-            if (isReval) lotHtml += ' <span class="badge-reval">🔄 ต่ออายุ</span>';
+            if (isReval) lotHtml += ' <span class="badge-reval">🔄</span>';
 
             printContent += `
                 <tr>
                     <td>${entry.date || '-'}</td>
                     <td>${entry.type || '-'}</td>
+                    <td>${entry.containerQty > 0 ? formatNumber(entry.containerQty) : '-'}</td>
+                    <td>${entry.containerWeight > 0 ? formatNumber(entry.containerWeight) : '-'}</td>
+                    <td>${entry.remainder > 0 ? formatNumber(entry.remainder) : '-'}</td>
+                    <td class="qty-in">${entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-'}</td>
+                    <td class="qty-out">${entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-'}</td>
+                    <td>${formatNumber(entry.balance)}</td>
                     <td>${lotHtml}</td>
+                    <td>${entry.vendorLot || '-'}</td>
+                    <td>${entry.mfgDate || '-'}</td>
                     <td>${entry.expDate || '-'}</td>
-                    <td class="${daysClass}">${entry.daysLeft || '-'} วัน</td>
-                    <td>${entry.lotBalance ? formatNumber(entry.lotBalance) : '-'} Kg</td>
+                    <td class="${daysClass}">${entry.daysLeft || '-'}</td>
+                    <td>${entry.lotBalance ? formatNumber(entry.lotBalance) : '-'}</td>
                     <td>${entry.supplier || '-'}</td>
                 </tr>
             `;
@@ -1971,7 +1989,15 @@ function printExpiryItems(type) {
                     <tr>
                         <th>วันที่</th>
                         <th>ประเภท</th>
+                        <th>Cont.</th>
+                        <th>นน./Cont.</th>
+                        <th>เศษ(Kg)</th>
+                        <th>รับเข้า</th>
+                        <th>เบิกออก</th>
+                        <th>คงเหลือ</th>
                         <th>Lot No.</th>
+                        <th>Vendor Lot</th>
+                        <th>MFD</th>
                         <th>EXP Date</th>
                         <th>Days Left</th>
                         <th>Lot Balance</th>
@@ -1987,7 +2013,15 @@ function printExpiryItems(type) {
                 <tr>
                     <td>${entry.date || '-'}</td>
                     <td>${entry.type || '-'}</td>
+                    <td>${entry.containerQty > 0 ? formatNumber(entry.containerQty) : '-'}</td>
+                    <td>${entry.containerWeight > 0 ? formatNumber(entry.containerWeight) : '-'}</td>
+                    <td>${entry.remainder > 0 ? formatNumber(entry.remainder) : '-'}</td>
+                    <td>${entry.inQty > 0 ? '+' + formatNumber(entry.inQty) : '-'}</td>
+                    <td>${entry.outQty > 0 ? '-' + formatNumber(entry.outQty) : '-'}</td>
+                    <td>${formatNumber(entry.balance)}</td>
                     <td>${entry.lotNo || '-'}</td>
+                    <td>${entry.vendorLot || '-'}</td>
+                    <td>${entry.mfgDate || '-'}</td>
                     <td>${entry.expDate || '-'}</td>
                     <td class="${daysClass}">${entry.daysLeft || '-'} วัน</td>
                     <td>${entry.lotBalance ? formatNumber(entry.lotBalance) : '-'} Kg</td>

@@ -3314,12 +3314,12 @@ mark.search-highlight {
         print-color-adjust: exact !important;
     }
 
-    /* Hide less important RM columns for cleaner print */
-    .stock-table-rm .col-num:nth-child(3),
+    /* Hide less important RM columns for cleaner print - DISABLED to show all details */
+    /* .stock-table-rm .col-num:nth-child(3),
     .stock-table-rm .col-num:nth-child(4),
     .stock-table-rm .col-num:nth-child(5) {
         display: none !important;
-    }
+    } */
 
     /* Type cells for print */
     .type-cell {

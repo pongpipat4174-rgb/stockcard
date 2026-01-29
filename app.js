@@ -2800,19 +2800,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Clear Form Button
     document.getElementById('clearFormRM')?.addEventListener('click', function () {
-        // Reset all form fields except date and type
+        // Reset all form fields completely
         var form = document.getElementById('entryFormRM');
         var savedDate = document.getElementById('entryDateRM').value;
-        var savedType = document.getElementById('entryTypeRM').value;
 
         form.reset();
 
-        // Restore date and type
+        // Restore date only
         document.getElementById('entryDateRM').value = savedDate;
-        document.getElementById('entryTypeRM').value = savedType;
 
-        // Trigger type change to reset visibility
-        document.getElementById('entryTypeRM').dispatchEvent(new Event('change'));
+        // Reset type to default (-- เลือกประเภท --)
+        document.getElementById('entryTypeRM').value = '';
+
+        // Hide all conditional fields (back to initial state)
+        var containerRow = document.getElementById('containerInputRow');
+        var mfdExpRow = document.getElementById('mfdExpRow');
+        var inQtyGroup = document.getElementById('inQtyGroup');
+        var outQtyGroup = document.getElementById('outQtyGroup');
+        var balanceGroup = document.getElementById('balanceGroup');
+        var withdrawContainerInfo = document.getElementById('withdrawContainerInfo');
+        var lotSplitWarning = document.getElementById('lotSplitWarning');
+
+        if (containerRow) containerRow.style.display = 'none';
+        if (mfdExpRow) mfdExpRow.style.display = 'none';
+        if (inQtyGroup) inQtyGroup.style.display = 'none';
+        if (outQtyGroup) outQtyGroup.style.display = 'none';
+        if (balanceGroup) balanceGroup.style.display = 'none';
+        if (withdrawContainerInfo) withdrawContainerInfo.style.display = 'none';
+        if (lotSplitWarning) lotSplitWarning.style.display = 'none';
 
         showToast('🗑️ ล้างข้อมูลแล้ว');
     });

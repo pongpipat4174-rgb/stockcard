@@ -2665,9 +2665,12 @@ function autoFillRMForm(productCode) {
     // 3. Intelligent Auto-Fill for Withdrawal
     if (isWithdrawal) {
         var sortedLots = getSortedActiveLots(productCode);
+        console.log('[AutoFill] Withdrawal for:', productCode, 'Found lots:', sortedLots.length);
 
         if (sortedLots.length > 0) {
             var bestLot = sortedLots[0];
+            console.log('[AutoFill] Best Lot:', bestLot);
+
             var lotInput = document.getElementById('entryLotNoRM');
             var vendorInput = document.getElementById('entryVendorRM');
 
@@ -2681,6 +2684,8 @@ function autoFillRMForm(productCode) {
 
             // Show available containers for this RM
             showContainerInfoForWithdraw(productCode, sortedLots);
+        } else {
+            console.log('[AutoFill] No active lots found for:', productCode);
         }
     } else {
         // Receive: Auto-fill supplier (from master first, then stock history)

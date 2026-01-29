@@ -2156,6 +2156,10 @@ mark.search-highlight {
     background: linear-gradient(135deg, #10b981, #059669);
 }
 
+.module-banner.rm-production-mode {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
 .module-banner-content {
     max-width: 1400px;
     margin: 0 auto;

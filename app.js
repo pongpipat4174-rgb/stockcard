@@ -48,7 +48,7 @@ const SHEET_CONFIG = {
         subtitle: 'คลัง Production - ระบบจัดการสต็อกวัตถุดิบและสารเคมี',
         icon: '🏭',
         unit: 'Kg',
-        color: '#f59e0b'
+        color: '#3b82f6'
     }
 };
 
@@ -189,7 +189,16 @@ function switchModule(module, event) {
     const labelOut = document.getElementById('labelTotalOut');
 
     if (module === 'rm' || module === 'rm_production') {
-        if (banner) banner.classList.add('rm-mode');
+        // Remove both mode classes first
+        if (banner) {
+            banner.classList.remove('rm-mode', 'rm-production-mode');
+            // Add the correct mode class
+            if (module === 'rm') {
+                banner.classList.add('rm-mode');
+            } else {
+                banner.classList.add('rm-production-mode');
+            }
+        }
         if (rmFilterGroup) rmFilterGroup.style.display = 'flex';
         if (rmSupplierGroup) rmSupplierGroup.style.display = 'flex';
         if (labelIn) labelIn.textContent = 'รับเข้าทั้งหมด (Kg)';
@@ -201,7 +210,7 @@ function switchModule(module, event) {
         const recalcBtn = document.getElementById('recalculateBtn');
         if (recalcBtn) recalcBtn.style.display = 'inline-flex';
     } else {
-        if (banner) banner.classList.remove('rm-mode');
+        if (banner) banner.classList.remove('rm-mode', 'rm-production-mode');
         if (rmFilterGroup) rmFilterGroup.style.display = 'none';
         if (rmSupplierGroup) rmSupplierGroup.style.display = 'none';
         if (labelIn) labelIn.textContent = 'รับเข้าทั้งหมด';

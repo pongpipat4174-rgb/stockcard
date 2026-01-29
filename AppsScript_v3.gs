@@ -1,8 +1,27 @@
 /**
  * Stock Card System - Apps Script Backend v3
- * Updated: 28 Jan 2026
- * OPTIMIZED + AUTO-TRIGGER on Sheet Edit
+ * Updated: 29 Jan 2026
+ * Features:
+ * - Auto-recalculation via Time-based Trigger
+ * - Custom Menu for manual recalculation
+ * - onChange Trigger support
  */
+
+// ======================= CUSTOM MENU =======================
+
+/**
+ * Creates custom menu when spreadsheet opens
+ */
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu('📊 Stock Card')
+    .addItem('🔄 Recalculate All', 'manualRecalculate')
+    .addSeparator()
+    .addItem('⚙️ Setup Triggers', 'setupAllTriggers')
+    .addToUi();
+}
+
+// ======================= API ENDPOINTS =======================
 
 function doPost(e) {
   try {
@@ -45,16 +64,13 @@ function doGet(e) {
 // ======================= AUTO-TRIGGER ON EDIT =======================
 
 /**
- * Trigger function - runs automatically when sheet is edited
- * Must be installed via: Triggers > Add Trigger > onSheetEdit > On edit
+ * Trigger function - runs when sheet is edited
+ * Auto-fills RM info when Lot No is entered in column K
  */
 function onSheetEdit(e) {
   try {
     var sheet = e.source.getActiveSheet();
-    var sheetName = sheet.getName();
-    
-    // Only run for RM_StockCard sheet
-    if (sheetName !== 'RM_StockCard') return;
+    if (sheet.getName() !== 'Sheet1') return;
     
     var range = e.range;
     var row = range.getRow();
@@ -63,39 +79,414 @@ function onSheetEdit(e) {
     // Skip header row
     if (row <= 1) return;
     
-    // Only recalculate if edited columns are: B (product), H (in), I (out), K (lot), N (exp)
-    var triggerCols = [2, 8, 9, 11, 14]; // B, H, I, K, N
-    if (triggerCols.indexOf(col) === -1) return;
-    
-    // Get product code from edited row
-    var productCode = sheet.getRange(row, 2).getValue();
-    if (!productCode) return;
-    
-    // Recalculate this product's balances
-    recalculateProductBalances(sheet, productCode);
-    
-    // Also update days left for this row
-    var expDate = sheet.getRange(row, 14).getValue();
-    var daysLeft = calculateDaysLeft(expDate);
-    sheet.getRange(row, 15).setValue(daysLeft);
-    
+    // Column K (Lot No/FIFO ID) - Auto-fill from existing data
+    if (col === 11) {
+      var lotNo = range.getValue();
+      if (!lotNo) return;
+      
+      autoFillByLotNo(sheet, row, lotNo.toString().trim());
+    }
   } catch (error) {
     console.error('onSheetEdit error:', error);
   }
 }
 
 /**
- * Simple onEdit trigger (installable)
- * Go to: Extensions > Apps Script > Triggers > Add Trigger
- * Choose: onSheetEdit, On edit
+ * Auto-fill info from the most recent entry with same Lot No
  */
-function createEditTrigger() {
+function autoFillByLotNo(sheet, targetRow, lotNo) {
+  var allData = sheet.getDataRange().getValues();
+  var lastEntry = null;
+  
+  // Find the most recent entry for this Lot No
+  for (var i = allData.length - 1; i >= 1; i--) {
+    if (allData[i][10] === lotNo && i + 1 !== targetRow) {
+      lastEntry = {
+        rmCode: allData[i][1],            // B - RM Code
+        productName: allData[i][2],       // C - Product Name
+        containerWeight: allData[i][5],   // F - Container Weight
+        vendorLot: allData[i][11],        // L - Vendor Lot
+        mfgDate: allData[i][12],          // M - Mfg Date
+        expDate: allData[i][13],          // N - Exp Date
+        supplier: allData[i][16]          // Q - Supplier
+      };
+      break;
+    }
+  }
+  
+  if (!lastEntry) return;
+  
+  // Check which cells are empty before auto-filling
+  var currentRmCode = sheet.getRange(targetRow, 2).getValue();
+  var currentName = sheet.getRange(targetRow, 3).getValue();
+  var currentContainer = sheet.getRange(targetRow, 6).getValue();
+  var currentVendorLot = sheet.getRange(targetRow, 12).getValue();
+  var currentMfg = sheet.getRange(targetRow, 13).getValue();
+  var currentExp = sheet.getRange(targetRow, 14).getValue();
+  var currentSupplier = sheet.getRange(targetRow, 17).getValue();
+  
+  // Auto-fill only empty cells
+  if (!currentRmCode && lastEntry.rmCode) {
+    sheet.getRange(targetRow, 2).setValue(lastEntry.rmCode);
+  }
+  if (!currentName && lastEntry.productName) {
+    sheet.getRange(targetRow, 3).setValue(lastEntry.productName);
+  }
+  if (!currentContainer && lastEntry.containerWeight) {
+    sheet.getRange(targetRow, 6).setValue(lastEntry.containerWeight);
+  }
+  if (!currentVendorLot && lastEntry.vendorLot) {
+    sheet.getRange(targetRow, 12).setValue(lastEntry.vendorLot);
+  }
+  if (!currentMfg && lastEntry.mfgDate) {
+    sheet.getRange(targetRow, 13).setValue(lastEntry.mfgDate);
+  }
+  if (!currentExp && lastEntry.expDate) {
+    sheet.getRange(targetRow, 14).setValue(lastEntry.expDate);
+  }
+  if (!currentSupplier && lastEntry.supplier) {
+    sheet.getRange(targetRow, 17).setValue(lastEntry.supplier);
+  }
+  
+  Logger.log('Auto-filled info for Lot No: ' + lotNo);
+}
+
+
+/**
+ * Trigger function - runs automatically when sheet changes (including copy-paste)
+ * Must be installed via: createChangeTrigger()
+ */
+function onSheetChange(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('Sheet1');
+    
+    if (!sheet) return;
+    
+    // Recalculate all products when any change occurs
+    manualRecalculateSheet(sheet);
+    
+  } catch (error) {
+    console.error('onSheetChange error:', error);
+  }
+}
+
+/**
+ * Setup all triggers (onChange + Time-based)
+ * Run this once to install all triggers
+ */
+function setupAllTriggers() {
+  // Delete all existing triggers first
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    ScriptApp.deleteTrigger(triggers[i]);
+  }
+  
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // 1. onEdit Trigger (for auto-fill RM info)
   ScriptApp.newTrigger('onSheetEdit')
     .forSpreadsheet(ss)
     .onEdit()
     .create();
-  Logger.log('Edit trigger created!');
+  
+  // 2. onChange Trigger (for structure changes)
+  ScriptApp.newTrigger('onSheetChange')
+    .forSpreadsheet(ss)
+    .onChange()
+    .create();
+  
+  // 3. Time-based Trigger (every 5 minutes)
+  ScriptApp.newTrigger('autoRecalculate')
+    .timeBased()
+    .everyMinutes(5)
+    .create();
+  
+  Logger.log('✅ All triggers created!');
+  Logger.log('- onEdit: auto-fills RM info');
+  Logger.log('- onChange: detects sheet changes');
+  Logger.log('- Time-based: runs every 5 minutes');
+  
+  SpreadsheetApp.getUi().alert(
+    '✅ Triggers Setup Complete!\n\n' +
+    '✏️ onEdit: Auto-fill RM info\n' +
+    '📌 onChange: Detect changes\n' +
+    '⏰ Time-based: Every 5 minutes\n\n' +
+    'Your sheet is now smart!'
+  );
+}
+
+/**
+ * Auto-recalculate function (called by time-based trigger)
+ */
+function autoRecalculate() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('Sheet1');
+    
+    if (!sheet) return;
+    
+    manualRecalculateSheet(sheet);
+    Logger.log('Auto-recalculation completed at: ' + new Date());
+    
+  } catch (error) {
+    Logger.log('Auto-recalculate error: ' + error);
+  }
+}
+
+// ======================= MANUAL RECALCULATE =======================
+
+/**
+ * Main recalculation function - call from menu or manually
+ */
+function manualRecalculate() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Sheet1');
+  
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Sheet1 not found!');
+    return;
+  }
+  
+  manualRecalculateSheet(sheet);
+  SpreadsheetApp.getUi().alert('✅ Recalculation complete!');
+}
+
+/**
+ * Calculate days left until expiration date
+ */
+function calculateDaysLeft(expDate) {
+  if (!expDate) return '';
+  
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  var expiration;
+  
+  // Handle different date formats
+  if (expDate instanceof Date) {
+    expiration = new Date(expDate);
+  } else if (typeof expDate === 'string') {
+    // Try parsing various formats
+    var parts = expDate.split('/');
+    if (parts.length === 3) {
+      // DD/MM/YYYY format
+      expiration = new Date(parts[2], parts[1] - 1, parts[0]);
+    } else {
+      expiration = new Date(expDate);
+    }
+  } else {
+    return '';
+  }
+  
+  if (isNaN(expiration.getTime())) return '';
+  
+  expiration.setHours(0, 0, 0, 0);
+  
+  var diffTime = expiration.getTime() - today.getTime();
+  var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
+}
+
+/**
+ * Recalculate all values for a specific sheet - OPTIMIZED VERSION
+ * Uses batch operations for 10-50x faster performance
+ * Includes Container Balance tracking
+ */
+function manualRecalculateSheet(sheet) {
+  var allData = sheet.getDataRange().getValues();
+  var numRows = allData.length;
+  if (numRows <= 1) return;
+  
+  // Prepare batch arrays for columns H, J, O, P, Q, R
+  var colH = [];  // In Qty
+  var colJ = [];  // Balance
+  var colO = [];  // Days Left
+  var colP = [];  // Lot Balance
+  var colQ = [];  // Supplier (only update if empty)
+  var colR = [];  // Container Balance (NEW!)
+  
+  var productBalances = {};
+  var lotBalances = {};
+  var lotContainerBalances = {};  // NEW: Track containers per lot
+  var lotLastRow = {};
+  var productSuppliers = {};
+  var rowData = [];
+  
+  // First pass: collect suppliers
+  for (var i = 1; i < numRows; i++) {
+    var productCode = allData[i][1];
+    var supplier = allData[i][16];
+    
+    if (productCode && supplier && supplier.toString().trim() !== '') {
+      productSuppliers[productCode] = supplier.toString().trim();
+    }
+  }
+  
+  // Second pass: calculate all values
+  for (var i = 1; i < numRows; i++) {
+    var row = i + 1;
+    var productCode = allData[i][1];
+    
+    // Empty row - just add empty values
+    if (!productCode || productCode.toString().trim() === '') {
+      rowData.push({
+        row: row,
+        isEmpty: true,
+        inQty: '',
+        balance: '',
+        daysLeft: '',
+        lotBalance: '',
+        containerBalance: '',
+        supplier: allData[i][16] || ''
+      });
+      continue;
+    }
+    
+    var type = allData[i][3];
+    var containerQty = parseFloat(allData[i][4]) || 0;
+    var containerWeight = parseFloat(allData[i][5]) || 0;
+    var remainder = parseFloat(allData[i][6]) || 0;
+    var inQty = parseFloat(allData[i][7]) || 0;
+    var outQty = parseFloat(allData[i][8]) || 0;
+    var lotNo = allData[i][10];
+    var expDate = allData[i][13];
+    var currentSupplier = allData[i][16];
+    
+    // Determine if receive or issue
+    var isReceive = (type === 'receive' || type === 'รับเข้า');
+    var isIssue = (type === 'issue' || type === 'เบิก' || type === 'ตัดออก');
+    
+    // Auto-calculate In quantity for receive
+    if (isReceive && inQty === 0 && containerQty > 0) {
+      inQty = (containerQty * containerWeight) + remainder;
+    }
+    
+    // Calculate product balance
+    productBalances[productCode] = (productBalances[productCode] || 0) + inQty - outQty;
+    
+    // Calculate lot balance
+    var lotKey = productCode + '|' + lotNo;
+    lotBalances[lotKey] = (lotBalances[lotKey] || 0) + inQty - outQty;
+    
+    // Calculate container balance per lot (NEW!)
+    if (!lotContainerBalances[lotKey]) {
+      lotContainerBalances[lotKey] = 0;
+    }
+    if (isReceive && containerQty > 0) {
+      // Receiving: add containers
+      lotContainerBalances[lotKey] += containerQty;
+    } else if (isIssue && containerQty > 0) {
+      // Issuing: subtract containers
+      lotContainerBalances[lotKey] -= containerQty;
+    }
+    
+    if (lotNo) {
+      lotLastRow[lotKey] = row;
+    }
+    
+    var daysLeft = calculateDaysLeft(expDate);
+    
+    var supplierToUse = '';
+    if (currentSupplier && currentSupplier.toString().trim() !== '') {
+      supplierToUse = currentSupplier.toString().trim();
+    } else if (productSuppliers[productCode]) {
+      supplierToUse = productSuppliers[productCode];
+    }
+    
+    rowData.push({
+      row: row,
+      isEmpty: false,
+      productCode: productCode,
+      type: type,
+      lotNo: lotNo,
+      lotKey: lotKey,
+      containerQty: containerQty,
+      inQty: Math.round(inQty * 100) / 100,
+      balance: Math.round(productBalances[productCode] * 100) / 100,
+      lotBalance: Math.round(lotBalances[lotKey] * 100) / 100,
+      containerBalance: lotContainerBalances[lotKey],
+      daysLeft: daysLeft,
+      supplier: supplierToUse,
+      hasSupplier: currentSupplier && currentSupplier.toString().trim() !== ''
+    });
+  }
+  
+  // Third pass: build batch arrays
+  for (var i = 0; i < rowData.length; i++) {
+    var r = rowData[i];
+    
+    if (r.isEmpty) {
+      colH.push(['']);
+      colJ.push(['']);
+      colO.push(['']);
+      colP.push(['']);
+      colQ.push([r.supplier]);
+      colR.push(['']);
+      continue;
+    }
+    
+    var isLastRowOfLot = (lotLastRow[r.lotKey] === r.row);
+    var finalLotBalance = 0;
+    var finalContainerBalance = 0;
+    
+    // Get final balances for this lot
+    for (var j = 0; j < rowData.length; j++) {
+      if (rowData[j].lotKey === r.lotKey) {
+        finalLotBalance = rowData[j].lotBalance;
+        finalContainerBalance = rowData[j].containerBalance;
+      }
+    }
+    
+    // H - In Qty
+    colH.push([r.inQty]);
+    
+    // J - Balance
+    colJ.push([r.balance]);
+    
+    // O - Days Left (only last row of lot with stock)
+    if (isLastRowOfLot && finalLotBalance > 0 && r.daysLeft !== '') {
+      colO.push([r.daysLeft]);
+    } else {
+      colO.push(['']);
+    }
+    
+    // P - Lot Balance (only last row of lot with stock)
+    if (isLastRowOfLot && finalLotBalance > 0) {
+      colP.push([finalLotBalance]);
+    } else {
+      colP.push(['']);
+    }
+    
+    // Q - Supplier (auto-fill if empty)
+    if (!r.hasSupplier && r.supplier) {
+      colQ.push([r.supplier]);
+    } else {
+      colQ.push([allData[r.row - 1][16] || '']);
+    }
+    
+    // S - Container Balance (only last row of lot with remaining containers)
+    // Note: Column R (18) is for Remarks/หมายเหตุ (e.g., "สารต่ออายุ")
+    if (isLastRowOfLot && finalContainerBalance > 0) {
+      colR.push([finalContainerBalance]);
+    } else {
+      colR.push(['']);
+    }
+  }
+  
+  // Fourth pass: BATCH WRITE (super fast!)
+  var dataRows = numRows - 1;
+  if (dataRows > 0) {
+    sheet.getRange(2, 8, dataRows, 1).setValues(colH);   // H
+    sheet.getRange(2, 10, dataRows, 1).setValues(colJ);  // J
+    sheet.getRange(2, 15, dataRows, 1).setValues(colO);  // O
+    sheet.getRange(2, 16, dataRows, 1).setValues(colP);  // P
+    sheet.getRange(2, 17, dataRows, 1).setValues(colQ);  // Q
+    sheet.getRange(2, 19, dataRows, 1).setValues(colR);  // S - Container Balance (skip R = Remarks)
+  }
+  
+  Logger.log('Recalculated ' + rowData.length + ' rows (Batch mode + Container Balance)');
 }
 
 // ======================= PACKAGE MODULE =======================

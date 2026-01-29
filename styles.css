@@ -843,6 +843,169 @@ mark.search-highlight {
     }
 }
 
+/* ========================================
+   COMBINED FEFO + CONTAINER BOX
+   ======================================== */
+.fefo-container-combined {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 2px solid #ef4444;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+}
+
+/* FEFO Section (Red area at top) */
+.fefo-section {
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.fefo-section.fefo-urgent {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    animation: pulseUrgent 1.5s ease-in-out infinite;
+}
+
+.fefo-section.fefo-urgent .summary-label {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+.fefo-section.fefo-urgent .fefo-value {
+    color: #b91c1c;
+    font-family: 'Consolas', monospace;
+    font-size: 1.1rem;
+}
+
+.fefo-section.fefo-urgent .fefo-note {
+    color: #991b1b;
+    font-size: 0.7rem;
+}
+
+/* Container Section (Blue stripe at bottom of FEFO box) */
+.container-section {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    padding: 0.6rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    border-top: 2px dashed #93c5fd;
+}
+
+.container-section .summary-label {
+    color: #1d4ed8;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.container-section .container-value {
+    color: #1e40af;
+    font-family: 'Consolas', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* FEFO Section (Red area at top) */
+.fefo-section {
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.fefo-section.fefo-urgent {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-bottom: 2px dashed #fca5a5;
+    animation: pulseUrgent 1.5s ease-in-out infinite;
+}
+
+.fefo-section.fefo-urgent .summary-label {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+.fefo-section.fefo-urgent .fefo-value {
+    color: #b91c1c;
+    font-family: 'Consolas', monospace;
+    font-size: 1.1rem;
+}
+
+.fefo-section.fefo-urgent .fefo-note {
+    color: #991b1b;
+    font-size: 0.7rem;
+}
+
+.fefo-section.fefo-conflict {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-bottom: 2px dashed #93c5fd;
+}
+
+.fefo-section.fefo-conflict .summary-label {
+    color: #1d4ed8;
+}
+
+.fefo-section.fefo-conflict .fefo-value {
+    color: #1e40af;
+}
+
+.fefo-section.fefo-conflict .fefo-note {
+    color: #1e3a8a;
+}
+
+/* FIFO Section (Blue bar at bottom) */
+.fifo-section {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    position: relative;
+    border-top: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.fifo-section.has-warning {
+    background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
+}
+
+.fifo-section .summary-label {
+    color: #1d4ed8;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.fifo-section .fifo-value {
+    color: #1e40af;
+    font-family: 'Consolas', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.fifo-section .fifo-note {
+    color: #1e3a8a;
+    font-size: 0.7rem;
+}
+
+.fifo-section .lots-badge {
+    position: absolute;
+    top: -8px;
+    right: 8px;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 9999px;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+/* When there's no FEFO urgent (only FIFO) */
+.fefo-fifo-combined>.fifo-section:first-child {
+    border-top: none;
+    border-radius: var(--radius-lg);
+}
+
 /* RM Summary Grid - Support 5-6 columns */
 .stock-card-summary-rm {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

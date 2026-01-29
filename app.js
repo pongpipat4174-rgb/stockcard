@@ -990,7 +990,7 @@ function renderStockCardsRM(products) {
             html += '</div>';
         }
 
-        // 2. FEFO Box (Red) - Show ALL lots expiring within 30 days
+        // 2. FEFO Box (Red) with FIFO (Blue stripe inside) - COMBINED
         // Find all lots with ≤30 days
         var urgentLots = fefoSorted.filter(function (lot) {
             return lotExpDays[lot] !== undefined && lotExpDays[lot] <= 30;
@@ -1003,78 +1003,19 @@ function renderStockCardsRM(products) {
             });
         }
 
-        if (urgentLots.length > 0) {
-            var fefoClass = 'fefo-lot fefo-urgent';
-
-            html += '<div class="summary-item ' + fefoClass + '">';
-            html += '<span class="summary-label">🚨 FEFO: หมดอายุเร็ว! (' + urgentLots.length + ' Lot)</span>';
-
-            // Show all urgent lots
-            urgentLots.forEach(function (lot, idx) {
-                html += '<span class="summary-value fefo-value">' + lot + '</span>';
-                html += '<span class="fefo-note">เหลือ ' + formatNumber(lotBalances[lot]) + ' Kg · หมดอายุ ' + lotExpDate[lot] + ' (' + lotExpDays[lot] + ' วัน)</span>';
-            });
-
-            html += '</div>';
-        } else if (fefoConflict && fefoLot !== '-') {
-            // Show FEFO conflict box if no urgent lots but FEFO differs from FIFO
-            html += '<div class="summary-item fefo-lot fefo-conflict">';
-            html += '<span class="summary-label">⏰ FEFO: หมดอายุก่อน</span>';
-            html += '<span class="summary-value fefo-value">' + fefoLot + '</span>';
-            html += '<span class="fefo-note">เหลือ ' + formatNumber(fefoBalance) + ' Kg · หมดอายุ ' + fefoExpDate + ' (' + fefoExpDays + ' วัน)</span>';
-            html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
-            html += '</div>';
-        }
-
-        // 3. FIFO Box (Yellow/Green) - Standard
-        // Always show FIFO as a baseline reference
-        // Check if FIFO matches Reval or FEFO to avoid redundancy? 
-        // User wants to see ALL 3 boxes if possible. But if they are identical, it's redundant.
-        // Let's show it but maybe adjust styling if it's not the priority.
-
-        var isFifoRedundant = (isRevalPriority && fifoLot === revalLot) || (urgentLots.length > 0 && fifoLot === fefoLot);
-        // Show anyway as requested ("Show 3 boxes"), but maybe logic implies "If meaningful"
-        // Let's standardise: FIFO box always shows.
-
-        html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
-        if (hasMultipleLots) {
-            html += '<span class="lots-badge">' + lotsWithBalance.length + ' Lots</span>';
-        }
-        html += '<span class="summary-label">' + (hasMultipleLots ? '� FIFO: ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
-        html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
-        html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg';
-        if (fifoExpDate && fifoExpDays !== null) {
-            html += ' · หมดอายุ ' + fifoExpDate + ' (' + fifoExpDays + ' วัน)';
-        }
-        html += '</span>';
-        html += '</div>';
-
-        // 4. CONTAINER SUMMARY BOX - Show ACTUAL containers for lots expiring within 30 days
-        // Calculate directly from entries to get exact container counts
+        // Calculate container count for expiring lots (for FEFO box inclusion)
         var expiringLotData = {};
-
-        // First, identify which lots are expiring (≤30 days) and have remaining balance
         prod.entries.forEach(function (entry) {
             if (!entry.lotNo) return;
             var daysLeft = parseInt(entry.daysLeft);
-
-            // Initialize lot tracking
             if (!expiringLotData[entry.lotNo]) {
                 expiringLotData[entry.lotNo] = {
-                    daysLeft: null,
-                    containersIn: 0,
-                    containersOut: 0,
-                    kgIn: 0,
-                    kgOut: 0
+                    daysLeft: null, containersIn: 0, containersOut: 0, kgIn: 0, kgOut: 0
                 };
             }
-
-            // Track days left (use first valid value)
             if (!isNaN(daysLeft) && expiringLotData[entry.lotNo].daysLeft === null) {
                 expiringLotData[entry.lotNo].daysLeft = daysLeft;
             }
-
-            // Track containers and Kg
             if (entry.inQty > 0) {
                 expiringLotData[entry.lotNo].containersIn += entry.containerQty || 0;
                 expiringLotData[entry.lotNo].kgIn += entry.inQty;
@@ -1085,64 +1026,81 @@ function renderStockCardsRM(products) {
             }
         });
 
-        // Sum containers only for expiring lots (≤30 days) with remaining stock
-        var exactContainers = 0;  // Lots with containerOut data
-        var estimatedContainers = 0;  // Lots WITHOUT containerOut data (estimate)
-        var expiringLotCount = 0;
-        var hasEstimate = false;
-
+        var exactContainers = 0, estimatedContainers = 0, expiringLotCount = 0, hasEstimate = false;
         Object.keys(expiringLotData).forEach(function (lotNo) {
             var lot = expiringLotData[lotNo];
             var kgRemaining = lot.kgIn - lot.kgOut;
-
-            // Only count if lot is expiring AND has remaining stock
             if (lot.daysLeft !== null && lot.daysLeft <= 30 && kgRemaining > 0) {
                 expiringLotCount++;
-
-                // Calculate remaining containers
                 var containersRemaining = lot.containersIn - lot.containersOut;
-
                 if (lot.kgOut === 0) {
-                    // No withdrawals - EXACT count (all containers remain)
                     exactContainers += lot.containersIn;
                 } else if (lot.containersOut > 0) {
-                    // Has containerOut recorded - EXACT count
                     exactContainers += Math.max(0, containersRemaining);
                 } else {
-                    // Has withdrawals but NO containerOut recorded - ESTIMATE
                     hasEstimate = true;
                     var remainRatio = lot.kgIn > 0 ? kgRemaining / lot.kgIn : 0;
-                    var estContainers = Math.round(lot.containersIn * remainRatio);
-                    estimatedContainers += estContainers;
+                    estimatedContainers += Math.round(lot.containersIn * remainRatio);
                 }
             }
         });
-
         var totalContainers = exactContainers + estimatedContainers;
 
-        // Only show if there are expiring lots with containers
-        if (expiringLotCount > 0 && totalContainers > 0) {
-            html += '<div class="summary-item container-lot">';
-            html += '<span class="summary-label">📦 ภาชนะใกล้หมดอายุ (' + expiringLotCount + ' Lot)</span>';
+        // 2. FEFO Box (Red) with Container count inside
+        if (urgentLots.length > 0) {
+            html += '<div class="summary-item fefo-container-combined">';
 
-            if (hasEstimate) {
-                // Show breakdown
-                var displayText = '';
-                if (exactContainers > 0) {
-                    displayText += exactContainers + ' ถัง (แน่นอน)';
+            // FEFO Section (Red area)
+            html += '<div class="fefo-section fefo-urgent">';
+            html += '<span class="summary-label">🚨 FEFO: หมดอายุเร็ว! (' + urgentLots.length + ' Lot)</span>';
+            urgentLots.forEach(function (lot, idx) {
+                html += '<span class="summary-value fefo-value">' + lot + '</span>';
+                html += '<span class="fefo-note">เหลือ ' + formatNumber(lotBalances[lot]) + ' Kg · หมดอายุ ' + lotExpDate[lot] + ' (' + lotExpDays[lot] + ' วัน)</span>';
+            });
+            html += '</div>';
+
+            // Container Section (Blue stripe at bottom of FEFO box)
+            if (totalContainers > 0) {
+                html += '<div class="container-section">';
+                html += '<span class="summary-label">🫙 ภาชนะคงเหลือ</span>';
+                if (hasEstimate) {
+                    var displayText = '';
+                    if (exactContainers > 0) displayText += exactContainers + ' ถัง';
+                    if (estimatedContainers > 0) {
+                        if (displayText) displayText += ' + ';
+                        displayText += '~' + estimatedContainers + ' ถัง (ประมาณ)';
+                    }
+                    html += '<span class="summary-value container-value">' + displayText + '</span>';
+                } else {
+                    html += '<span class="summary-value container-value">' + exactContainers + ' ถัง ✓</span>';
                 }
-                if (estimatedContainers > 0) {
-                    if (displayText) displayText += ' + ';
-                    displayText += '~' + estimatedContainers + ' ถัง (ประมาณ)';
-                }
-                html += '<span class="summary-value container-value">' + displayText + '</span>';
-                html += '<span class="container-note">* Lot ที่มีการเบิกแล้ว = ประมาณ</span>';
-            } else {
-                // All exact
-                html += '<span class="summary-value container-value">' + exactContainers + ' ถัง ✓</span>';
+                html += '</div>';
             }
+
+            html += '</div>'; // Close combined box
+        } else if (fefoConflict && fefoLot !== '-') {
+            // Show FEFO conflict box (standalone, no container inside)
+            html += '<div class="summary-item fefo-lot fefo-conflict">';
+            html += '<span class="summary-label">⏰ FEFO: หมดอายุก่อน</span>';
+            html += '<span class="summary-value fefo-value">' + fefoLot + '</span>';
+            html += '<span class="fefo-note">เหลือ ' + formatNumber(fefoBalance) + ' Kg · หมดอายุ ' + fefoExpDate + ' (' + fefoExpDays + ' วัน)</span>';
+            html += '<span class="fefo-conflict-note">⚠️ FIFO ≠ FEFO - พิจารณาใช้ Lot นี้แทน!</span>';
             html += '</div>';
         }
+
+        // 3. FIFO Box (Yellow) - Separate box as before
+        html += '<div class="summary-item fifo-lot' + (hasMultipleLots ? ' has-warning' : '') + '">';
+        if (hasMultipleLots) {
+            html += '<span class="lots-badge">' + lotsWithBalance.length + ' Lots</span>';
+        }
+        html += '<span class="summary-label">' + (hasMultipleLots ? '📦 FIFO: ใช้ Lot นี้ก่อน!' : '📦 Lot คงเหลือ') + '</span>';
+        html += '<span class="summary-value fifo-value">' + fifoLot + '</span>';
+        html += '<span class="fifo-note">เหลือ ' + formatNumber(fifoBalance) + ' Kg';
+        if (fifoExpDate && fifoExpDays !== null) {
+            html += ' · หมดอายุ ' + fifoExpDate + ' (' + fifoExpDays + ' วัน)';
+        }
+        html += '</span>';
+        html += '</div>';
 
         html += '</div>';
         html += '<div class="stock-table-container"><table class="stock-table stock-table-rm"><thead><tr>';

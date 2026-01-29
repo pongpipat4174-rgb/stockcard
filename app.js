@@ -2325,6 +2325,18 @@ async function saveEntryRM() {
         var expDate = document.getElementById('entryExpDateRM')?.value || '';
         var vendorLot = document.getElementById('entryVendorLotRM')?.value || '';
 
+        // For withdrawal: get MFD/EXP/VendorLot from the source lot
+        if (isWithdrawal && lotNo && lotNo !== '-') {
+            var allLots = getSortedActiveLots(productCode);
+            var sourceLot = allLots.find(function (l) { return l.lotNo === lotNo; });
+            if (sourceLot) {
+                if (!vendorLot || vendorLot === '') vendorLot = sourceLot.vendorLot || '';
+                if (!mfgDate || mfgDate === '') mfgDate = sourceLot.mfdDate || '';
+                if (!expDate || expDate === '') expDate = sourceLot.expDate || '';
+                if (!vendor || vendor === '') vendor = sourceLot.supplier || '';
+            }
+        }
+
         entriesToSave.push({
             date: formatDateThai(date),
             productCode: productCode,
@@ -2337,8 +2349,8 @@ async function saveEntryRM() {
             outQty: outQty,
             lotNo: lotNo,
             vendorLot: vendorLot,
-            mfgDate: mfgDate ? formatDateThai(mfgDate) : '',
-            expDate: expDate ? formatDateThai(expDate) : '',
+            mfgDate: (mfgDate && mfgDate !== '-') ? (mfgDate.includes('/') ? mfgDate : formatDateThai(mfgDate)) : '',
+            expDate: (expDate && expDate !== '-') ? (expDate.includes('/') ? expDate : formatDateThai(expDate)) : '',
             supplier: vendor,
             containerOut: isWithdrawal ? containerOut : 0
         });

@@ -141,7 +141,7 @@ function doPost(e) {
             var map = [];
             map[0] = "'" + (entry.date || "");
             map[1] = entry.productCode || "";
-            map[2] = null; // Skip Name (formula)
+            map[2] = entry.productName || ""; // Write Name (no formula)
             map[3] = entry.type || "";
 
             // E,F (Container)
@@ -219,25 +219,16 @@ function doPost(e) {
 
             map[17] = entry.remark || "";
 
+            // S (Container Out) - เพิ่ม
+            map[18] = (entry.containerOut !== undefined && entry.containerOut !== "") ? entry.containerOut : null;
+
 
             var requests = [];
             var currentBatchVal = [];
             var currentBatchStart = -1;
 
-            // Write ALL columns (no formula check since sheet has no formulas)
-            for (var i = 0; i < 18; i++) {
-                // Skip only Column C (Name) which should be formula or vlookup
-                var skipColumn = (i === 2); // Skip C (index 2)
-
-                if (skipColumn) {
-                    if (currentBatchStart !== -1) {
-                        requests.push({ col: currentBatchStart + 1, vals: [currentBatchVal] });
-                        currentBatchVal = [];
-                        currentBatchStart = -1;
-                    }
-                    continue;
-                }
-
+            // Write ALL columns (no formula, no skip)
+            for (var i = 0; i < 19; i++) {
                 if (currentBatchStart === -1) currentBatchStart = i;
                 var valToWrite = (map[i] === null || map[i] === undefined) ? "" : map[i];
                 currentBatchVal.push(valToWrite);
@@ -373,7 +364,7 @@ function transferToProduction(dataArray) {
                 var map = [];
                 map[0] = "'" + (item.transferDate || new Date().toLocaleDateString('th-TH'));
                 map[1] = item.productCode || "";
-                map[2] = null; // Name (formula)
+                map[2] = item.productName || ""; // Write Name (no formula)
                 map[3] = "รับเข้า (โอนจาก Center)";
                 map[4] = (item.containerQty !== undefined) ? item.containerQty : null;
                 map[5] = (item.containerWeight !== undefined) ? item.containerWeight : null;
@@ -443,20 +434,8 @@ function transferToProduction(dataArray) {
                 var currentBatchVal = [];
                 var currentBatchStart = -1;
 
-                // Write ALL columns (no formula check since sheet has no formulas)
-                for (var k = 0; k < 18; k++) {
-                    // Skip only Column C (Name) which should be formula or vlookup
-                    var skipColumnPD = (k === 2); // Skip C (index 2)
-
-                    if (skipColumnPD) {
-                        if (currentBatchStart !== -1) {
-                            requests.push({ col: currentBatchStart + 1, vals: [currentBatchVal] });
-                            currentBatchVal = [];
-                            currentBatchStart = -1;
-                        }
-                        continue;
-                    }
-
+                // Write ALL columns (no formula, no skip)
+                for (var k = 0; k < 19; k++) {
                     if (currentBatchStart === -1) currentBatchStart = k;
                     var valToWrite = (map[k] === null || map[k] === undefined) ? "" : map[k];
                     currentBatchVal.push(valToWrite);

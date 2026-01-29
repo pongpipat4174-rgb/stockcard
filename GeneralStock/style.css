@@ -390,6 +390,8 @@ th {
     border-radius: 20px;
     font-size: 0.8rem;
     font-weight: 600;
+    white-space: nowrap;
+    display: inline-block;
 }
 
 .status-ok {

@@ -184,6 +184,16 @@
         font-size: 0.9rem;
     }
 
+    .status-indicator {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        white-space: nowrap;
+    }
+
+    .stock-inline {
+        min-width: 50px;
+    }
+
     /* --- NAV BAR ADJUSTMENT (Red Box Area) --- */
     /* Target common nav structures or specific class if known */
     .tabs-nav,

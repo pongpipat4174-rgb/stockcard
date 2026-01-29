@@ -88,7 +88,7 @@
         white-space: nowrap;
     }
 
-    /* --- 5. Table to Card View --- */
+    /* --- 5. Table to Compact Card View --- */
     table,
     thead,
     tbody,
@@ -105,52 +105,122 @@
     }
 
     tr {
-        margin-bottom: 16px;
+        margin-bottom: 12px;
         background: white;
         border-radius: 12px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         border: 1px solid var(--border-color);
         padding: 12px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto auto;
+        gap: 8px;
     }
 
-    td {
+    /* Row 1: Status + Name (span full width) */
+    td:nth-child(1) {
+        /* สถานะ - hide on mobile, show as badge instead */
+        display: none;
+    }
+
+    td:nth-child(2) {
+        /* ชื่อรายการ/สเปก - full width row 1 */
+        grid-column: 1 / -1;
         border: none;
-        position: relative;
+        padding: 0;
+        text-align: left;
+    }
+
+    td:nth-child(2):before {
+        display: none;
+    }
+
+    td:nth-child(3) {
+        /* หมวดหมู่ - hide, shown in name row */
+        display: none;
+    }
+
+    /* Row 2: Stock & Min - side by side */
+    td:nth-child(4) {
+        /* คงเหลือ */
+        grid-column: 1;
+        border: none;
         padding: 8px 0;
-        border-bottom: 1px solid #f1f5f9;
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    td:nth-child(4):before {
+        content: 'คงเหลือ';
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-bottom: 2px;
+    }
+
+    td:nth-child(5) {
+        /* จุดสั่งซื้อ */
+        grid-column: 2;
+        border: none;
+        padding: 8px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
         text-align: right;
     }
 
-    td:last-child {
-        border-bottom: none;
-        justify-content: center;
-        padding-top: 16px;
-    }
-
-    td:before {
-        content: attr(data-label);
-        font-weight: 600;
+    td:nth-child(5):before {
+        content: 'จุดสั่งซื้อ';
+        font-size: 0.75rem;
         color: var(--text-muted);
-        text-align: left;
-        margin-right: auto;
-        font-size: 0.9rem;
+        margin-bottom: 2px;
     }
 
-    td[onclick] {
-        display: block;
-        text-align: left;
+    /* Row 3: Actions - full width */
+    td:nth-child(6) {
+        /* จัดการ */
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #f1f5f9;
     }
 
-    td[onclick]:before {
+    td:nth-child(6):before {
         display: none;
     }
 
     .product-info {
         flex-direction: row;
-        align-items: flex-start;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .product-info img {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+
+    .product-name {
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .product-spec {
+        font-size: 0.8rem;
+    }
+
+    .stock-badge {
+        font-size: 1.1rem;
+        padding: 4px 8px;
+    }
+
+    .btn.icon {
+        padding: 8px 10px;
     }
 
     /* --- NAV BAR ADJUSTMENT (Red Box Area) --- */
@@ -172,5 +242,134 @@
         text-align: center !important;
         border-radius: 8px !important;
         margin-bottom: 0 !important;
+    }
+
+    /* --- 6. Modal Mobile Fixes --- */
+    .modal-overlay {
+        padding: 10px;
+        align-items: flex-start;
+    }
+
+    .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 90vh;
+        margin: 0;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .modal-header {
+        padding: 12px 16px;
+        flex-shrink: 0;
+    }
+
+    .modal-header h2 {
+        font-size: 1.1rem;
+    }
+
+    .modal-body,
+    #item-form,
+    #trans-form {
+        overflow-y: auto;
+        flex: 1;
+        padding: 12px 16px;
+        max-height: calc(90vh - 140px);
+    }
+
+    .form-group {
+        margin-bottom: 12px;
+    }
+
+    .form-group label {
+        font-size: 0.85rem;
+        margin-bottom: 4px;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 10px 12px;
+        font-size: 1rem;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .form-row .form-group {
+        width: 100%;
+    }
+
+    /* Modal Actions - Fixed at bottom */
+    .modal-actions {
+        flex-shrink: 0;
+        padding: 12px 16px;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        gap: 10px;
+        position: sticky;
+        bottom: 0;
+    }
+
+    .modal-actions button {
+        flex: 1;
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+
+    /* Image preview smaller on mobile */
+    #image-preview {
+        max-height: 100px !important;
+    }
+
+    /* Detail modal compact */
+    #detail-modal .modal-body {
+        padding: 16px;
+    }
+
+    #detail-modal img {
+        max-height: 150px !important;
+    }
+
+    #detail-modal h3 {
+        font-size: 1.2rem !important;
+    }
+
+    /* Transaction modal compact */
+    .trans-content {
+        max-width: 100% !important;
+    }
+
+    .item-summary-badge {
+        font-size: 0.9rem;
+        padding: 10px;
+        margin-bottom: 12px;
+    }
+
+    .large-input {
+        font-size: 1.2rem !important;
+        padding: 12px !important;
+    }
+
+    /* History modal */
+    #history-modal .modal-content {
+        max-width: 100% !important;
+    }
+
+    .history-container {
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+
+    .history-table {
+        font-size: 0.85rem;
+    }
+
+    .history-table th,
+    .history-table td {
+        padding: 8px 6px;
     }
 }

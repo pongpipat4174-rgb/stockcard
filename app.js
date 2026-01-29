@@ -2637,6 +2637,7 @@ function autoFillRMForm(productCode) {
         var vendorInput = document.getElementById('entryVendorRM');
         if (vendorInput && !vendorInput.value && lastVendor !== '-') {
             vendorInput.value = lastVendor;
+            showToast('📦 Supplier ล่าสุด: ' + lastVendor);
         }
     }
 }
@@ -2730,9 +2731,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // RM Auto-Fill on Product Change (Logic updated to include Lot/Vendor)
-    document.getElementById('entryProductCodeRM')?.addEventListener('change', function () {
-        autoFillRMForm(this.value);
-        calculateRMTotal(); // Also trigger form visibility update
+    // Trigger on both 'change' (dropdown select) and 'input' (typing)
+    var productCodeRMInput = document.getElementById('entryProductCodeRM');
+
+    function handleProductCodeRMChange() {
+        var code = this.value.trim();
+        if (code) {
+            autoFillRMForm(code);
+            calculateRMTotal();
+        }
+    }
+
+    productCodeRMInput?.addEventListener('change', handleProductCodeRMChange);
+    productCodeRMInput?.addEventListener('input', function () {
+        var code = this.value.trim();
+        // Trigger auto-fill if code matches exactly (from dropdown or typed correctly)
+        if (code && rmProductMasterData.some(function (p) { return p.code === code; })) {
+            autoFillRMForm(code);
+            calculateRMTotal();
+        }
     });
 
     // Also trigger on Type change - immediately show full form for 'รับเข้า'

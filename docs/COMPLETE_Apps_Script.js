@@ -373,10 +373,10 @@ function recalculateRMBalances(params) {
 function transferToProduction(dataArray) {
     try {
         var ss = SpreadsheetApp.getActiveSpreadsheet();
-        var productionSheet = ss.getSheetByName('Production');
+        var productionSheet = ss.getSheetByName('production');
 
         if (!productionSheet) {
-            return { success: false, message: 'ไม่พบชีต Production - กรุณาสร้างชีตชื่อ "Production" ก่อน' };
+            return { success: false, message: 'ไม่พบชีต production - กรุณาสร้างชีตชื่อ "production" ก่อน' };
         }
 
         var transferredCount = 0;

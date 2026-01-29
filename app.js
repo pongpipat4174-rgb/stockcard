@@ -43,7 +43,7 @@ const SHEET_CONFIG = {
     },
     rm_production: {
         id: '1C3mPPxucPueSOfW4Hh7m4k3BjJ4ZHonqzc8j-JfQOfs',
-        sheetName: 'Production',
+        sheetName: 'production',
         title: 'Stock Card วัตถุดิบ (RM Production)',
         subtitle: 'คลัง Production - ระบบจัดการสต็อกวัตถุดิบและสารเคมี',
         icon: '🏭',

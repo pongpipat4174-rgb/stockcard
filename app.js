@@ -1798,23 +1798,91 @@ function printExpiryItems(type) {
             <meta charset="UTF-8">
             <title>${title}</title>
             <style>
-                body { font-family: 'Sarabun', 'Inter', sans-serif; padding: 15px; margin: 0; }
-                .print-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
-                .print-header img { height: 45px; }
-                .print-header h1 { margin: 0; font-size: 16px; }
-                .print-header p { margin: 3px 0 0; color: #666; font-size: 11px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; table-layout: fixed; }
-                th { background: ${headerColor}; color: white; padding: 6px 4px; text-align: center; font-weight: 600; white-space: nowrap; }
-                td { padding: 5px 4px; border-bottom: 1px solid #e5e7eb; text-align: center; word-wrap: break-word; }
+                * { box-sizing: border-box; }
+                body { font-family: 'Sarabun', 'Inter', sans-serif; padding: 12px; margin: 0; font-size: 8pt; }
+                .print-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; }
+                .print-header img { height: 40px; }
+                .print-header h1 { margin: 0; font-size: 14px; }
+                .print-header p { margin: 2px 0 0; color: #666; font-size: 10px; }
+                
+                /* Fixed width table */
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin-top: 6px; 
+                    font-size: 8pt; 
+                    table-layout: fixed; 
+                }
+                
+                /* Column widths - total 100% */
+                col.col-date { width: 6%; }
+                col.col-type { width: 5%; }
+                col.col-cont { width: 4%; }
+                col.col-wt { width: 5%; }
+                col.col-rem { width: 5%; }
+                col.col-in { width: 6%; }
+                col.col-out { width: 6%; }
+                col.col-bal { width: 6%; }
+                col.col-lot { width: 11%; }
+                col.col-vlot { width: 9%; }
+                col.col-mfd { width: 7%; }
+                col.col-exp { width: 7%; }
+                col.col-days { width: 5%; }
+                col.col-lotbal { width: 6%; }
+                col.col-sup { width: 12%; }
+                
+                th { 
+                    background: ${headerColor}; 
+                    color: white; 
+                    padding: 5px 2px; 
+                    text-align: center; 
+                    font-weight: 600; 
+                    font-size: 7.5pt;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    border: 1px solid rgba(255,255,255,0.3);
+                }
+                td { 
+                    padding: 4px 2px; 
+                    border: 1px solid #e5e7eb; 
+                    text-align: center; 
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    font-size: 7.5pt;
+                }
                 tr:nth-child(even) { background: #f9fafb; }
-                .product-header { background: #f3f4f6; padding: 8px 10px; margin-top: 15px; border-radius: 6px; }
-                .product-header h3 { margin: 0; font-size: 12px; }
+                
+                .product-header { 
+                    background: linear-gradient(135deg, #f3f4f6, #e5e7eb); 
+                    padding: 6px 10px; 
+                    margin-top: 12px; 
+                    border-radius: 4px; 
+                    border-left: 3px solid ${headerColor};
+                }
+                .product-header h3 { margin: 0; font-size: 10pt; font-weight: 600; }
+                
                 .days-critical { color: #dc2626; font-weight: bold; }
                 .days-warning { color: #d97706; font-weight: bold; }
                 .qty-in { color: #059669; font-weight: 600; }
                 .qty-out { color: #dc2626; font-weight: 600; }
-                .badge-reval { display: inline-block; background: #8b5cf6; color: white; font-size: 8px; padding: 1px 3px; border-radius: 3px; }
-                @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } }
+                .badge-reval { 
+                    display: inline-block; 
+                    background: #8b5cf6; 
+                    color: white; 
+                    font-size: 6pt; 
+                    padding: 1px 2px; 
+                    border-radius: 2px; 
+                    margin-left: 2px;
+                }
+                
+                @media print { 
+                    @page { size: A4 landscape; margin: 6mm; } 
+                    body { padding: 0; } 
+                    .product-header { page-break-inside: avoid; }
+                    table { page-break-inside: auto; }
+                    tr { page-break-inside: avoid; }
+                }
             </style>
         </head>
         <body>
@@ -1834,23 +1902,40 @@ function printExpiryItems(type) {
                 <h3>🧪 ${prod.name} (${prod.code})</h3>
             </div>
             <table>
+                <colgroup>
+                    <col class="col-date">
+                    <col class="col-type">
+                    <col class="col-cont">
+                    <col class="col-wt">
+                    <col class="col-rem">
+                    <col class="col-in">
+                    <col class="col-out">
+                    <col class="col-bal">
+                    <col class="col-lot">
+                    <col class="col-vlot">
+                    <col class="col-mfd">
+                    <col class="col-exp">
+                    <col class="col-days">
+                    <col class="col-lotbal">
+                    <col class="col-sup">
+                </colgroup>
                 <thead>
                     <tr>
-                        <th style="width:7%">วันที่</th>
-                        <th style="width:6%">ประเภท</th>
-                        <th style="width:5%">Cont.</th>
-                        <th style="width:5%">นน./Cont.</th>
-                        <th style="width:5%">เศษ(Kg)</th>
-                        <th style="width:6%">รับเข้า</th>
-                        <th style="width:6%">เบิกออก</th>
-                        <th style="width:6%">คงเหลือ</th>
-                        <th style="width:10%">Lot No.</th>
-                        <th style="width:8%">Vendor Lot</th>
-                        <th style="width:7%">MFD</th>
-                        <th style="width:7%">EXP</th>
-                        <th style="width:5%">Days</th>
-                        <th style="width:6%">Lot Bal.</th>
-                        <th style="width:11%">Supplier</th>
+                        <th>วันที่</th>
+                        <th>ประเภท</th>
+                        <th>Cont.</th>
+                        <th>นน./C</th>
+                        <th>เศษ</th>
+                        <th>รับเข้า</th>
+                        <th>เบิกออก</th>
+                        <th>คงเหลือ</th>
+                        <th>Lot No.</th>
+                        <th>Vendor Lot</th>
+                        <th>MFD</th>
+                        <th>EXP</th>
+                        <th>Days</th>
+                        <th>Lot Bal.</th>
+                        <th>Supplier</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1860,7 +1945,7 @@ function printExpiryItems(type) {
             var daysClass = parseInt(entry.daysLeft) <= 30 ? 'days-critical' : 'days-warning';
             var isReval = entry.remark && /(ต่ออายุ|reval|extend)/i.test(entry.remark);
             var lotHtml = entry.lotNo || '-';
-            if (isReval) lotHtml += ' <span class="badge-reval">🔄</span>';
+            if (isReval) lotHtml += '<span class="badge-reval">🔄</span>';
 
             printContent += `
                 <tr>

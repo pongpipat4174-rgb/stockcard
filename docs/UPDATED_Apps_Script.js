@@ -182,7 +182,11 @@ function doPost(e) {
             for (var i = 0; i < 18; i++) {
                 var hasFormula = (formulas[i] !== "");
 
-                if (hasFormula) {
+                // Column A (date) - ALWAYS write, never skip
+                // Column B (productCode) - ALWAYS write
+                var forceWrite = (i === 0 || i === 1);
+
+                if (hasFormula && !forceWrite) {
                     if (currentBatchStart !== -1) {
                         requests.push({ col: currentBatchStart + 1, vals: [currentBatchVal] });
                         currentBatchVal = [];
@@ -351,7 +355,10 @@ function transferToProduction(dataArray) {
                 for (var k = 0; k < 18; k++) {
                     var hasFormula = (formulas[k] !== "");
 
-                    if (hasFormula) {
+                    // Column A (date) and B (productCode) - ALWAYS write
+                    var forceWrite = (k === 0 || k === 1);
+
+                    if (hasFormula && !forceWrite) {
                         if (currentBatchStart !== -1) {
                             requests.push({ col: currentBatchStart + 1, vals: [currentBatchVal] });
                             currentBatchVal = [];

@@ -2394,9 +2394,11 @@ async function saveEntryRM() {
         showToast('บันทึกสำเร็จทั้งหมด!');
 
         // Check if any entry contains "เบิกผลิต" - ask to transfer to Production
+        console.log('Checking entries for transfer:', entriesToSave.map(e => e.type));
         var transferEntries = entriesToSave.filter(function (e) {
             return e.type && e.type.includes('เบิกผลิต');
         });
+        console.log('Transfer entries found:', transferEntries.length, transferEntries);
 
         if (transferEntries.length > 0) {
             // Ask user if they want to transfer to Production

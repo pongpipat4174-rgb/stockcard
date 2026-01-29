@@ -258,7 +258,14 @@
                         id="detail-country">-</span>
                 </div>
 
-                <div class="modal-actions" style="margin-top: 24px; justify-content: center;">
+                <div class="modal-actions"
+                    style="margin-top: 24px; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" class="btn secondary" onclick="editImageFromDetail()">
+                        <i class="fa-solid fa-camera"></i> แก้ไขรูป
+                    </button>
+                    <button type="button" class="btn secondary" onclick="printDetail()">
+                        <i class="fa-solid fa-print"></i> พิมพ์
+                    </button>
                     <button type="button" class="btn primary" onclick="closeModal('detail-modal')">ปิดหน้าต่าง</button>
                 </div>
             </div>

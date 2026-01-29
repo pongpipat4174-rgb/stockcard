@@ -398,9 +398,10 @@ th {
 }
 
 .status-low {
-    background: #fef2f2;
-    color: #dc2626;
-    border: 1px solid #fee2e2;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
 }
 
 /* Buttons */

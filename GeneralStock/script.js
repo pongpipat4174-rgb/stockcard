@@ -5,6 +5,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbxJglmGvcDbVBSTcGlCXg0N
 let items = [];
 let transactions = [];
 let categoryFilter = 'all';
+let currentDetailIndex = null;
 
 // DOM Elements
 const tableBody = document.getElementById('table-body');
@@ -360,6 +361,7 @@ transForm.addEventListener('submit', async (e) => {
 
 // --- DETAIL VIEW LOGIC ---
 window.viewItemDetails = (index) => {
+    currentDetailIndex = index; // Store for edit image button
     const item = items[index];
     const isLow = item.stock <= item.min;
 
@@ -438,6 +440,50 @@ window.deleteItem = async (index) => {
 };
 
 window.editItem = (index) => openModal(index);
+
+// --- EDIT IMAGE FROM DETAIL ---
+window.editImageFromDetail = function () {
+    if (currentDetailIndex !== null) {
+        closeModal('detail-modal');
+        openModal(currentDetailIndex);
+        // Scroll to image section after a short delay
+        setTimeout(() => {
+            document.querySelector('.image-upload-options')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    }
+};
+
+// --- PRINT DETAIL ---
+window.printDetail = function () {
+    const modal = document.getElementById('detail-modal');
+    const printContent = modal.querySelector('.modal-body').innerHTML;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>รายละเอียดสินค้า</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Sarabun', sans-serif; padding: 20px; }
+                img { max-width: 200px; border-radius: 8px; }
+                h3 { color: #1e3a8a; margin-bottom: 10px; }
+                .cat-badge, .status-indicator { padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; display: inline-block; margin-right: 8px; }
+                .status-ok { background: #ecfdf5; color: #059669; }
+                .status-low { background: #fef2f2; color: #dc2626; }
+                .modal-actions { display: none; }
+                @media print { body { padding: 0; } }
+            </style>
+        </head>
+        <body>${printContent}</body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 500);
+};
 
 // --- START APP ---
 initApp();

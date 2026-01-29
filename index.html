@@ -550,7 +550,7 @@
                                 placeholder="ชื่อวัตถุดิบ">
                         </div>
                     </div>
-                    <div class="form-grid" id="containerInputRow">
+                    <div class="form-grid" id="containerInputRow" style="display: none;">
                         <div class="form-group">
                             <label for="entryContainerQtyRM">จำนวน Container</label>
                             <input type="number" id="entryContainerQtyRM" name="containerQty" min="0" placeholder="0">
@@ -564,11 +564,11 @@
                     <!-- Hidden remainder field -->
                     <input type="hidden" id="entryRemainderRM" name="remainder" value="0">
                     <div class="form-grid" id="inOutBalanceRow">
-                        <div class="form-group" id="inQtyGroup">
+                        <div class="form-group" id="inQtyGroup" style="display: none;">
                             <label for="entryInQtyRM">รับเข้า (Kg)</label>
                             <input type="number" id="entryInQtyRM" name="inQty" min="0" step="0.01" placeholder="0">
                         </div>
-                        <div class="form-group" id="outQtyGroup">
+                        <div class="form-group" id="outQtyGroup" style="display: none;">
                             <label for="entryOutQtyRM">เบิกออก (Kg)</label>
                             <input type="number" id="entryOutQtyRM" name="outQty" min="0" step="0.01" placeholder="0">
                         </div>
@@ -590,7 +590,7 @@
                             <input type="text" id="entryVendorRM" name="vendor" placeholder="เช่น CHEMICO">
                         </div>
                     </div>
-                    <div class="form-grid" id="mfdExpRow">
+                    <div class="form-grid" id="mfdExpRow" style="display: none;">
                         <div class="form-group">
                             <label for="entryVendorLotRM">Vendor Lot</label>
                             <input type="text" id="entryVendorLotRM" name="vendorLot" placeholder="Lot จาก Supplier">

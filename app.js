@@ -2735,14 +2735,43 @@ document.addEventListener('DOMContentLoaded', function () {
         calculateRMTotal(); // Also trigger form visibility update
     });
 
-    // Also trigger on Type change (e.g., if user selected product first, then switched to withdrawal)
+    // Also trigger on Type change - immediately show full form for 'รับเข้า'
     document.getElementById('entryTypeRM')?.addEventListener('change', function () {
+        var type = this.value;
+        var isReceive = type === 'รับเข้า';
+        var isWithdrawal = type && type.includes('เบิก');
+
+        // Show/hide form sections based on type
+        var containerRow = document.getElementById('containerInputRow');
+        var mfdExpRow = document.getElementById('mfdExpRow');
+        var inQtyGroup = document.getElementById('inQtyGroup');
+        var outQtyGroup = document.getElementById('outQtyGroup');
+
+        if (isReceive) {
+            // Show receive-specific fields
+            if (containerRow) containerRow.style.display = 'grid';
+            if (mfdExpRow) mfdExpRow.style.display = 'grid';
+            if (inQtyGroup) inQtyGroup.style.display = 'block';
+            if (outQtyGroup) outQtyGroup.style.display = 'none';
+
+            // Clear out qty
+            var outQtyInput = document.getElementById('entryOutQtyRM');
+            if (outQtyInput) outQtyInput.value = '';
+        } else if (isWithdrawal) {
+            // Show withdrawal-specific fields
+            if (containerRow) containerRow.style.display = 'none';
+            if (mfdExpRow) mfdExpRow.style.display = 'none';
+            if (inQtyGroup) inQtyGroup.style.display = 'none';
+            if (outQtyGroup) outQtyGroup.style.display = 'block';
+
+            // Clear in qty
+            var inQtyInput = document.getElementById('entryInQtyRM');
+            if (inQtyInput) inQtyInput.value = '';
+        }
+
+        // Auto-fill if product is already selected
         var productCode = document.getElementById('entryProductCodeRM').value;
         if (productCode) {
-            // Clear inputs first if switching back to 'receive' to avoid confusion? 
-            // Or just re-run logic. Re-running logic is safer.
-            // But we shouldn't wipe data if user typed it. 
-            // autoFillRMForm checks for empty fields before filling, so it's safe.
             autoFillRMForm(productCode);
         }
     });

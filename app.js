@@ -2165,6 +2165,13 @@ async function saveEntryRM() {
     var entriesToSave = [];
 
     if (isSplit && outQty > 0) {
+        // Get all lot data for MFD/EXP lookup
+        var allLots = getSortedActiveLots(productCode);
+        var lotDataMap = {};
+        allLots.forEach(function (l) {
+            lotDataMap[l.lotNo] = l;
+        });
+
         // Create multiple entries based on plan
         splitPlan.forEach(function (item) {
             var chunkQty = item.qty;
@@ -2186,6 +2193,11 @@ async function saveEntryRM() {
             var estContainerOut = avgWeight > 0 ? Math.ceil(chunkQty / avgWeight) : 0;
             estContainerOut = Math.min(estContainerOut, lotInfo.containersAvailable);
 
+            // Get MFD/EXP from lot data
+            var lotData = lotDataMap[item.lotNo] || {};
+            var mfgDate = lotData.mfdDate || '';
+            var expDate = lotData.expDate || '';
+
             entriesToSave.push({
                 date: formatDateThai(date),
                 productCode: productCode,
@@ -2197,6 +2209,8 @@ async function saveEntryRM() {
                 inQty: 0,
                 outQty: chunkQty,
                 lotNo: item.lotNo,
+                mfgDate: mfgDate !== '-' ? mfgDate : '',
+                expDate: expDate !== '-' ? expDate : '',
                 supplier: item.supplier || vendor,
                 containerOut: estContainerOut
             });
@@ -2680,7 +2694,7 @@ function autoFillRMForm(productCode) {
 
             var lotInput = document.getElementById('entryLotNoRM');
             var vendorInput = document.getElementById('entryVendorRM');
-            var mfdInput = document.getElementById('entryMfdDateRM');
+            var mfdInput = document.getElementById('entryMfgDateRM');  // entryMfgDateRM not entryMfdDateRM
             var expInput = document.getElementById('entryExpDateRM');
 
             if (lotInput && !lotInput.value) {

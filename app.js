@@ -2715,11 +2715,12 @@ function showContainerInfoForWithdraw(productCode, sortedLots) {
     var containerWeights = {};
 
     sortedLots.forEach(function (lot) {
-        if (lot.containerBalance && lot.containerBalance > 0) {
-            totalContainers += lot.containerBalance;
+        var containers = lot.fullContainers || 0;
+        if (containers > 0) {
+            totalContainers += containers;
             var weight = lot.containerWeight || 'ไม่ระบุ';
             if (!containerWeights[weight]) containerWeights[weight] = 0;
-            containerWeights[weight] += lot.containerBalance;
+            containerWeights[weight] += containers;
         }
     });
 
@@ -2728,7 +2729,7 @@ function showContainerInfoForWithdraw(productCode, sortedLots) {
         html += '<small>';
 
         Object.keys(containerWeights).forEach(function (weight) {
-            if (weight !== 'ไม่ระบุ') {
+            if (weight !== 'ไม่ระบุ' && weight !== '0') {
                 html += containerWeights[weight] + ' ภาชนะ × ' + weight + ' Kg | ';
             }
         });
@@ -2736,10 +2737,12 @@ function showContainerInfoForWithdraw(productCode, sortedLots) {
         // Show per lot breakdown
         html += '</small><br><small style="color:#0369a1;">';
         sortedLots.forEach(function (lot, idx) {
-            if (lot.containerBalance > 0) {
-                html += 'Lot ' + lot.lotNo + ': ' + lot.containerBalance + ' ภาชนะ';
+            var containers = lot.fullContainers || 0;
+            if (containers > 0) {
+                html += 'Lot ' + lot.lotNo + ': ' + containers + ' ภาชนะ';
                 if (lot.containerWeight) html += ' (' + lot.containerWeight + ' Kg/ภาชนะ)';
-                if (idx < sortedLots.length - 1) html += ' | ';
+                if (lot.partialKg > 0) html += ' + เศษ ' + lot.partialKg + ' Kg';
+                if (idx < sortedLots.length - 1) html += '<br>';
             }
         });
         html += '</small>';
@@ -2747,7 +2750,10 @@ function showContainerInfoForWithdraw(productCode, sortedLots) {
         containerInfoDiv.innerHTML = html;
         containerInfoDiv.style.display = 'block';
     } else {
-        containerInfoDiv.style.display = 'none';
+        // No containers tracked, show balance only
+        var totalBalance = sortedLots.reduce(function (sum, lot) { return sum + (lot.balance || 0); }, 0);
+        containerInfoDiv.innerHTML = '<strong>📦 คงเหลือ:</strong> ' + formatNumber(totalBalance) + ' Kg';
+        containerInfoDiv.style.display = 'block';
     }
 }
 

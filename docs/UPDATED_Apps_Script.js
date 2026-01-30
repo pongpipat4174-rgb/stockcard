@@ -198,7 +198,7 @@ function doPost(e) {
                         var thaiTime = new Date(utc + (thaiOffset * 60000));
                         thaiTime.setHours(0, 0, 0, 0);
                         var diffTime = expDateObj.getTime() - thaiTime.getTime();
-                        daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include expiry date
                     }
                 } catch (e) {
                     daysLeft = "";
@@ -415,7 +415,7 @@ function transferToProduction(dataArray) {
                             var thaiTimePD = new Date(utcPD + (thaiOffsetPD * 60000));
                             thaiTimePD.setHours(0, 0, 0, 0);
                             var diffTimePD = expDateObjPD.getTime() - thaiTimePD.getTime();
-                            daysLeftPD = Math.ceil(diffTimePD / (1000 * 60 * 60 * 24));
+                            daysLeftPD = Math.ceil(diffTimePD / (1000 * 60 * 60 * 24)) + 1; // +1 to include expiry date
                         }
                     } catch (e) {
                         daysLeftPD = "";

@@ -94,18 +94,60 @@ function checkAuth() {
 }
 
 // Handle Login
-function handleLogin(event) {
+async function handleLogin(event) {
     event.preventDefault();
 
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
     const errorDiv = document.getElementById('loginError');
+    const loginBtn = document.querySelector('.login-btn');
 
-    // Find user in database
+    // Show loading
+    if (loginBtn) {
+        loginBtn.textContent = 'กำลังเข้าสู่ระบบ...';
+        loginBtn.disabled = true;
+    }
+
+    try {
+        // Try API login first
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'loginUser',
+                username: username,
+                password: password
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.user) {
+            // Login successful from API
+            currentUser = {
+                username: result.user.username,
+                name: result.user.name,
+                role: result.user.role,
+                modules: result.user.modules,
+                loginTime: new Date().toISOString()
+            };
+
+            localStorage.setItem('stockcard_user', JSON.stringify(currentUser));
+            logActivity('login', 'เข้าสู่ระบบสำเร็จ');
+            showAuthenticatedUI();
+            document.getElementById('loginForm').reset();
+            errorDiv.style.display = 'none';
+            showToast('✅ ยินดีต้อนรับ, ' + result.user.name);
+            return false;
+        }
+    } catch (apiError) {
+        console.log('API login failed, using local database:', apiError);
+    }
+
+    // Fallback: Find user in local database
     const user = USER_DATABASE.find(u => u.username === username && u.password === password);
 
     if (user) {
-        // Login successful
         currentUser = {
             username: user.username,
             name: user.name,
@@ -113,28 +155,22 @@ function handleLogin(event) {
             modules: user.modules,
             loginTime: new Date().toISOString()
         };
-
-        // Save to localStorage
         localStorage.setItem('stockcard_user', JSON.stringify(currentUser));
-
-        // Log activity
-        logActivity('login', 'เข้าสู่ระบบสำเร็จ');
-
-        // Show authenticated UI
+        logActivity('login', 'เข้าสู่ระบบสำเร็จ (local)');
         showAuthenticatedUI();
-
-        // Clear form
         document.getElementById('loginForm').reset();
         errorDiv.style.display = 'none';
-
         showToast('✅ ยินดีต้อนรับ, ' + user.name);
     } else {
-        // Login failed
         errorDiv.textContent = '❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
         errorDiv.style.display = 'block';
-
-        // Log failed attempt
         logActivity('login_failed', 'พยายามเข้าสู่ระบบล้มเหลว: ' + username);
+    }
+
+    // Reset button
+    if (loginBtn) {
+        loginBtn.textContent = 'เข้าสู่ระบบ';
+        loginBtn.disabled = false;
     }
 
     return false;
@@ -173,6 +209,12 @@ function showAuthenticatedUI() {
         userInfoSection.style.display = 'flex';
         document.getElementById('currentUserName').textContent = '👤 ' + currentUser.name;
         document.getElementById('currentUserRole').textContent = currentUser.role.toUpperCase();
+
+        // Show admin button only for admins
+        const adminBtn = document.getElementById('adminBtn');
+        if (adminBtn) {
+            adminBtn.style.display = currentUser.role === 'admin' ? 'inline-flex' : 'none';
+        }
     }
 
     // Apply module permissions
@@ -280,6 +322,20 @@ function logActivity(action, details, module = null) {
         console.warn('Could not save activity log:', e);
     }
 
+    // Send to Google Sheet (async, non-blocking)
+    try {
+        fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'logActivity',
+                ...logEntry
+            })
+        }).catch(err => console.log('Activity log sync failed:', err));
+    } catch (e) {
+        // Ignore errors - local log is already saved
+    }
+
     // Console log for debugging
     console.log('[Activity]', logEntry);
 }
@@ -290,6 +346,214 @@ function getActivityLog() {
         return JSON.parse(localStorage.getItem('stockcard_activity_log') || '[]');
     } catch (e) {
         return [];
+    }
+}
+
+// ==================== CHANGE PASSWORD ====================
+
+function openChangePasswordModal() {
+    document.getElementById('changePasswordModal').style.display = 'flex';
+    document.getElementById('changePasswordForm').reset();
+    document.getElementById('passwordError').style.display = 'none';
+}
+
+function closeChangePasswordModal() {
+    document.getElementById('changePasswordModal').style.display = 'none';
+}
+
+async function handleChangePassword(event) {
+    event.preventDefault();
+
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const errorDiv = document.getElementById('passwordError');
+
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+        errorDiv.textContent = '❌ รหัสผ่านใหม่ไม่ตรงกัน';
+        errorDiv.style.display = 'block';
+        return false;
+    }
+
+    if (newPassword.length < 4) {
+        errorDiv.textContent = '❌ รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัวอักษร';
+        errorDiv.style.display = 'block';
+        return false;
+    }
+
+    try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'updatePassword',
+                username: currentUser.username,
+                currentPassword: currentPassword,
+                newPassword: newPassword
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('✅ เปลี่ยนรหัสผ่านสำเร็จ');
+            closeChangePasswordModal();
+            logActivity('change_password', 'เปลี่ยนรหัสผ่าน');
+        } else {
+            errorDiv.textContent = '❌ ' + result.message;
+            errorDiv.style.display = 'block';
+        }
+    } catch (error) {
+        errorDiv.textContent = '❌ เกิดข้อผิดพลาด: ' + error.message;
+        errorDiv.style.display = 'block';
+    }
+
+    return false;
+}
+
+// ==================== ADMIN USER MANAGEMENT ====================
+
+function openAdminUserModal() {
+    if (currentUser.role !== 'admin') {
+        showToast('❌ เฉพาะ Admin เท่านั้นที่สามารถจัดการผู้ใช้ได้');
+        return;
+    }
+
+    document.getElementById('adminUserModal').style.display = 'flex';
+    document.getElementById('addUserForm').reset();
+    loadUserList();
+}
+
+function closeAdminUserModal() {
+    document.getElementById('adminUserModal').style.display = 'none';
+}
+
+async function loadUserList() {
+    const container = document.getElementById('userListContainer');
+    container.innerHTML = '<p>กำลังโหลด...</p>';
+
+    try {
+        const response = await fetch(APPS_SCRIPT_URL + '?action=getUsers');
+        const result = await response.json();
+
+        if (result.success && result.users) {
+            renderUserList(result.users);
+        } else {
+            // Fallback to local database
+            renderUserList(USER_DATABASE);
+        }
+    } catch (error) {
+        console.log('Using local user database:', error);
+        renderUserList(USER_DATABASE);
+    }
+}
+
+function renderUserList(users) {
+    const container = document.getElementById('userListContainer');
+
+    let html = '<table class="user-list-table">';
+    html += '<thead><tr><th>ชื่อผู้ใช้</th><th>ชื่อ</th><th>บทบาท</th><th>โมดูล</th><th></th></tr></thead>';
+    html += '<tbody>';
+
+    users.forEach(user => {
+        const roleClass = 'role-' + user.role;
+        const modules = Array.isArray(user.modules) ? user.modules.join(', ') : user.modules;
+        const isAdmin = user.username === 'admin';
+
+        html += '<tr>';
+        html += '<td><strong>' + user.username + '</strong></td>';
+        html += '<td>' + user.name + '</td>';
+        html += '<td><span class="role-badge ' + roleClass + '">' + user.role + '</span></td>';
+        html += '<td style="font-size: 0.75rem; color: #666;">' + modules + '</td>';
+        html += '<td>';
+        if (!isAdmin) {
+            html += '<button class="btn-delete-user" onclick="handleDeleteUser(\'' + user.username + '\')">🗑️ ลบ</button>';
+        } else {
+            html += '<span style="color:#999; font-size:0.75rem;">ลบไม่ได้</span>';
+        }
+        html += '</td>';
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+async function handleAddUser(event) {
+    event.preventDefault();
+
+    const username = document.getElementById('newUsername').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    const name = document.getElementById('newUserName').value.trim();
+    const role = document.getElementById('newUserRole').value;
+
+    // Get selected modules
+    const moduleCheckboxes = document.querySelectorAll('input[name="newUserModules"]:checked');
+    const modules = Array.from(moduleCheckboxes).map(cb => cb.value);
+
+    if (modules.length === 0) {
+        showToast('❌ กรุณาเลือกอย่างน้อย 1 โมดูล');
+        return false;
+    }
+
+    try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'addUser',
+                username: username,
+                password: password,
+                name: name,
+                role: role,
+                modules: modules
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('✅ เพิ่มผู้ใช้สำเร็จ');
+            document.getElementById('addUserForm').reset();
+            loadUserList();
+            logActivity('add_user', 'เพิ่มผู้ใช้: ' + username);
+        } else {
+            showToast('❌ ' + result.message);
+        }
+    } catch (error) {
+        showToast('❌ เกิดข้อผิดพลาด: ' + error.message);
+    }
+
+    return false;
+}
+
+async function handleDeleteUser(username) {
+    if (!confirm('ต้องการลบผู้ใช้ "' + username + '" ใช่หรือไม่?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'deleteUser',
+                username: username
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('✅ ลบผู้ใช้สำเร็จ');
+            loadUserList();
+            logActivity('delete_user', 'ลบผู้ใช้: ' + username);
+        } else {
+            showToast('❌ ' + result.message);
+        }
+    } catch (error) {
+        showToast('❌ เกิดข้อผิดพลาด: ' + error.message);
     }
 }
 

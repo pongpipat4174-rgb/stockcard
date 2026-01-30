@@ -23,6 +23,11 @@ function doGet(e) {
         return getRMMasterData();
     }
 
+    // Get Users for Login
+    if (action === 'getUsers') {
+        return getUsersList();
+    }
+
     // Default response
     return ContentService.createTextOutput(JSON.stringify({
         success: false,
@@ -98,6 +103,31 @@ function doPost(e) {
             }
             var result = transferToProduction(dataArray);
             return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+        }
+
+        // ===== USER LOGIN =====
+        if (action === 'loginUser') {
+            return loginUser(data);
+        }
+
+        // ===== UPDATE PASSWORD =====
+        if (action === 'updatePassword') {
+            return updateUserPassword(data);
+        }
+
+        // ===== ADD USER =====
+        if (action === 'addUser') {
+            return addNewUser(data);
+        }
+
+        // ===== DELETE USER =====
+        if (action === 'deleteUser') {
+            return deleteUser(data);
+        }
+
+        // ===== LOG ACTIVITY =====
+        if (action === 'logActivity') {
+            return logActivityToSheet(data);
         }
 
         // ===== ADD RM / ADD PACKAGE (เดิม) =====
@@ -513,5 +543,262 @@ function transferToProduction(dataArray) {
             success: false,
             message: 'เกิดข้อผิดพลาด: ' + error.message
         };
+    }
+}
+
+
+// ==================== USER MANAGEMENT ====================
+
+// Get or Create Users Sheet
+function getUsersSheet() {
+    var ss = SpreadsheetApp.openById('1C3mPPxucPueSOfW4Hh7m4k3BjJ4ZHonqzc8j-JfQOfs');
+    var sheet = ss.getSheetByName('Users');
+
+    if (!sheet) {
+        // Create Users sheet with headers
+        sheet = ss.insertSheet('Users');
+        sheet.appendRow(['username', 'password', 'name', 'role', 'modules', 'created', 'lastLogin']);
+        // Add default admin user
+        sheet.appendRow(['admin', 'admin123', 'Admin', 'admin', 'package,rm,rm_production,consumable,general', new Date().toISOString(), '']);
+    }
+
+    return sheet;
+}
+
+// Get Users List (for login)
+function getUsersList() {
+    try {
+        var sheet = getUsersSheet();
+        var data = sheet.getDataRange().getValues();
+        var users = [];
+
+        // Skip header row
+        for (var i = 1; i < data.length; i++) {
+            var row = data[i];
+            if (row[0]) { // has username
+                users.push({
+                    username: row[0],
+                    password: row[1], // Will be hashed in production
+                    name: row[2],
+                    role: row[3] || 'viewer',
+                    modules: (row[4] || '').split(',').map(function (m) { return m.trim(); }).filter(function (m) { return m; })
+                });
+            }
+        }
+
+        return ContentService.createTextOutput(JSON.stringify({
+            success: true,
+            users: users
+        })).setMimeType(ContentService.MimeType.JSON);
+
+    } catch (error) {
+        return ContentService.createTextOutput(JSON.stringify({
+            success: false,
+            message: error.message
+        })).setMimeType(ContentService.MimeType.JSON);
+    }
+}
+
+// Login User
+function loginUser(data) {
+    try {
+        var sheet = getUsersSheet();
+        var allData = sheet.getDataRange().getValues();
+
+        var username = data.username;
+        var password = data.password;
+
+        for (var i = 1; i < allData.length; i++) {
+            if (allData[i][0] === username && allData[i][1] === password) {
+                // Update last login time
+                sheet.getRange(i + 1, 7).setValue(new Date().toISOString());
+
+                return ContentService.createTextOutput(JSON.stringify({
+                    success: true,
+                    user: {
+                        username: allData[i][0],
+                        name: allData[i][2],
+                        role: allData[i][3] || 'viewer',
+                        modules: (allData[i][4] || '').split(',').map(function (m) { return m.trim(); }).filter(function (m) { return m; })
+                    }
+                })).setMimeType(ContentService.MimeType.JSON);
+            }
+        }
+
+        return ContentService.createTextOutput(JSON.stringify({
+            success: false,
+            message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'
+        })).setMimeType(ContentService.MimeType.JSON);
+
+    } catch (error) {
+        return ContentService.createTextOutput(JSON.stringify({
+            success: false,
+            message: error.message
+        })).setMimeType(ContentService.MimeType.JSON);
+    }
+}
+
+// Update User Password
+function updateUserPassword(data) {
+    try {
+        var sheet = getUsersSheet();
+        var allData = sheet.getDataRange().getValues();
+
+        var username = data.username;
+        var currentPassword = data.currentPassword;
+        var newPassword = data.newPassword;
+
+        for (var i = 1; i < allData.length; i++) {
+            if (allData[i][0] === username) {
+                // Verify current password
+                if (allData[i][1] !== currentPassword) {
+                    return ContentService.createTextOutput(JSON.stringify({
+                        success: false,
+                        message: 'รหัสผ่านเดิมไม่ถูกต้อง'
+                    })).setMimeType(ContentService.MimeType.JSON);
+                }
+
+                // Update password
+                sheet.getRange(i + 1, 2).setValue(newPassword);
+
+                return ContentService.createTextOutput(JSON.stringify({
+                    success: true,
+                    message: 'เปลี่ยนรหัสผ่านสำเร็จ'
+                })).setMimeType(ContentService.MimeType.JSON);
+            }
+        }
+
+        return ContentService.createTextOutput(JSON.stringify({
+            success: false,
+            message: 'ไม่พบผู้ใช้นี้'
+        })).setMimeType(ContentService.MimeType.JSON);
+
+    } catch (error) {
+        return ContentService.createTextOutput(JSON.stringify({
+            success: false,
+            message: error.message
+        })).setMimeType(ContentService.MimeType.JSON);
+    }
+}
+
+// Add New User (Admin only)
+function addNewUser(data) {
+    try {
+        var sheet = getUsersSheet();
+        var allData = sheet.getDataRange().getValues();
+
+        // Check if username already exists
+        for (var i = 1; i < allData.length; i++) {
+            if (allData[i][0] === data.username) {
+                return ContentService.createTextOutput(JSON.stringify({
+                    success: false,
+                    message: 'ชื่อผู้ใช้นี้มีอยู่แล้ว'
+                })).setMimeType(ContentService.MimeType.JSON);
+            }
+        }
+
+        // Add new user
+        var modules = Array.isArray(data.modules) ? data.modules.join(',') : data.modules;
+        sheet.appendRow([
+            data.username,
+            data.password,
+            data.name,
+            data.role || 'viewer',
+            modules,
+            new Date().toISOString(),
+            ''
+        ]);
+
+        return ContentService.createTextOutput(JSON.stringify({
+            success: true,
+            message: 'เพิ่มผู้ใช้สำเร็จ'
+        })).setMimeType(ContentService.MimeType.JSON);
+
+    } catch (error) {
+        return ContentService.createTextOutput(JSON.stringify({
+            success: false,
+            message: error.message
+        })).setMimeType(ContentService.MimeType.JSON);
+    }
+}
+
+// Delete User (Admin only)
+function deleteUser(data) {
+    try {
+        var sheet = getUsersSheet();
+        var allData = sheet.getDataRange().getValues();
+
+        // Cannot delete admin
+        if (data.username === 'admin') {
+            return ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                message: 'ไม่สามารถลบผู้ใช้ admin ได้'
+            })).setMimeType(ContentService.MimeType.JSON);
+        }
+
+        for (var i = 1; i < allData.length; i++) {
+            if (allData[i][0] === data.username) {
+                sheet.deleteRow(i + 1);
+
+                return ContentService.createTextOutput(JSON.stringify({
+                    success: true,
+                    message: 'ลบผู้ใช้สำเร็จ'
+                })).setMimeType(ContentService.MimeType.JSON);
+            }
+        }
+
+        return ContentService.createTextOutput(JSON.stringify({
+            success: false,
+            message: 'ไม่พบผู้ใช้นี้'
+        })).setMimeType(ContentService.MimeType.JSON);
+
+    } catch (error) {
+        return ContentService.createTextOutput(JSON.stringify({
+            success: false,
+            message: error.message
+        })).setMimeType(ContentService.MimeType.JSON);
+    }
+}
+
+
+// ==================== ACTIVITY LOG ====================
+
+// Get or Create ActivityLog Sheet
+function getActivityLogSheet() {
+    var ss = SpreadsheetApp.openById('1C3mPPxucPueSOfW4Hh7m4k3BjJ4ZHonqzc8j-JfQOfs');
+    var sheet = ss.getSheetByName('ActivityLog');
+
+    if (!sheet) {
+        // Create ActivityLog sheet with headers
+        sheet = ss.insertSheet('ActivityLog');
+        sheet.appendRow(['timestamp', 'username', 'name', 'module', 'action', 'details']);
+    }
+
+    return sheet;
+}
+
+// Log Activity to Sheet
+function logActivityToSheet(data) {
+    try {
+        var sheet = getActivityLogSheet();
+
+        sheet.appendRow([
+            data.timestamp || new Date().toISOString(),
+            data.username || '',
+            data.userName || '',
+            data.module || '',
+            data.action || '',
+            data.details || ''
+        ]);
+
+        return ContentService.createTextOutput(JSON.stringify({
+            success: true
+        })).setMimeType(ContentService.MimeType.JSON);
+
+    } catch (error) {
+        return ContentService.createTextOutput(JSON.stringify({
+            success: false,
+            message: error.message
+        })).setMimeType(ContentService.MimeType.JSON);
     }
 }

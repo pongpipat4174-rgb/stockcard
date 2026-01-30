@@ -981,8 +981,19 @@ function renderStockCardsRM(products) {
         var fefoConflict = !isRevalPriority && hasMultipleLots && fefoLot !== fifoLot && fefoLot !== '-';
         var fefoUrgent = fefoExpDays !== null && fefoExpDays <= 30;
 
+        // Find last row index for each lot (to show lotBalance only on last row)
+        var lastRowIndexForLot = {};
+        prod.entries.forEach(function (entry, entryIndex) {
+            if (entry.lotNo) {
+                lastRowIndexForLot[entry.lotNo] = entryIndex; // Will keep updating to last occurrence
+            }
+        });
+
         var entriesHtml = '';
-        prod.entries.forEach(function (entry) {
+        prod.entries.forEach(function (entry, entryIndex) {
+            // Check if this is the last row for this lot
+            var isLastRowForLot = entry.lotNo && lastRowIndexForLot[entry.lotNo] === entryIndex;
+
             // Days left styling
             var daysLeftClass = '';
             var daysNum = parseInt(entry.daysLeft);
@@ -1025,7 +1036,7 @@ function renderStockCardsRM(products) {
             entriesHtml += '<td class="col-date"><span class="date-full">' + highlightText(entry.mfgDate || '-', q) + '</span><span class="date-short">' + highlightText(toShortDate(entry.mfgDate), q) + '</span></td>';
             entriesHtml += '<td class="col-date"><span class="date-full">' + highlightText(entry.expDate || '-', q) + '</span><span class="date-short">' + highlightText(toShortDate(entry.expDate), q) + '</span></td>';
             entriesHtml += '<td class="col-num ' + daysLeftClass + '">' + highlightText(entry.daysLeft || '-', q) + '</td>';
-            entriesHtml += '<td class="col-num">' + (entry.lotBalance > 0 ? formatNumber(entry.lotBalance) : '-') + '</td>';
+            entriesHtml += '<td class="col-num">' + (isLastRowForLot && entry.lotBalance > 0 ? formatNumber(entry.lotBalance) : '-') + '</td>';
             entriesHtml += '<td class="col-supplier">' + highlightText(entry.supplier || '-', q) + '</td>';
             entriesHtml += '<td class="no-print"><button class="btn btn-delete" onclick="deleteEntryRM(' + entry.rowIndex + ', \'' + prod.code + '\', \'' + entry.type + '\')">ลบ</button></td>';
             entriesHtml += '</tr>';

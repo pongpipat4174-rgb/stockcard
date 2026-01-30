@@ -551,26 +551,49 @@ const loadData = async () => {
                 if (loadedItems[0].name !== undefined && loadedItems[0].stock !== undefined) {
                     console.log("Backend sent mapped data. Using directly.");
                     items = loadedItems;
-                } else if (loadedItems[0]["ชื่อสินค้า"] || loadedItems[0]["name"]) {
+                } else if (loadedItems[0]["ชื่อสินค้า"] || loadedItems[0]["ID"] || loadedItems[0]["name"]) {
                     // Check if it's the raw format or mapped format
                     const row = loadedItems[0];
-                    if (row["ชื่อสินค้า"]) {
-                        console.log("Mapping Thai Headers...");
+                    console.log("First row keys:", Object.keys(row));
+                    console.log("ID value:", row["ID"]);
+                    console.log("ชื่อสินค้า value:", row["ชื่อสินค้า"]);
+
+                    // API sends product name in "ID" field due to column shift
+                    if (row["ID"] && isNaN(parseFloat(row["ID"]))) {
+                        console.log("Using ID field for product name (shifted columns)");
+                        loadedItems = loadedItems.map(row => ({
+                            name: row["ID"],  // ID contains actual product name
+                            category: row["สถานะ"] || 'weight',
+                            stockCartons: parseFloat(row["ชื่อสินค้า"]) || 0,
+                            stockPartialKg: parseFloat(row["คงเหลือ (ลัง)"]) || 0,
+                            kgPerCarton: parseFloat(row["เศษ (กก.)"]) || 25,
+                            pcsPerKg: parseFloat(row["จุดสั่งซื้อ (กก.)"]) || 0,
+                            minThreshold: parseFloat(row["รวม (กก.)"]) || 0,
+                            pcsPerPack: parseFloat(row["ชิ้น/ถุง"]) || 1,
+                            fgPcsPerCarton: parseFloat(row["ชิ้น FG/ลัง"]) || 1,
+                            rollLength: parseFloat(row["Yield/ม้วน"]) || 0,
+                            cutLength: parseFloat(row["StockCode"]) || 0,
+                            pcsPerRoll: parseFloat(row["ความยาวม้วน (ม.)"]) || 0,
+                            fgYieldPerRoll: parseFloat(row["Yield/ม้วน"]) || 0,
+                            stockCode: row["แจ้งเตือนเมื่อต่ำกว่า (กก.)"] || ""
+                        }));
+                    } else if (row["ชื่อสินค้า"]) {
+                        console.log("Using ชื่อสินค้า field for product name (normal)");
                         loadedItems = loadedItems.map(row => ({
                             name: row["ชื่อสินค้า"],
                             category: row["ประเภท"] || 'weight',
-                            stockCartons: parseFloat(row["สต็อก (ลัง)"] || row["สต๊อก (ลัง)"] || row["คงเหลือปัจจุบัน (ลัง)"] || 0),
+                            stockCartons: parseFloat(row["สต็อก (ลัง)"] || row["คงเหลือ (ลัง)"] || 0),
                             stockPartialKg: parseFloat(row["เศษ(กก.)"] || row["เศษ (กก.)"] || 0),
-                            kgPerCarton: parseFloat(row["กก./ลัง"] || row["น้ำหนักต่อลัง (kg)"] || 25),
-                            pcsPerKg: parseFloat(row["ชิ้น/กก.1"] || row["ชิ้น/กก."] || row["จำนวนซองต่อ กก."] || 0),
-                            minThreshold: parseFloat(row["จุดสั่งซื้อ (กก.)"] || row["แจ้งเตือนเมื่อต่ำกว่า (กก.)"] || 0),
-                            pcsPerPack: parseFloat(row["ชิ้นงาน/ถุง"] || row["จำนวนชิ้นงาน ต่อ 1 ถุงชริ้ง"] || 1),
-                            fgPcsPerCarton: parseFloat(row["ชิ้น FG/ลัง"] || row["จำนวนชิ้น FG ต่อลัง"] || 1),
+                            kgPerCarton: parseFloat(row["กก./ลัง"] || 25),
+                            pcsPerKg: parseFloat(row["ชิ้น/กก.1"] || row["ชิ้น/กก."] || 0),
+                            minThreshold: parseFloat(row["จุดสั่งซื้อ (กก.)"] || 0),
+                            pcsPerPack: parseFloat(row["ชิ้นงาน/ถุง"] || 1),
+                            fgPcsPerCarton: parseFloat(row["ชิ้น FG/ลัง"] || 1),
                             rollLength: parseFloat(row["ความยาวม้วน (ม.)"] || 0),
                             cutLength: parseFloat(row["ความยาวตัด (มม.)"] || 0),
                             pcsPerRoll: parseFloat(row["ชิ้น/ม้วน"] || 0),
                             fgYieldPerRoll: parseFloat(row["Yield/ม้วน"] || 0),
-                            stockCode: row["StockCode"] || row["รหัสสต็อก"] || ""
+                            stockCode: row["StockCode"] || ""
                         }));
                     }
                 }

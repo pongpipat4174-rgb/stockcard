@@ -132,8 +132,10 @@ function doPost(e) {
                 var destRange = sheet.getRange(targetRow, 1, 1, 18);
                 sourceRange.copyTo(destRange, SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
 
-                // IMPORTANT: Clear Column A date format (prevent Buddhist year from being copied)
-                sheet.getRange(targetRow, 1).setNumberFormat('@');
+                // IMPORTANT: Clear Column A format and set to plain text BEFORE writing
+                var cellA = sheet.getRange(targetRow, 1);
+                cellA.clearFormat();
+                cellA.setNumberFormat('@');
             }
 
             // 2. Check Formulas
@@ -367,8 +369,10 @@ function transferToProduction(dataArray) {
                     var destRange = productionSheet.getRange(targetRow, 1, 1, 18);
                     sourceRange.copyTo(destRange, SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
 
-                    // IMPORTANT: Clear Column A date format (prevent Buddhist year from being copied)
-                    productionSheet.getRange(targetRow, 1).setNumberFormat('@');
+                    // IMPORTANT: Clear Column A format and set to plain text BEFORE writing
+                    var cellA = productionSheet.getRange(targetRow, 1);
+                    cellA.clearFormat();
+                    cellA.setNumberFormat('@');
                 }
 
                 // Check formulas

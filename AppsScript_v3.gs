@@ -38,6 +38,9 @@ function doPost(e) {
       return deleteEntryRM(data);
     } else if (action === 'recalculate_rm') {
       return recalculateAllRM(data);
+    } else if (action === 'save_all') {
+      // Consumable module save
+      return saveConsumableData(data);
     }
     
     return ContentService.createTextOutput(JSON.stringify({
@@ -850,4 +853,137 @@ function getActualLastRow(sheet, column) {
 
 function testScript() {
   Logger.log('Apps Script v3 with Auto-Trigger is working!');
+}
+
+// ======================= CONSUMABLE MODULE =======================
+
+/**
+ * Save all Consumable data (items + transactions)
+ * Called from web app with action: 'save_all', sheet: 'Consumable'
+ */
+function saveConsumableData(data) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = data.sheet || 'Consumable';
+    var sheet = ss.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Sheet not found: ' + sheetName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var items = data.items;
+    
+    if (!items || items.length === 0) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'No items to save'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Get existing data to preserve structure
+    var existingData = sheet.getDataRange().getValues();
+    var headers = existingData[0];
+    
+    // Find column indices by header name
+    var colMap = {};
+    for (var h = 0; h < headers.length; h++) {
+      colMap[headers[h]] = h;
+    }
+    
+    // Update only stock columns (C and D) - not entire row
+    // This prevents overwriting calculated formulas
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var itemName = item['ชื่อสินค้า'];
+      
+      // Find matching row
+      for (var r = 1; r < existingData.length; r++) {
+        if (existingData[r][0] === itemName) {
+          // Update stock cartons (Column C, index 2)
+          sheet.getRange(r + 1, 3).setValue(item['สต็อก (ลัง)'] || 0);
+          // Update partial kg (Column D, index 3)
+          sheet.getRange(r + 1, 4).setValue(item['เศษ(กก.)'] || 0);
+          break;
+        }
+      }
+    }
+    
+    // Save transactions if provided
+    if (data.transactions && data.transactions.length > 0) {
+      saveConsumableTransactions(ss, data.transactions);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'Updated ' + items.length + ' items in ' + sheetName
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Save Consumable transactions to separate sheet
+ */
+function saveConsumableTransactions(ss, transactions) {
+  try {
+    var transSheetName = 'Consumable_Transactions';
+    var transSheet = ss.getSheetByName(transSheetName);
+    
+    if (!transSheet) {
+      // Create transactions sheet with headers
+      transSheet = ss.insertSheet(transSheetName);
+      var headers = ['ID', 'วันที่', 'ประเภท', 'ItemIndex', 'ชื่อสินค้า', 
+                     'จำนวน (กก.)', 'จำนวน (ลัง)', 'คงเหลือ (ลัง)', 'หมายเหตุ'];
+      transSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      transSheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    }
+    
+    // Get existing transaction IDs to avoid duplicates
+    var existingData = transSheet.getDataRange().getValues();
+    var existingIds = {};
+    for (var i = 1; i < existingData.length; i++) {
+      if (existingData[i][0]) {
+        existingIds[existingData[i][0].toString()] = true;
+      }
+    }
+    
+    // Filter new transactions only
+    var newRows = [];
+    for (var t = 0; t < transactions.length; t++) {
+      var trans = transactions[t];
+      var id = trans['ID'] ? trans['ID'].toString() : '';
+      
+      if (id && !existingIds[id]) {
+        newRows.push([
+          id,
+          trans['วันที่'] || '',
+          trans['ประเภท'] || '',
+          trans['ItemIndex'] || 0,
+          trans['ชื่อสินค้า'] || '',
+          trans['จำนวน (กก.)'] || 0,
+          trans['จำนวน (ลัง)'] || 0,
+          trans['คงเหลือ (ลัง)'] || 0,
+          trans['หมายเหตุ'] || ''
+        ]);
+      }
+    }
+    
+    // Append new transactions
+    if (newRows.length > 0) {
+      var lastRow = transSheet.getLastRow();
+      transSheet.getRange(lastRow + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
+      Logger.log('Added ' + newRows.length + ' new Consumable transactions');
+    }
+    
+  } catch (error) {
+    Logger.log('Save Consumable transactions error: ' + error.message);
+  }
 }

@@ -1220,7 +1220,10 @@ window.openHistoryModal = (index) => {
                 <td class="center text-blue">${fgYieldDisplay}</td>
                 <td class="center" style="font-weight:700;">${formatNumber(log.remainingStock, isRoll ? 1 : 1)}</td>
                 <td style="font-size:0.9rem;">${log.note || '-'}</td>
-                <td class="center no-print">
+                <td class="center no-print" style="display:flex; gap:4px; justify-content:center;">
+                    <button class="btn icon-only" onclick="editTransaction('${log.id}', ${index})" title="แก้ไข" style="padding:4px;width:28px;height:28px;background:#3b82f6;color:#fff;">
+                        <i class="fa-solid fa-pencil"></i>
+                    </button>
                     <button class="btn icon-only delete" onclick="deleteTransaction('${log.id}', ${index})" title="ลบ" style="padding:4px;width:28px;height:28px;">
                         <i class="fa-solid fa-trash"></i>
                     </button>
@@ -1332,6 +1335,77 @@ window.deleteTransaction = async (transId, itemIndex) => {
     openHistoryModal(itemIndex);
 
     await saveData();
+};
+
+// Edit Transaction - แก้ไขจำนวนแทนการลบ
+window.editTransaction = async (transId, itemIndex) => {
+    const transIdx = transactions.findIndex(t => t.id === transId);
+    if (transIdx === -1) {
+        alert('ไม่พบรายการนี้');
+        return;
+    }
+
+    const trans = transactions[transIdx];
+    const item = items[itemIndex];
+    const isRoll = item.category === 'roll';
+
+    const currentQty = isRoll ? (trans.qtyUnit || trans.qtyCartons) : (trans.qtyKg || trans.qtyCartons);
+    const unitLabel = isRoll ? 'ม้วน' : 'กก.';
+
+    const newQtyStr = prompt(`แก้ไขจำนวน (${trans.type === 'IN' ? 'รับเข้า' : 'เบิกออก'})\n\nจำนวนเดิม: ${currentQty} ${unitLabel}\n\nใส่จำนวนใหม่:`, currentQty);
+
+    if (newQtyStr === null) return; // Cancelled
+
+    const newQty = parseFloat(newQtyStr);
+    if (isNaN(newQty) || newQty < 0) {
+        alert('กรุณาใส่ตัวเลขที่ถูกต้อง');
+        return;
+    }
+
+    // Calculate difference
+    const diff = newQty - currentQty;
+
+    if (diff === 0) {
+        alert('ไม่มีการเปลี่ยนแปลง');
+        return;
+    }
+
+    // Update stock based on transaction type and difference
+    // If IN: more qty = more stock, less qty = less stock
+    // If OUT: more qty = less stock, less qty = more stock
+    if (trans.type === 'IN') {
+        item.stockCartons += diff;
+    } else {
+        item.stockCartons -= diff;
+    }
+
+    // Update transaction record
+    if (isRoll) {
+        trans.qtyUnit = newQty;
+        trans.qtyCartons = newQty;
+    } else {
+        trans.qtyKg = newQty;
+        trans.qtyCartons = newQty / (item.kgPerCarton || 25);
+    }
+
+    // Recalculate remaining stock
+    trans.remainingStock = item.stockCartons;
+
+    // Sync linked stock
+    if (item.stockCode) {
+        items.forEach(i => {
+            if (i.stockCode === item.stockCode && i.category === item.category) {
+                i.stockCartons = item.stockCartons;
+                i.stockPartialKg = item.stockPartialKg;
+            }
+        });
+    }
+
+    // Re-render and save
+    openHistoryModal(itemIndex);
+    await saveData();
+
+    alert(`แก้ไขสำเร็จ! จาก ${currentQty} เป็น ${newQty} ${unitLabel}`);
 };
 
 // Modal Operations

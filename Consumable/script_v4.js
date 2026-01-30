@@ -611,14 +611,19 @@ const loadData = async () => {
                                 // values[5] is totalKg (calculated) - skip
                                 minThreshold: parseFloat(String(values[6]).replace(/,/g, '')) || 0,
                                 pcsPerKg: parseFloat(String(values[7]).replace(/,/g, '')) || 0,
-                                cutLength: parseFloat(String(values[8]).replace(/,/g, '')) || 0,
+                                // values[8] is empty for shrink
                                 pcsPerPack: parseFloat(String(values[9]).replace(/,/g, '')) || 1,
                                 fgPcsPerCarton: parseFloat(String(values[10]).replace(/,/g, '')) || 1,
-                                // Roll-specific fields
-                                rollLength: parseFloat(String(values[16]).replace(/,/g, '')) || 0,
-                                pcsPerRoll: 0,
-                                fgYieldPerRoll: parseFloat(String(values[14]).replace(/,/g, '')) || 0,
-                                stockCode: values[15] || ""
+                                // Roll-specific fields (CORRECTED positions):
+                                // [14] = rollLength (ความยาวม้วน ม.) = 2664
+                                // [15] = cutLength (ความยาวตัด มม.) = 180, 260, etc.
+                                // [16] = pcsPerRoll (ชิ้น/ม้วน) = 14800, 10246, etc.
+                                // [18] = stockCode = F450, etc.
+                                rollLength: parseFloat(String(values[14]).replace(/,/g, '')) || 0,
+                                cutLength: parseFloat(String(values[15]).replace(/,/g, '')) || 0,
+                                pcsPerRoll: parseFloat(String(values[16]).replace(/,/g, '')) || 0,
+                                fgYieldPerRoll: 0,  // Will be calculated from pcsPerRoll / fgPcsPerCarton
+                                stockCode: values[18] || ""
                             };
                         });
                     } else if (row["ชื่อสินค้า"]) {

@@ -559,7 +559,12 @@ const loadData = async () => {
                     console.log("ชื่อสินค้า value:", row["ชื่อสินค้า"]);
 
                     // API sends product name in "ID" field due to column shift
-                    if (row["ID"] && isNaN(parseFloat(row["ID"]))) {
+                    // Check if ID contains product name (longer than 3 chars and contains letters)
+                    const idValue = row["ID"] || "";
+                    const hasLetters = /[a-zA-Zก-๙]/.test(idValue);
+                    const isProductName = idValue.length > 3 && hasLetters;
+
+                    if (isProductName) {
                         console.log("Using ID field for product name (shifted columns)");
                         loadedItems = loadedItems.map(row => ({
                             name: row["ID"],  // ID contains actual product name

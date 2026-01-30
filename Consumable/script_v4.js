@@ -1,7 +1,7 @@
 // --- CONFIGURATION ---
 // ใส่ลิงค์ Google Apps Script Web App ของคุณในเครื่องหมายคำพูดด้านล่าง
 // ตัวอย่าง: const API_URL = "https://script.google.com/macros/s/xxxxxxxxx/exec";
-const API_URL = 'https://script.google.com/macros/s/AKfycbxJglmGvcDbVBSTcGlCXg0NFDXIJm-RyIXe_-G-70nIlK3rxZVFT_tWAbHYP-mb-zOG3w/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxJJ9U7BVR-e3764ibgPkgob49CR9KAQ3uoLL6MayumlfEsWDdQEQVCb89RotS3lSWKRg/exec';
 
 // --- DEBUG CONSOLE (Visual Analysis) ---
 const createDebugPanel = () => {
@@ -824,20 +824,16 @@ window.saveData = async () => {
                 transactions: sheetTransactions
             };
 
-            // ⚠️ DISABLED: Cloud save temporarily disabled until Apps Script is updated
-            // To re-enable: uncomment the fetch call below after deploying AppsScript_Consumable.gs
-            /*
+            // ✅ Cloud save enabled - Apps Script now supports save_all
             await fetch(API_URL, {
                 method: 'POST',
                 body: JSON.stringify(payload),
                 headers: { "Content-Type": "text/plain" }
             });
-            console.log("Saved to Google Sheets (Full Columns)");
-            */
-            console.log("Cloud save DISABLED - Data saved to LocalStorage only");
+            console.log("Saved to Google Sheets successfully");
         } catch (e) {
             console.error("Cloud save failed", e);
-            // alert("บันทึกออนไลน์ล้มเหลว ข้อมูลถูกบันทึกลงเครื่องแล้ว");
+            alert("บันทึกออนไลน์ล้มเหลว ข้อมูลถูกบันทึกลงเครื่องแล้ว");
         }
     }
 

@@ -2318,6 +2318,7 @@ async function saveEntryRM() {
         // Normal Save (Single Entry)
         var containerQty = parseFloat(document.getElementById('entryContainerQtyRM').value) || 0;
         var containerWeight = parseFloat(document.getElementById('entryContainerWeightRM').value) || 0;
+        var containerWeightOut = parseFloat(document.getElementById('entryContainerWeightOutRM').value) || 0;
         var remainder = parseFloat(document.getElementById('entryRemainderRM').value) || 0;
         var lotNo = document.getElementById('entryLotNoRM').value || '-';
         var containerOut = parseFloat(document.getElementById('entryContainerOutRM').value) || 0;
@@ -2343,7 +2344,7 @@ async function saveEntryRM() {
             productName: productName,
             type: type,
             containerQty: isWithdrawal ? containerOut : containerQty, // Use containerOut for withdrawal
-            containerWeight: containerWeight,
+            containerWeight: isWithdrawal ? containerWeightOut : containerWeight, // Use weight out for withdrawal
             remainder: remainder,
             inQty: inQty,
             outQty: outQty,
@@ -2403,6 +2404,7 @@ async function saveEntryRM() {
         // Ask about transfer BEFORE cleanup
         var shouldTransfer = false;
         if (transferEntries.length > 0) {
+            alert('พบรายการเบิกผลิต ' + transferEntries.length + ' รายการ - กดตกลงเพื่อดูคำถามโอนข้อมูล');
             shouldTransfer = confirm('รายการ "เบิกผลิต" ' + transferEntries.length + ' รายการ\n\nต้องการโอนข้อมูลไป RM Production ด้วยหรือไม่?\n\n(ข้อมูลจะถูกบันทึกเป็น "รับเข้า" ใน Production)');
         }
 

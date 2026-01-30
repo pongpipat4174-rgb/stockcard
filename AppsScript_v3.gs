@@ -946,7 +946,7 @@ function saveConsumableTransactions(ss, transactions) {
     if (!transSheet) {
       // Create transactions sheet with headers
       transSheet = ss.insertSheet(transSheetName);
-      var headers = ['ID', 'วันที่', 'ประเภท', 'ItemIndex', 'ชื่อสินค้า', 
+      var headers = ['ID', 'วันที่', 'เวลา', 'ประเภท', 'ItemIndex', 'ชื่อสินค้า', 
                      'จำนวน (กก.)', 'จำนวน (ลัง)', 'คงเหลือ (ลัง)', 'หมายเหตุ'];
       transSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
       transSheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
@@ -971,6 +971,7 @@ function saveConsumableTransactions(ss, transactions) {
         newRows.push([
           id,
           trans['วันที่'] || '',
+          trans['เวลา'] || '', // เวลาที่บันทึก
           trans['ประเภท'] || '',
           trans['ItemIndex'] || 0,
           trans['ชื่อสินค้า'] || '',

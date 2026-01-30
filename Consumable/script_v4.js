@@ -675,6 +675,7 @@ const loadData = async () => {
                         loadedTrans = loadedTrans.map(row => ({
                             id: row["ID"],
                             date: row["วันที่"],
+                            time: row["เวลา"] || '', // เวลาที่บันทึก
                             type: row["ประเภท"],
                             itemIndex: row["ItemIndex"],
                             itemName: row["ชื่อสินค้า"],
@@ -809,6 +810,7 @@ window.saveData = async () => {
             const sheetTransactions = transactions.map(t => ({
                 "ID": t.id,
                 "วันที่": t.date,
+                "เวลา": t.time || '', // เวลาที่บันทึก
                 "ประเภท": t.type,
                 "ItemIndex": t.itemIndex,
                 "ชื่อสินค้า": t.itemName,
@@ -1129,6 +1131,7 @@ transForm.addEventListener('submit', async (e) => {
         itemIndex: index,
         itemName: item.name,
         date: date,
+        time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), // เวลาที่บันทึก
         type: type,
         category: item.category || 'weight',
         qtyKg: isRoll ? 0 : totalMove, // Keep legacy field for weight
@@ -1208,7 +1211,7 @@ window.openHistoryModal = (index) => {
             }
 
             row.innerHTML = `
-                <td style="font-family:monospace; font-size:0.95rem;">${formatDate(log.date)}</td>
+                <td style="font-family:monospace; font-size:0.95rem;">${formatDate(log.date)}<br><span style="font-size:0.8rem;color:#6b7280;">${log.time || '-'}</span></td>
                 <td>
                     <span style="font-weight:600; color:${isIn ? '#166534' : '#991b1b'}; display:flex; align-items:center; gap:6px;">
                         ${isIn ? '<i class="fa-solid fa-arrow-down"></i> รับเข้า' : '<i class="fa-solid fa-arrow-up"></i> เบิกออก'}
@@ -1339,9 +1342,12 @@ window.deleteTransaction = async (transId, itemIndex) => {
 
 // Edit Transaction - แก้ไขจำนวนแทนการลบ
 window.editTransaction = async (transId, itemIndex) => {
-    const transIdx = transactions.findIndex(t => t.id === transId);
+    // Compare as strings to handle both number and string IDs
+    const transIdx = transactions.findIndex(t => String(t.id) === String(transId));
     if (transIdx === -1) {
-        alert('ไม่พบรายการนี้');
+        console.log('Transaction not found. Looking for:', transId);
+        console.log('Available IDs:', transactions.map(t => t.id));
+        alert('ไม่พบรายการนี้ กรุณารีเฟรชหน้าแล้วลองใหม่');
         return;
     }
 

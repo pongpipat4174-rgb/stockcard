@@ -243,12 +243,12 @@ function doPost(e) {
                 requests.push({ col: currentBatchStart + 1, vals: [currentBatchVal] });
             }
 
+            // FIRST: Set Column A format to text BEFORE writing (prevent Buddhist year conversion)
+            sheet.getRange(targetRow, 1).setNumberFormat('@');
+
             requests.forEach(function (req) {
                 sheet.getRange(targetRow, req.col, 1, req.vals[0].length).setValues(req.vals);
             });
-
-            // Force Column A (date) to be plain text format (prevent auto-conversion to Buddhist year)
-            sheet.getRange(targetRow, 1).setNumberFormat('@');
 
             SpreadsheetApp.flush();
 
@@ -464,12 +464,12 @@ function transferToProduction(dataArray) {
                     requests.push({ col: currentBatchStart + 1, vals: [currentBatchVal] });
                 }
 
+                // FIRST: Set Column A format to text BEFORE writing (prevent Buddhist year conversion)
+                productionSheet.getRange(targetRow, 1).setNumberFormat('@');
+
                 requests.forEach(function (req) {
                     productionSheet.getRange(targetRow, req.col, 1, req.vals[0].length).setValues(req.vals);
                 });
-
-                // Force Column A (date) to be plain text format (prevent auto-conversion to Buddhist year)
-                productionSheet.getRange(targetRow, 1).setNumberFormat('@');
 
                 transferredCount++;
 

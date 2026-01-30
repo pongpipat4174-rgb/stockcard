@@ -680,6 +680,7 @@ const loadData = async () => {
                             itemName: row["ชื่อสินค้า"],
                             qtyKg: row["จำนวน (กก.)"],
                             qtyCartons: row["จำนวน (ลัง)"],
+                            qtyUnit: row["จำนวน (ลัง)"], // For roll items: qtyUnit = qtyCartons
                             remainingStock: row["คงเหลือ (ลัง)"],
                             note: row["หมายเหตุ"]
                         }));

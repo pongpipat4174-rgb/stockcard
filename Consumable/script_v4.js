@@ -577,24 +577,48 @@ const loadData = async () => {
                             // 8: empty
                             // 9: pcsPerPack
                             // 10: fgPcsPerCarton
+                            const values = Object.values(row);
+                            // Debug log first item
+                            if (loadedItems.indexOf(row) === 0) {
+                                console.log("Keys:", Object.keys(row));
+                                console.log("Values:", values);
+                                console.log("pcsPerPack position [9]:", values[9]);
+                            }
+                            // Map by position using values array:
+                            // 0: name (ID)
+                            // 1: category
+                            // 2: stockCartons
+                            // 3: stockPartialKg
+                            // 4: kgPerCarton
+                            // 5: totalKg (skip - calculated)
+                            // 6: minThreshold
+                            // 7: pcsPerKg
+                            // 8: cutLength (or empty for shrink)
+                            // 9: pcsPerPack
+                            // 10: fgPcsPerCarton
+                            // 11: totalPcs (calculated)
+                            // 12: fgYield (calculated)
+                            // 13: status
+                            // 14: Yield/roll
+                            // 15: StockCode
+                            // 16: rollLength
                             return {
-                                name: row[keys[0]],  // ID = product name
-                                category: row[keys[1]] || 'weight',
-                                stockCartons: parseFloat(String(row[keys[2]]).replace(/,/g, '')) || 0,
-                                stockPartialKg: parseFloat(String(row[keys[3]]).replace(/,/g, '')) || 0,
-                                kgPerCarton: parseFloat(String(row[keys[4]]).replace(/,/g, '')) || 25,
-                                // keys[5] is totalKg (calculated) - skip
-                                minThreshold: parseFloat(String(row[keys[6]]).replace(/,/g, '')) || 0,
-                                pcsPerKg: parseFloat(String(row[keys[7]]).replace(/,/g, '')) || 0,
-                                // keys[8] is empty
-                                pcsPerPack: parseFloat(String(row[keys[9]]).replace(/,/g, '')) || 1,
-                                fgPcsPerCarton: parseFloat(String(row[keys[10]]).replace(/,/g, '')) || 1,
+                                name: values[0],  // Product name
+                                category: values[1] || 'weight',
+                                stockCartons: parseFloat(String(values[2]).replace(/,/g, '')) || 0,
+                                stockPartialKg: parseFloat(String(values[3]).replace(/,/g, '')) || 0,
+                                kgPerCarton: parseFloat(String(values[4]).replace(/,/g, '')) || 25,
+                                // values[5] is totalKg (calculated) - skip
+                                minThreshold: parseFloat(String(values[6]).replace(/,/g, '')) || 0,
+                                pcsPerKg: parseFloat(String(values[7]).replace(/,/g, '')) || 0,
+                                cutLength: parseFloat(String(values[8]).replace(/,/g, '')) || 0,
+                                pcsPerPack: parseFloat(String(values[9]).replace(/,/g, '')) || 1,
+                                fgPcsPerCarton: parseFloat(String(values[10]).replace(/,/g, '')) || 1,
                                 // Roll-specific fields
-                                rollLength: parseFloat(String(row[keys[16]] || row["ความยาวม้วน (ม.)"] || 0).replace(/,/g, '')) || 0,
-                                cutLength: parseFloat(String(row[keys[17]] || row["ความยาวตัด (มม.)"] || 0).replace(/,/g, '')) || 0,
+                                rollLength: parseFloat(String(values[16]).replace(/,/g, '')) || 0,
                                 pcsPerRoll: 0,
-                                fgYieldPerRoll: parseFloat(String(row[keys[14]] || row["Yield/ม้วน"] || 0).replace(/,/g, '')) || 0,
-                                stockCode: row[keys[15]] || row["StockCode"] || ""
+                                fgYieldPerRoll: parseFloat(String(values[14]).replace(/,/g, '')) || 0,
+                                stockCode: values[15] || ""
                             };
                         });
                     } else if (row["ชื่อสินค้า"]) {

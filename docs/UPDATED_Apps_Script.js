@@ -247,6 +247,9 @@ function doPost(e) {
                 sheet.getRange(targetRow, req.col, 1, req.vals[0].length).setValues(req.vals);
             });
 
+            // Force Column A (date) to be plain text format (prevent auto-conversion to Buddhist year)
+            sheet.getRange(targetRow, 1).setNumberFormat('@');
+
             SpreadsheetApp.flush();
 
         } else {
@@ -464,6 +467,9 @@ function transferToProduction(dataArray) {
                 requests.forEach(function (req) {
                     productionSheet.getRange(targetRow, req.col, 1, req.vals[0].length).setValues(req.vals);
                 });
+
+                // Force Column A (date) to be plain text format (prevent auto-conversion to Buddhist year)
+                productionSheet.getRange(targetRow, 1).setNumberFormat('@');
 
                 transferredCount++;
 

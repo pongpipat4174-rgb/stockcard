@@ -142,12 +142,8 @@ function doPost(e) {
 
             // 3. Prepare Map
             var map = [];
-            // Format date as D-M-YYYY (use dash instead of slash to prevent date parsing)
-            var dateStr = entry.date || "";
-            if (dateStr) {
-                dateStr = String(dateStr).replace(/\//g, '-');
-            }
-            map[0] = dateStr;
+            // Keep apostrophe prefix to force text storage in Google Sheets (prevent Buddhist year)
+            map[0] = "'" + (entry.date || "");
             map[1] = entry.productCode || "";
             map[2] = entry.productName || ""; // Write Name (no formula)
             map[3] = entry.type || "";
@@ -381,16 +377,13 @@ function transferToProduction(dataArray) {
 
                 // Prepare data map
                 var map = [];
-                // Format date as D-M-YYYY (use dash instead of slash to prevent date parsing)
+                // Keep apostrophe prefix to force text storage in Google Sheets (prevent Buddhist year)
                 var transferDateStr = item.transferDate;
                 if (!transferDateStr) {
                     var now = new Date();
-                    transferDateStr = now.getDate() + '-' + (now.getMonth() + 1) + '-' + now.getFullYear();
-                } else {
-                    // Convert slash to dash if present
-                    transferDateStr = String(transferDateStr).replace(/\//g, '-');
+                    transferDateStr = now.getDate() + '/' + (now.getMonth() + 1) + '/' + now.getFullYear();
                 }
-                map[0] = transferDateStr;
+                map[0] = "'" + transferDateStr;
                 map[1] = item.productCode || "";
                 map[2] = item.productName || ""; // Write Name (no formula)
                 map[3] = "รับเข้า (โอนจาก Center)";

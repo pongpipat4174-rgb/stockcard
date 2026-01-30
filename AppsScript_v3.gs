@@ -59,9 +59,15 @@ function doPost(e) {
 function doGet(e) {
   // Check if requesting master data
   var action = e && e.parameter ? e.parameter.action : null;
+  var sheetName = e && e.parameter ? e.parameter.sheet : null;
   
   if (action === 'getRMMaster') {
     return getRMMasterData();
+  }
+  
+  // Load all data from a sheet (for Consumable, GeneralStock, etc.)
+  if (action === 'load_all' && sheetName) {
+    return loadAllSheetData(sheetName);
   }
   
   return ContentService.createTextOutput(JSON.stringify({
@@ -985,5 +991,80 @@ function saveConsumableTransactions(ss, transactions) {
     
   } catch (error) {
     Logger.log('Save Consumable transactions error: ' + error.message);
+  }
+}
+
+/**
+ * Load all data from any sheet (generic function)
+ * Used for Consumable, GeneralStock, etc.
+ */
+function loadAllSheetData(sheetName) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Sheet not found: ' + sheetName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var data = sheet.getDataRange().getValues();
+    
+    if (data.length <= 1) {
+      return ContentService.createTextOutput(JSON.stringify({
+        items: [],
+        transactions: []
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var headers = data[0];
+    var items = [];
+    
+    // Convert rows to objects using headers
+    for (var i = 1; i < data.length; i++) {
+      var row = data[i];
+      // Skip empty rows (check first column)
+      if (!row[0] || row[0].toString().trim() === '') continue;
+      
+      var item = {};
+      for (var j = 0; j < headers.length; j++) {
+        var header = headers[j] ? headers[j].toString() : 'col' + j;
+        item[header] = row[j];
+      }
+      items.push(item);
+    }
+    
+    // Load transactions if exists
+    var transactions = [];
+    var transSheetName = sheetName + '_Transactions';
+    var transSheet = ss.getSheetByName(transSheetName);
+    
+    if (transSheet) {
+      var transData = transSheet.getDataRange().getValues();
+      if (transData.length > 1) {
+        var transHeaders = transData[0];
+        for (var t = 1; t < transData.length; t++) {
+          if (!transData[t][0]) continue;
+          var trans = {};
+          for (var th = 0; th < transHeaders.length; th++) {
+            trans[transHeaders[th]] = transData[t][th];
+          }
+          transactions.push(trans);
+        }
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      items: items,
+      transactions: transactions
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }

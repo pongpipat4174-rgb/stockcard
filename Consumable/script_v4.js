@@ -824,15 +824,20 @@ window.saveData = async () => {
                 transactions: sheetTransactions
             };
 
+            // ⚠️ DISABLED: Cloud save temporarily disabled until Apps Script is updated
+            // To re-enable: uncomment the fetch call below after deploying AppsScript_Consumable.gs
+            /*
             await fetch(API_URL, {
                 method: 'POST',
                 body: JSON.stringify(payload),
                 headers: { "Content-Type": "text/plain" }
             });
             console.log("Saved to Google Sheets (Full Columns)");
+            */
+            console.log("Cloud save DISABLED - Data saved to LocalStorage only");
         } catch (e) {
             console.error("Cloud save failed", e);
-            alert("บันทึกออนไลน์ล้มเหลว ข้อมูลถูกบันทึกลงเครื่องแล้ว");
+            // alert("บันทึกออนไลน์ล้มเหลว ข้อมูลถูกบันทึกลงเครื่องแล้ว");
         }
     }
 

@@ -2360,6 +2360,12 @@ async function saveEntryRM() {
     showToast('กำลังบันทึก ' + entriesToSave.length + ' รายการ...');
     console.log('Saving entries:', entriesToSave);
 
+    // DEBUG: Show what will be saved
+    var debugInfo = entriesToSave.map(function (e, i) {
+        return (i + 1) + '. วันที่: ' + e.date + ', ประเภท: ' + e.type + ', ภาชนะ: ' + e.containerQty + ', น้ำหนัก: ' + e.containerWeight;
+    }).join('\n');
+    alert('DEBUG - ข้อมูลที่จะบันทึก:\n' + debugInfo);
+
     try {
         // Process sequentially with AWAIT to prevent concurrency issues
         for (var i = 0; i < entriesToSave.length; i++) {

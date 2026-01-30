@@ -11,7 +11,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=24">
+    <link rel="stylesheet" href="styles.css?v=23">
 </head>
 
 <body>
@@ -22,125 +22,6 @@
             <div class="loader-ring"></div>
             <div class="loader-ring"></div>
             <span class="loader-text">กำลังโหลดข้อมูล...</span>
-        </div>
-    </div>
-
-    <!-- Login Modal -->
-    <div class="login-overlay" id="loginOverlay">
-        <div class="login-modal">
-            <div class="login-header">
-                <img src="logo.png" alt="TAN PRODUCTION" class="login-logo">
-                <h2>🔐 เข้าสู่ระบบ</h2>
-                <p>Stock Card - TAN PRODUCTION</p>
-            </div>
-            <form id="loginForm" onsubmit="return handleLogin(event)">
-                <div class="login-field">
-                    <label for="loginUsername">👤 ชื่อผู้ใช้</label>
-                    <input type="text" id="loginUsername" placeholder="ใส่ชื่อผู้ใช้" required autocomplete="username">
-                </div>
-                <div class="login-field">
-                    <label for="loginPassword">🔑 รหัสผ่าน</label>
-                    <input type="password" id="loginPassword" placeholder="ใส่รหัสผ่าน" required
-                        autocomplete="current-password">
-                </div>
-                <div class="login-error" id="loginError" style="display: none;"></div>
-                <button type="submit" class="login-btn">เข้าสู่ระบบ</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Change Password Modal -->
-    <div class="modal-overlay" id="changePasswordModal" style="display: none;">
-        <div class="modal change-password-modal">
-            <div class="modal-header">
-                <h3>🔑 เปลี่ยนรหัสผ่าน</h3>
-                <button class="modal-close" onclick="closeChangePasswordModal()">×</button>
-            </div>
-            <form id="changePasswordForm" onsubmit="return handleChangePassword(event)">
-                <div class="form-group">
-                    <label>รหัสผ่านเดิม</label>
-                    <input type="password" id="currentPassword" required>
-                </div>
-                <div class="form-group">
-                    <label>รหัสผ่านใหม่</label>
-                    <input type="password" id="newPassword" required minlength="4">
-                </div>
-                <div class="form-group">
-                    <label>ยืนยันรหัสผ่านใหม่</label>
-                    <input type="password" id="confirmPassword" required minlength="4">
-                </div>
-                <div class="login-error" id="passwordError" style="display: none;"></div>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeChangePasswordModal()">ยกเลิก</button>
-                    <button type="submit" class="btn btn-primary">💾 บันทึก</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Admin User Management Modal -->
-    <div class="modal-overlay" id="adminUserModal" style="display: none;">
-        <div class="modal admin-user-modal">
-            <div class="modal-header">
-                <h3>👥 จัดการผู้ใช้</h3>
-                <button class="modal-close" onclick="closeAdminUserModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <!-- Add User Form -->
-                <div class="add-user-section">
-                    <h4>➕ เพิ่มผู้ใช้ใหม่</h4>
-                    <form id="addUserForm" onsubmit="return handleAddUser(event)">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>ชื่อผู้ใช้</label>
-                                <input type="text" id="newUsername" required pattern="[a-zA-Z0-9]+"
-                                    placeholder="ภาษาอังกฤษเท่านั้น">
-                            </div>
-                            <div class="form-group">
-                                <label>รหัสผ่าน</label>
-                                <input type="password" id="newUserPassword" required minlength="4">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>ชื่อ-นามสกุล</label>
-                                <input type="text" id="newUserName" required placeholder="ชื่อแสดงในระบบ">
-                            </div>
-                            <div class="form-group">
-                                <label>บทบาท</label>
-                                <select id="newUserRole">
-                                    <option value="viewer">Viewer (ดูอย่างเดียว)</option>
-                                    <option value="editor">Editor (เพิ่ม/แก้ไข)</option>
-                                    <option value="admin">Admin (ทุกอย่าง)</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>โมดูลที่เข้าถึงได้</label>
-                            <div class="checkbox-group">
-                                <label><input type="checkbox" name="newUserModules" value="package" checked> 📦
-                                    แพ็คเกจ</label>
-                                <label><input type="checkbox" name="newUserModules" value="rm" checked> 🧪 RM
-                                    Center</label>
-                                <label><input type="checkbox" name="newUserModules" value="rm_production"> 🏭 RM
-                                    Production</label>
-                                <label><input type="checkbox" name="newUserModules" value="consumable"> 🧱
-                                    วัสดุสิ้นเปลือง</label>
-                                <label><input type="checkbox" name="newUserModules" value="general"> ⚙️ อะไหล่</label>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-success">➕ เพิ่มผู้ใช้</button>
-                    </form>
-                </div>
-
-                <!-- User List -->
-                <div class="user-list-section">
-                    <h4>📋 รายชื่อผู้ใช้</h4>
-                    <div id="userListContainer">
-                        <p>กำลังโหลด...</p>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -251,21 +132,6 @@
                     </svg>
                     พิมพ์ทั้งหมด
                 </button>
-                <!-- User Info -->
-                <div class="user-info" id="userInfoSection" style="display: none;">
-                    <span class="user-name" id="currentUserName">👤 User</span>
-                    <span class="user-role" id="currentUserRole">Role</span>
-                    <button class="btn btn-user-action" onclick="openChangePasswordModal()" title="เปลี่ยนรหัสผ่าน">
-                        🔑
-                    </button>
-                    <button class="btn btn-user-action btn-admin-only" id="adminBtn" onclick="openAdminUserModal()"
-                        title="จัดการผู้ใช้" style="display: none;">
-                        👥
-                    </button>
-                    <button class="btn btn-logout" onclick="handleLogout()" title="ออกจากระบบ">
-                        🚪 ออก
-                    </button>
-                </div>
             </div>
         </div>
     </header>
@@ -979,7 +845,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=92"></script>
+    <script src="app.js?v=91"></script>
 
     <script>
         // Integrated Module Switch Logic

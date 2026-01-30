@@ -367,7 +367,13 @@ function transferToProduction(dataArray) {
 
                 // Prepare data map
                 var map = [];
-                map[0] = "'" + (item.transferDate || new Date().toLocaleDateString('th-TH'));
+                // Format date as D/M/YYYY (AD year, not Buddhist year)
+                var transferDateStr = item.transferDate;
+                if (!transferDateStr) {
+                    var now = new Date();
+                    transferDateStr = now.getDate() + '/' + (now.getMonth() + 1) + '/' + now.getFullYear();
+                }
+                map[0] = "'" + transferDateStr;
                 map[1] = item.productCode || "";
                 map[2] = item.productName || ""; // Write Name (no formula)
                 map[3] = "รับเข้า (โอนจาก Center)";

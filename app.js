@@ -2360,12 +2360,6 @@ async function saveEntryRM() {
     showToast('กำลังบันทึก ' + entriesToSave.length + ' รายการ...');
     console.log('Saving entries:', entriesToSave);
 
-    // DEBUG: Show what will be saved
-    var debugInfo = entriesToSave.map(function (e, i) {
-        return (i + 1) + '. วันที่: ' + e.date + ', ประเภท: ' + e.type + ', ภาชนะ: ' + e.containerQty + ', น้ำหนัก: ' + e.containerWeight;
-    }).join('\n');
-    alert('DEBUG - ข้อมูลที่จะบันทึก:\n' + debugInfo);
-
     try {
         // Process sequentially with AWAIT to prevent concurrency issues
         for (var i = 0; i < entriesToSave.length; i++) {
@@ -2410,7 +2404,6 @@ async function saveEntryRM() {
         // Ask about transfer BEFORE cleanup
         var shouldTransfer = false;
         if (transferEntries.length > 0) {
-            alert('พบรายการเบิกผลิต ' + transferEntries.length + ' รายการ - กดตกลงเพื่อดูคำถามโอนข้อมูล');
             shouldTransfer = confirm('รายการ "เบิกผลิต" ' + transferEntries.length + ' รายการ\n\nต้องการโอนข้อมูลไป RM Production ด้วยหรือไม่?\n\n(ข้อมูลจะถูกบันทึกเป็น "รับเข้า" ใน Production)');
         }
 

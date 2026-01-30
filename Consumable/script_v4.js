@@ -551,11 +551,54 @@ const loadData = async () => {
                 if (loadedItems[0].name !== undefined && loadedItems[0].stock !== undefined) {
                     console.log("Backend sent mapped data. Using directly.");
                     items = loadedItems;
-                } else if (loadedItems[0]["ชื่อสินค้า"] || loadedItems[0]["name"]) {
+                } else if (loadedItems[0]["ID"] || loadedItems[0]["ชื่อสินค้า"] || loadedItems[0]["name"]) {
                     // Check if it's the raw format or mapped format
                     const row = loadedItems[0];
-                    if (row["ชื่อสินค้า"]) {
-                        console.log("Mapping Thai Headers...");
+
+                    // Check if product name is in "ID" field (column shift issue with garbled Thai headers)
+                    const idValue = row["ID"] || "";
+                    const hasLetters = /[a-zA-Zก-๙]/.test(idValue);
+                    const isProductNameInID = idValue.length > 3 && hasLetters;
+
+                    if (isProductNameInID) {
+                        // Use positional mapping since Thai column names are garbled
+                        console.log("Mapping from ID field (using positional mapping)...");
+                        loadedItems = loadedItems.map(row => {
+                            const keys = Object.keys(row);
+                            // Map by position:
+                            // 0: ID = name
+                            // 1: category
+                            // 2: stockCartons
+                            // 3: stockPartialKg
+                            // 4: kgPerCarton
+                            // 5: totalKg (skip - calculated)
+                            // 6: minThreshold
+                            // 7: pcsPerKg
+                            // 8: empty
+                            // 9: pcsPerPack
+                            // 10: fgPcsPerCarton
+                            return {
+                                name: row[keys[0]],  // ID = product name
+                                category: row[keys[1]] || 'weight',
+                                stockCartons: parseFloat(String(row[keys[2]]).replace(/,/g, '')) || 0,
+                                stockPartialKg: parseFloat(String(row[keys[3]]).replace(/,/g, '')) || 0,
+                                kgPerCarton: parseFloat(String(row[keys[4]]).replace(/,/g, '')) || 25,
+                                // keys[5] is totalKg (calculated) - skip
+                                minThreshold: parseFloat(String(row[keys[6]]).replace(/,/g, '')) || 0,
+                                pcsPerKg: parseFloat(String(row[keys[7]]).replace(/,/g, '')) || 0,
+                                // keys[8] is empty
+                                pcsPerPack: parseFloat(String(row[keys[9]]).replace(/,/g, '')) || 1,
+                                fgPcsPerCarton: parseFloat(String(row[keys[10]]).replace(/,/g, '')) || 1,
+                                // Roll-specific fields
+                                rollLength: parseFloat(String(row[keys[16]] || row["ความยาวม้วน (ม.)"] || 0).replace(/,/g, '')) || 0,
+                                cutLength: parseFloat(String(row[keys[17]] || row["ความยาวตัด (มม.)"] || 0).replace(/,/g, '')) || 0,
+                                pcsPerRoll: 0,
+                                fgYieldPerRoll: parseFloat(String(row[keys[14]] || row["Yield/ม้วน"] || 0).replace(/,/g, '')) || 0,
+                                stockCode: row[keys[15]] || row["StockCode"] || ""
+                            };
+                        });
+                    } else if (row["ชื่อสินค้า"]) {
+                        console.log("Mapping Thai Headers (normal)...");
                         loadedItems = loadedItems.map(row => ({
                             name: row["ชื่อสินค้า"],
                             category: row["ประเภท"] || 'weight',

@@ -2201,6 +2201,20 @@ mark.search-highlight {
     border-bottom: 2px solid #10b981;
 }
 
+/* ==================== RM PRODUCTION STYLES (Blue Theme) ==================== */
+.stock-card-production {
+    border-left: 4px solid #3b82f6;
+}
+
+.stock-card-header-production {
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+}
+
+.stock-card-summary-production {
+    background: linear-gradient(135deg, #dbeafe, #eff6ff);
+    border-bottom: 2px solid #3b82f6;
+}
+
 .stock-table-rm th {
     background: #f3f4f6;
     color: #4b5563;

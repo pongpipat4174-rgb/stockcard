@@ -1043,12 +1043,17 @@ function renderStockCardsRM(products) {
         });
 
         var q = currentSearchQuery;
-        html += '<div class="stock-card stock-card-rm" id="card-rm-' + idx + '">';
-        html += '<div class="stock-card-header stock-card-header-rm">';
+        var isProduction = currentModule === 'rm_production';
+        var cardClass = 'stock-card stock-card-rm' + (isProduction ? ' stock-card-production' : '');
+        var headerClass = 'stock-card-header stock-card-header-rm' + (isProduction ? ' stock-card-header-production' : '');
+        var summaryClass = 'stock-card-summary stock-card-summary-rm' + (isProduction ? ' stock-card-summary-production' : '');
+
+        html += '<div class="' + cardClass + '" id="card-rm-' + idx + '">';
+        html += '<div class="' + headerClass + '">';
         html += '<div class="stock-card-title"><h3>🧪 ' + highlightText(prod.name, q) + '</h3><span class="product-code">' + highlightText(prod.code, q) + '</span></div>';
         html += '<button class="btn print-btn" onclick="printSingleCard(\'card-rm-' + idx + '\', \'' + prod.name + '\', \'' + prod.code + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> พิมพ์</button>';
         html += '</div>';
-        html += '<div class="stock-card-summary stock-card-summary-rm">';
+        html += '<div class="' + summaryClass + '">';
 
         // Row 1: รับเข้า + เบิกออก
         html += '<div class="summary-item"><span class="summary-label">รับเข้าทั้งหมด (Kg)</span><span class="summary-value positive">+' + formatNumber(prod.totalIn) + '</span></div>';

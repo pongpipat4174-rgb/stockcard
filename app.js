@@ -56,6 +56,245 @@ const SHEET_CONFIG = {
 let currentModule = 'package';
 let isSwitchingModule = false; // Prevent double-tap on mobile
 
+// ==================== AUTHENTICATION SYSTEM ====================
+
+// User Database (Manual Login)
+// Format: { username, password, name, role, modules }
+// Role: admin (all access), editor (add/edit), viewer (read only)
+// Modules: array of allowed modules ['package', 'rm', 'rm_production', 'consumable', 'general']
+const USER_DATABASE = [
+    { username: 'admin', password: 'admin123', name: 'Admin', role: 'admin', modules: ['package', 'rm', 'rm_production', 'consumable', 'general'] },
+    { username: 'user1', password: 'user123', name: 'พนักงาน 1', role: 'editor', modules: ['package', 'rm'] },
+    { username: 'user2', password: 'user123', name: 'พนักงาน 2', role: 'editor', modules: ['rm_production'] },
+    { username: 'viewer', password: 'view123', name: 'ผู้ดูอย่างเดียว', role: 'viewer', modules: ['package', 'rm', 'rm_production'] },
+    // เพิ่ม user ได้ตามต้องการ
+];
+
+// Current logged in user
+let currentUser = null;
+
+// Activity Log (will be stored in localStorage and optionally synced to Sheet)
+let activityLog = [];
+
+// Check if user is logged in on page load
+function checkAuth() {
+    const savedUser = localStorage.getItem('stockcard_user');
+    if (savedUser) {
+        try {
+            currentUser = JSON.parse(savedUser);
+            showAuthenticatedUI();
+            logActivity('session_resume', 'กลับเข้าสู่ระบบ');
+            return true;
+        } catch (e) {
+            localStorage.removeItem('stockcard_user');
+        }
+    }
+    showLoginScreen();
+    return false;
+}
+
+// Handle Login
+function handleLogin(event) {
+    event.preventDefault();
+
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorDiv = document.getElementById('loginError');
+
+    // Find user in database
+    const user = USER_DATABASE.find(u => u.username === username && u.password === password);
+
+    if (user) {
+        // Login successful
+        currentUser = {
+            username: user.username,
+            name: user.name,
+            role: user.role,
+            modules: user.modules,
+            loginTime: new Date().toISOString()
+        };
+
+        // Save to localStorage
+        localStorage.setItem('stockcard_user', JSON.stringify(currentUser));
+
+        // Log activity
+        logActivity('login', 'เข้าสู่ระบบสำเร็จ');
+
+        // Show authenticated UI
+        showAuthenticatedUI();
+
+        // Clear form
+        document.getElementById('loginForm').reset();
+        errorDiv.style.display = 'none';
+
+        showToast('✅ ยินดีต้อนรับ, ' + user.name);
+    } else {
+        // Login failed
+        errorDiv.textContent = '❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+        errorDiv.style.display = 'block';
+
+        // Log failed attempt
+        logActivity('login_failed', 'พยายามเข้าสู่ระบบล้มเหลว: ' + username);
+    }
+
+    return false;
+}
+
+// Handle Logout
+function handleLogout() {
+    if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
+        logActivity('logout', 'ออกจากระบบ');
+
+        currentUser = null;
+        localStorage.removeItem('stockcard_user');
+
+        showLoginScreen();
+        showToast('👋 ออกจากระบบเรียบร้อย');
+    }
+}
+
+// Show Login Screen
+function showLoginScreen() {
+    document.getElementById('loginOverlay').classList.remove('hidden');
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+// Show Authenticated UI
+function showAuthenticatedUI() {
+    // Hide login overlay
+    document.getElementById('loginOverlay').classList.add('hidden');
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.body.style.overflow = '';
+
+    // Show user info
+    const userInfoSection = document.getElementById('userInfoSection');
+    if (userInfoSection) {
+        userInfoSection.style.display = 'flex';
+        document.getElementById('currentUserName').textContent = '👤 ' + currentUser.name;
+        document.getElementById('currentUserRole').textContent = currentUser.role.toUpperCase();
+    }
+
+    // Apply module permissions
+    applyModulePermissions();
+
+    // Apply action permissions
+    applyActionPermissions();
+}
+
+// Apply Module Permissions (show/hide tabs)
+function applyModulePermissions() {
+    if (!currentUser) return;
+
+    const moduleMap = {
+        'package': 'tabPackage',
+        'rm': 'tabRM',
+        'rm_production': 'tabRMProduction',
+        'consumable': 'tabConsumable',
+        'general': 'tabGeneral'
+    };
+
+    Object.keys(moduleMap).forEach(module => {
+        const tab = document.getElementById(moduleMap[module]);
+        if (tab) {
+            if (currentUser.modules.includes(module) || currentUser.role === 'admin') {
+                tab.classList.remove('disabled');
+            } else {
+                tab.classList.add('disabled');
+            }
+        }
+    });
+
+    // If current module is not allowed, switch to first allowed
+    if (!currentUser.modules.includes(currentModule) && currentUser.role !== 'admin') {
+        const firstAllowed = currentUser.modules[0] || 'package';
+        switchModule(firstAllowed, null);
+    }
+}
+
+// Apply Action Permissions (show/hide buttons based on role)
+function applyActionPermissions() {
+    if (!currentUser) return;
+
+    const isViewer = currentUser.role === 'viewer';
+
+    // Hide add/edit buttons for viewers
+    const addBtn = document.getElementById('addEntryBtn');
+    const smartWithdrawBtn = document.getElementById('smartWithdrawBtn');
+    const transferBtn = document.getElementById('transferBtn');
+    const recalculateBtn = document.getElementById('recalculateBtn');
+
+    if (addBtn) addBtn.style.display = isViewer ? 'none' : '';
+    if (smartWithdrawBtn && !isViewer) smartWithdrawBtn.style.display = '';
+    if (transferBtn && !isViewer) transferBtn.style.display = '';
+    if (recalculateBtn && !isViewer) recalculateBtn.style.display = '';
+
+    // Also hide delete buttons for viewers (handled in render functions)
+}
+
+// Check if current user can perform action
+function canPerformAction(action) {
+    if (!currentUser) return false;
+
+    if (currentUser.role === 'admin') return true;
+    if (currentUser.role === 'editor' && ['add', 'edit', 'delete', 'view'].includes(action)) return true;
+    if (currentUser.role === 'viewer' && action === 'view') return true;
+
+    return false;
+}
+
+// Check if current user can access module
+function canAccessModule(module) {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    return currentUser.modules.includes(module);
+}
+
+// Log Activity
+function logActivity(action, details, module = null) {
+    const logEntry = {
+        timestamp: new Date().toISOString(),
+        user: currentUser ? currentUser.username : 'anonymous',
+        userName: currentUser ? currentUser.name : 'ไม่ระบุ',
+        module: module || currentModule,
+        action: action,
+        details: details
+    };
+
+    // Add to local log
+    activityLog.push(logEntry);
+
+    // Keep only last 1000 entries in memory
+    if (activityLog.length > 1000) {
+        activityLog = activityLog.slice(-1000);
+    }
+
+    // Save to localStorage
+    try {
+        const existingLog = JSON.parse(localStorage.getItem('stockcard_activity_log') || '[]');
+        existingLog.push(logEntry);
+        // Keep only last 500 in localStorage
+        const trimmedLog = existingLog.slice(-500);
+        localStorage.setItem('stockcard_activity_log', JSON.stringify(trimmedLog));
+    } catch (e) {
+        console.warn('Could not save activity log:', e);
+    }
+
+    // Console log for debugging
+    console.log('[Activity]', logEntry);
+}
+
+// Get Activity Log
+function getActivityLog() {
+    try {
+        return JSON.parse(localStorage.getItem('stockcard_activity_log') || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+// ==================== END AUTHENTICATION SYSTEM ====================
+
 // Data containers
 let stockData = [];
 let rmStockData = [];
@@ -125,10 +364,19 @@ function switchModule(module, event) {
         return;
     }
 
+    // Check module permission
+    if (!canAccessModule(module)) {
+        showToast('❌ คุณไม่มีสิทธิ์เข้าถึงโมดูลนี้');
+        return;
+    }
+
     // Set lock
     isSwitchingModule = true;
     currentModule = module;
     console.log('Switching to module:', module);
+
+    // Log activity
+    logActivity('view_module', 'เข้าดูโมดูล: ' + module, module);
 
     // Save to sessionStorage
     try {
@@ -333,7 +581,14 @@ async function fetchRMMasterData() {
 
 // Initialize
 async function init() {
-    console.log('Initializing Stock Card System V.14...');
+    console.log('Initializing Stock Card System V.16 with Auth...');
+
+    // Check authentication first
+    if (!checkAuth()) {
+        // User not logged in - login screen will be shown
+        hideLoading();
+        return;
+    }
 
     // Safety Timeout: Force hide loading after 20 seconds if stuck
     const safetyTimeout = setTimeout(function () {

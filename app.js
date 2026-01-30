@@ -2301,7 +2301,7 @@ async function saveEntryRM() {
                 productCode: productCode,
                 productName: productName,
                 type: type,
-                containerQty: contQty,
+                containerQty: estContainerOut, // Use container out for withdrawal
                 containerWeight: containerWeight,
                 remainder: rem,
                 inQty: 0,
@@ -2342,7 +2342,7 @@ async function saveEntryRM() {
             productCode: productCode,
             productName: productName,
             type: type,
-            containerQty: containerQty,
+            containerQty: isWithdrawal ? containerOut : containerQty, // Use containerOut for withdrawal
             containerWeight: containerWeight,
             remainder: remainder,
             inQty: inQty,

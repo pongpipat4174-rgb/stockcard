@@ -191,9 +191,13 @@ function doPost(e) {
                         if (expYear > 2500) expYear = expYear - 543;
                         var expDateObj = new Date(expYear, expMonth, expDay);
                         expDateObj.setHours(0, 0, 0, 0);
-                        var today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        var diffTime = expDateObj.getTime() - today.getTime();
+                        // Use Thailand timezone (UTC+7)
+                        var now = new Date();
+                        var thaiOffset = 7 * 60; // Thailand is UTC+7
+                        var utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+                        var thaiTime = new Date(utc + (thaiOffset * 60000));
+                        thaiTime.setHours(0, 0, 0, 0);
+                        var diffTime = expDateObj.getTime() - thaiTime.getTime();
                         daysLeft = Math.floor(diffTime / (1000 * 60 * 60 * 24));
                     }
                 } catch (e) {
@@ -404,9 +408,13 @@ function transferToProduction(dataArray) {
                             if (expYearPD > 2500) expYearPD = expYearPD - 543;
                             var expDateObjPD = new Date(expYearPD, expMonthPD, expDayPD);
                             expDateObjPD.setHours(0, 0, 0, 0);
-                            var todayPD = new Date();
-                            todayPD.setHours(0, 0, 0, 0);
-                            var diffTimePD = expDateObjPD.getTime() - todayPD.getTime();
+                            // Use Thailand timezone (UTC+7)
+                            var nowPD = new Date();
+                            var thaiOffsetPD = 7 * 60;
+                            var utcPD = nowPD.getTime() + (nowPD.getTimezoneOffset() * 60000);
+                            var thaiTimePD = new Date(utcPD + (thaiOffsetPD * 60000));
+                            thaiTimePD.setHours(0, 0, 0, 0);
+                            var diffTimePD = expDateObjPD.getTime() - thaiTimePD.getTime();
                             daysLeftPD = Math.floor(diffTimePD / (1000 * 60 * 60 * 24));
                         }
                     } catch (e) {

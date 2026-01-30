@@ -381,13 +381,16 @@ function transferToProduction(dataArray) {
 
                 // Prepare data map
                 var map = [];
-                // Write date as plain text (setNumberFormat('@') already applied)
+                // Write date - ensure it's plain text by using explicit text format
                 var transferDateStr = item.transferDate;
                 if (!transferDateStr) {
                     var now = new Date();
                     transferDateStr = now.getDate() + '/' + (now.getMonth() + 1) + '/' + now.getFullYear();
                 }
-                map[0] = transferDateStr;
+                // Use setValue separately for date to ensure plain text
+                var cellA = productionSheet.getRange(targetRow, 1);
+                cellA.setValue(transferDateStr);
+                map[0] = null; // Skip in setValues since we already set it
                 map[1] = item.productCode || "";
                 map[2] = item.productName || ""; // Write Name (no formula)
                 map[3] = "รับเข้า (โอนจาก Center)";
@@ -459,13 +462,13 @@ function transferToProduction(dataArray) {
                 map[16] = item.supplier || ""; // Q (Supplier)
                 map[17] = "โอนจาก Center: " + (item.originalDate || "");
 
-                // Write data (skip formula cells)
+                // Write data (skip Column A which is already set separately)
                 var requests = [];
                 var currentBatchVal = [];
                 var currentBatchStart = -1;
 
-                // Write ALL columns (no formula, no skip)
-                for (var k = 0; k < 19; k++) {
+                // Write columns B onwards (skip Column A which was set separately)
+                for (var k = 1; k < 19; k++) {
                     if (currentBatchStart === -1) currentBatchStart = k;
                     var valToWrite = (map[k] === null || map[k] === undefined) ? "" : map[k];
                     currentBatchVal.push(valToWrite);
@@ -475,8 +478,7 @@ function transferToProduction(dataArray) {
                     requests.push({ col: currentBatchStart + 1, vals: [currentBatchVal] });
                 }
 
-                // FIRST: Set Column A format to text BEFORE writing (prevent Buddhist year conversion)
-                productionSheet.getRange(targetRow, 1).setNumberFormat('@');
+                // Column A format already set by clearFormat + setNumberFormat above
 
                 requests.forEach(function (req) {
                     productionSheet.getRange(targetRow, req.col, 1, req.vals[0].length).setValues(req.vals);

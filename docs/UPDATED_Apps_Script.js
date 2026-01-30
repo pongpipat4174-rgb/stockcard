@@ -18,6 +18,14 @@
 function doGet(e) {
     var action = e.parameter.action;
 
+    // Auto-initialize Users and ActivityLog sheets on first call
+    try {
+        getUsersSheet();
+        getActivityLogSheet();
+    } catch (initError) {
+        // Ignore initialization errors
+    }
+
     // Get RM Master Data
     if (action === 'getRMMaster') {
         return getRMMasterData();
@@ -548,6 +556,19 @@ function transferToProduction(dataArray) {
 
 
 // ==================== USER MANAGEMENT ====================
+
+/**
+ * รันฟังก์ชันนี้ครั้งแรกเพื่อสร้าง Tab Users และ ActivityLog
+ * วิธีรัน: เลือก initializeUserSystem จาก dropdown แล้วกดปุ่ม Run ▶️
+ */
+function initializeUserSystem() {
+    var usersSheet = getUsersSheet();
+    var activitySheet = getActivityLogSheet();
+
+    Logger.log('✅ Users sheet created/verified: ' + usersSheet.getName());
+    Logger.log('✅ ActivityLog sheet created/verified: ' + activitySheet.getName());
+    Logger.log('📋 ระบบพร้อมใช้งาน!');
+}
 
 // Get or Create Users Sheet
 function getUsersSheet() {

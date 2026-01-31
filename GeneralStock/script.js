@@ -338,6 +338,10 @@ transForm.addEventListener('submit', async (e) => {
         item.stock -= qty;
     }
 
+    // Get current time
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
     const trans = {
         id: Date.now().toString(),
         itemId: item.id,
@@ -345,6 +349,7 @@ transForm.addEventListener('submit', async (e) => {
         type: type,
         qty: qty,
         date: date,
+        time: timeStr,
         note: note,
         remaining: item.stock
     };
@@ -400,16 +405,19 @@ window.viewItemDetails = (index) => {
     document.getElementById('detail-modal').style.display = 'flex';
 };
 // --- HISTORY LOGIC ---
+let currentHistoryItemIndex = null; // Store item index for transaction operations
+
 window.openHistoryModal = (index) => {
+    currentHistoryItemIndex = index; // Store for edit/delete operations
     const item = items[index];
     const itemTrans = transactions.filter(t => t.itemId === item.id);
     const hBody = document.getElementById('history-body');
     hBody.innerHTML = '';
 
-    itemTrans.forEach(t => {
+    itemTrans.forEach((t, tIndex) => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${t.date}</td>
+            <td>${t.date} <span style="color:#64748b;font-size:0.85em">${t.time || ''}</span></td>
             <td>
                 <span style="color: ${t.type === 'IN' ? '#059669' : '#dc2626'}; font-weight:600">
                     ${t.type === 'IN' ? 'รับเข้า' : 'เบิกออก'}
@@ -418,15 +426,94 @@ window.openHistoryModal = (index) => {
             <td class="center">${t.qty}</td>
             <td class="center" style="font-weight:700">${t.remaining}</td>
             <td>${t.note || '-'}</td>
+            <td class="center">
+                <button onclick="editTransaction('${t.id}')" style="background:#3b82f6;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;margin-right:4px" title="แก้ไข">✏️</button>
+                <button onclick="deleteTransaction('${t.id}')" style="background:#ef4444;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer" title="ลบ">🗑️</button>
+            </td>
         `;
         hBody.appendChild(row);
     });
 
     if (itemTrans.length === 0) {
-        hBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8">ไม่พบประวัติ</td></tr>';
+        hBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#94a3b8">ไม่พบประวัติ</td></tr>';
     }
 
     document.getElementById('history-modal').style.display = 'flex';
+};
+
+// --- DELETE TRANSACTION ---
+window.deleteTransaction = async (transId) => {
+    const transIndex = transactions.findIndex(t => t.id === transId);
+    if (transIndex === -1) return;
+
+    const trans = transactions[transIndex];
+    if (!confirm(`ยืนยันลบรายการ: ${trans.type === 'IN' ? 'รับเข้า' : 'เบิกออก'} ${trans.qty} ชิ้น วันที่ ${trans.date}?`)) return;
+
+    // Revert stock change
+    const itemIndex = items.findIndex(i => i.id === trans.itemId);
+    if (itemIndex !== -1) {
+        if (trans.type === 'IN') {
+            items[itemIndex].stock -= trans.qty; // Undo receive
+        } else {
+            items[itemIndex].stock += trans.qty; // Undo withdraw
+        }
+    }
+
+    // Remove transaction
+    transactions.splice(transIndex, 1);
+
+    // Close and reopen to refresh
+    closeModal('history-modal');
+    renderTable();
+    updateStats();
+    await saveData();
+
+    // Reopen history modal
+    if (currentHistoryItemIndex !== null) {
+        openHistoryModal(currentHistoryItemIndex);
+    }
+};
+
+// --- EDIT TRANSACTION ---
+window.editTransaction = (transId) => {
+    const trans = transactions.find(t => t.id === transId);
+    if (!trans) return;
+
+    const newQty = prompt(`แก้ไขจำนวน (ปัจจุบัน: ${trans.qty}):`, trans.qty);
+    if (newQty === null) return;
+
+    const parsedQty = parseFloat(newQty);
+    if (isNaN(parsedQty) || parsedQty <= 0) {
+        alert('กรุณาใส่จำนวนที่ถูกต้อง');
+        return;
+    }
+
+    const qtyDiff = parsedQty - trans.qty;
+
+    // Update item stock
+    const itemIndex = items.findIndex(i => i.id === trans.itemId);
+    if (itemIndex !== -1) {
+        if (trans.type === 'IN') {
+            items[itemIndex].stock += qtyDiff; // Adjust for receive
+        } else {
+            items[itemIndex].stock -= qtyDiff; // Adjust for withdraw
+        }
+    }
+
+    // Update transaction
+    trans.qty = parsedQty;
+    trans.remaining = items[itemIndex]?.stock || trans.remaining;
+
+    // Refresh UI
+    closeModal('history-modal');
+    renderTable();
+    updateStats();
+    saveData();
+
+    // Reopen history modal
+    if (currentHistoryItemIndex !== null) {
+        openHistoryModal(currentHistoryItemIndex);
+    }
 };
 
 // --- DELETE LOGIC ---

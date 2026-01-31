@@ -62,9 +62,11 @@ function loadGeneralStock() {
   var transSheet = ss.getSheetByName('GeneralTrans');
   var transactions = [];
   if (transSheet && transSheet.getLastRow() > 1) {
-    // อ่าน A ถึง H (8 คอลัมน์)
-    var tData = transSheet.getRange(2, 1, transSheet.getLastRow() - 1, 8).getValues();
-    transactions = tData.map(function(r) {
+    // อ่าน A ถึง I (9 คอลัมน์ รวม Time)
+    var tData = transSheet.getRange(2, 1, transSheet.getLastRow() - 1, 9).getValues();
+    transactions = tData.filter(function(r) {
+      return r[0] && r[0].toString().trim() !== '';
+    }).map(function(r) {
       // แปลงวันที่เป็น String format YYYY-MM-DD (ถ้าระบบเก็บเป็น Date object)
       var d = r[5];
       var dateStr = d;
@@ -73,14 +75,15 @@ function loadGeneralStock() {
       }
       
       return {
-        id: r[0],
-        itemId: r[1],
-        itemName: r[2],
-        type: r[3],
-        qty: r[4],
+        id: r[0] ? String(r[0]) : '',
+        itemId: r[1] ? String(r[1]) : '',
+        itemName: r[2] || '',
+        type: r[3] || '',
+        qty: r[4] || 0,
         date: dateStr,
-        note: r[6],
-        remaining: r[7]
+        time: r[6] || '',
+        note: r[7] || '',
+        remaining: r[8] || 0
       };
     });
   }
@@ -132,11 +135,11 @@ function saveGeneralStock(data) {
   var transSheet = ss.getSheetByName('GeneralTrans');
   if (!transSheet) {
     transSheet = ss.insertSheet('GeneralTrans');
-    transSheet.appendRow(['ID', 'ItemID', 'ItemName', 'Type', 'Qty', 'Date', 'Note', 'Remaining']);
+    transSheet.appendRow(['ID', 'ItemID', 'ItemName', 'Type', 'Qty', 'Date', 'Time', 'Note', 'Remaining']);
   }
   
   if (transSheet.getLastRow() > 1) {
-    transSheet.getRange(2, 1, transSheet.getLastRow()-1, 8).clearContent();
+    transSheet.getRange(2, 1, transSheet.getLastRow()-1, 9).clearContent();
   }
   
   if (trans && trans.length > 0) {
@@ -148,11 +151,12 @@ function saveGeneralStock(data) {
         t.type,
         t.qty,
         t.date,
-        t.note,
+        t.time || '',
+        t.note || '',
         t.remaining
       ];
     });
-    transSheet.getRange(2, 1, tRows.length, 8).setValues(tRows);
+    transSheet.getRange(2, 1, tRows.length, 9).setValues(tRows);
   }
   
   return ContentService.createTextOutput(JSON.stringify({status: 'success'}))

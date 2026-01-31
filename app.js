@@ -2388,6 +2388,18 @@ async function saveEntryRM() {
                 showToast('กำลังบันทึกรายการที่ ' + (i + 1) + '/' + entriesToSave.length + '...');
             }
 
+            // Determine which sheet to save to based on current module
+            var targetConfig = (currentModule === 'rm_production') ? SHEET_CONFIG.rm_production : SHEET_CONFIG.rm;
+
+            // *** DEBUG: แสดง module และ sheetName เพื่อตรวจสอบ ***
+            console.log('=== SAVE DEBUG ===');
+            console.log('currentModule:', currentModule);
+            console.log('targetConfig.sheetName:', targetConfig.sheetName);
+            console.log('entry.type:', entry.type);
+
+            // Uncomment line below to see popup debug (for testing only)
+            alert('DEBUG:\nModule: ' + currentModule + '\nSheet: ' + targetConfig.sheetName + '\nType: ' + entry.type);
+
             // Using fetch in await mode
             await fetch(APPS_SCRIPT_URL, {
                 method: "POST",
@@ -2398,8 +2410,8 @@ async function saveEntryRM() {
                 redirect: "follow",
                 body: JSON.stringify({
                     action: 'add_rm',
-                    spreadsheetId: SHEET_CONFIG.rm.id,
-                    sheetName: SHEET_CONFIG.rm.sheetName,
+                    spreadsheetId: targetConfig.id,
+                    sheetName: targetConfig.sheetName,
                     entry: entry
                 })
             });
@@ -2411,16 +2423,24 @@ async function saveEntryRM() {
         showToast('บันทึกสำเร็จทั้งหมด!');
 
         // Check if any entry contains "เบิกผลิต" - ask to transfer to Production
-        console.log('Checking entries for transfer:', entriesToSave.map(e => e.type));
-        var transferEntries = entriesToSave.filter(function (e) {
-            return e.type && e.type.includes('เบิกผลิต');
-        });
-        console.log('Transfer entries found:', transferEntries.length, transferEntries);
-
-        // Ask about transfer BEFORE cleanup
+        // *** IMPORTANT: Only trigger transfer when in RM CENTER, not RM Production ***
+        console.log('Checking entries for transfer. Current module:', currentModule);
+        var transferEntries = [];
         var shouldTransfer = false;
-        if (transferEntries.length > 0) {
-            shouldTransfer = confirm('รายการ "เบิกผลิต" ' + transferEntries.length + ' รายการ\n\nต้องการโอนข้อมูลไป RM Production ด้วยหรือไม่?\n\n(ข้อมูลจะถูกบันทึกเป็น "รับเข้า" ใน Production)');
+
+        // Only ask about transfer if we're in RM Center module
+        if (currentModule === 'rm') {
+            transferEntries = entriesToSave.filter(function (e) {
+                return e.type && e.type.includes('เบิกผลิต');
+            });
+            console.log('Transfer entries found:', transferEntries.length, transferEntries);
+
+            // Ask about transfer BEFORE cleanup
+            if (transferEntries.length > 0) {
+                shouldTransfer = confirm('รายการ "เบิกผลิต" ' + transferEntries.length + ' รายการ\n\nต้องการโอนข้อมูลไป RM Production ด้วยหรือไม่?\n\n(ข้อมูลจะถูกบันทึกเป็น "รับเข้า" ใน Production)');
+            }
+        } else {
+            console.log('Skipping transfer prompt - already in RM Production module');
         }
 
         // Success Cleanup

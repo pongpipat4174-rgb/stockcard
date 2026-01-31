@@ -1429,14 +1429,14 @@ window.editTransaction = async (transId, itemIndex) => {
         item.stockCartons -= diff;
     }
 
-    // Update transaction record
-    if (isRoll) {
-        trans.qtyUnit = newQty;
-        trans.qtyCartons = newQty;
-    } else {
-        trans.qtyKg = newQty;
-        trans.qtyCartons = newQty / (item.kgPerCarton || 25);
+    // Update transaction record - update ALL fields to ensure display works
+    trans.qtyUnit = newQty; // Always update for unit/roll display
+    trans.qtyCartons = newQty; // Column H in sheet
+    if (!isRoll) {
+        trans.qtyKg = newQty; // For weight items
     }
+
+    console.log('Updated trans:', trans.qtyUnit, trans.qtyCartons, trans.qtyKg);
 
     // Recalculate remaining stock
     trans.remainingStock = item.stockCartons;

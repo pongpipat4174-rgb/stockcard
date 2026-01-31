@@ -415,9 +415,15 @@ window.openHistoryModal = (index) => {
     hBody.innerHTML = '';
 
     itemTrans.forEach((t, tIndex) => {
+        // Format time - only show if it's a valid time format (HH:MM)
+        let timeDisplay = '';
+        if (t.time && typeof t.time === 'string' && t.time.match(/^\d{1,2}:\d{2}/)) {
+            timeDisplay = t.time;
+        }
+
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${t.date} <span style="color:#64748b;font-size:0.85em">${t.time || ''}</span></td>
+            <td>${t.date}${timeDisplay ? ' <span style="color:#64748b;font-size:0.85em">' + timeDisplay + '</span>' : ''}</td>
             <td>
                 <span style="color: ${t.type === 'IN' ? '#059669' : '#dc2626'}; font-weight:600">
                     ${t.type === 'IN' ? 'รับเข้า' : 'เบิกออก'}

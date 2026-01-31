@@ -509,3 +509,38 @@ th {
         padding: 16px;
     }
 }
+
+/* Transaction Action Buttons (Icon Style) */
+.action-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    margin: 0 2px;
+    transition: all 0.2s;
+}
+
+.action-btn.edit {
+    background: #3b82f6;
+    color: white;
+}
+
+.action-btn.edit:hover {
+    background: #2563eb;
+    transform: scale(1.1);
+}
+
+.action-btn.delete {
+    background: #ef4444;
+    color: white;
+}
+
+.action-btn.delete:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}

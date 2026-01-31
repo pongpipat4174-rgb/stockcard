@@ -426,9 +426,9 @@ window.openHistoryModal = (index) => {
             <td class="center">${t.qty}</td>
             <td class="center" style="font-weight:700">${t.remaining}</td>
             <td>${t.note || '-'}</td>
-            <td class="center">
-                <button onclick="editTransaction('${t.id}')" style="background:#3b82f6;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;margin-right:4px" title="แก้ไข">✏️</button>
-                <button onclick="deleteTransaction('${t.id}')" style="background:#ef4444;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer" title="ลบ">🗑️</button>
+            <td class="center" style="white-space:nowrap">
+                <button onclick="editTransaction('${t.id}')" class="action-btn edit" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="deleteTransaction('${t.id}')" class="action-btn delete" title="ลบ"><i class="fa-solid fa-trash"></i></button>
             </td>
         `;
         hBody.appendChild(row);
@@ -527,6 +527,14 @@ window.deleteItem = async (index) => {
 };
 
 window.editItem = (index) => openModal(index);
+
+// --- EDIT ITEM FROM DETAIL ---
+window.editItemFromDetail = function () {
+    if (currentDetailIndex !== null) {
+        closeModal('detail-modal');
+        openModal(currentDetailIndex);
+    }
+};
 
 // --- EDIT IMAGE FROM DETAIL ---
 window.editImageFromDetail = function () {

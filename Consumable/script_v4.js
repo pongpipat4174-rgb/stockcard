@@ -1397,7 +1397,7 @@ window.editTransaction = async (transId, itemIndex) => {
 
     const trans = transactions[transIdx];
     const item = items[itemIndex];
-    const isRoll = item.category === 'roll';
+    const isRoll = item.category === 'unit'; // 'unit' means roll items (ม้วน)
 
     const currentQty = isRoll ? (trans.qtyUnit || trans.qtyCartons) : (trans.qtyKg || trans.qtyCartons);
     const unitLabel = isRoll ? 'ม้วน' : 'กก.';

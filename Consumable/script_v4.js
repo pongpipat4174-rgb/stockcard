@@ -1451,6 +1451,32 @@ window.editTransaction = async (transId, itemIndex) => {
         });
     }
 
+    // Update transaction in Google Sheet
+    try {
+        const updatePayload = {
+            action: 'update_consumable_transaction',
+            transactionId: transId,
+            qtyKg: trans.qtyKg || 0,
+            qtyCartons: trans.qtyCartons,
+            remainingStock: trans.remainingStock
+        };
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(updatePayload),
+            headers: { "Content-Type": "text/plain" }
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            console.log('Updated in Sheet:', transId);
+        } else {
+            console.error('Sheet update failed:', result.error);
+        }
+    } catch (e) {
+        console.error('Update in Sheet failed:', e);
+    }
+
     // Re-render and save
     openHistoryModal(itemIndex);
     await saveData();

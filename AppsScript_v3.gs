@@ -44,6 +44,9 @@ function doPost(e) {
     } else if (action === 'delete_consumable_transaction') {
       // Delete a specific transaction from Consumable_Transactions
       return deleteConsumableTransaction(data);
+    } else if (action === 'update_consumable_transaction') {
+      // Update a specific transaction in Consumable_Transactions
+      return updateConsumableTransaction(data);
     }
     
     return ContentService.createTextOutput(JSON.stringify({
@@ -1047,6 +1050,77 @@ function deleteConsumableTransaction(data) {
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       message: 'Deleted transaction ' + transactionId
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Update a specific transaction in Consumable_Transactions sheet
+ */
+function updateConsumableTransaction(data) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var transSheetName = 'Consumable_Transactions';
+    var transSheet = ss.getSheetByName(transSheetName);
+    
+    if (!transSheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Sheet not found: ' + transSheetName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var transactionId = data.transactionId ? data.transactionId.toString() : '';
+    
+    if (!transactionId) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'No transaction ID provided'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Find the row with matching ID (Column A)
+    var allData = transSheet.getDataRange().getValues();
+    var headers = allData[0];
+    var rowToUpdate = -1;
+    
+    for (var i = 1; i < allData.length; i++) {
+      if (allData[i][0] && allData[i][0].toString() === transactionId) {
+        rowToUpdate = i + 1; // Sheet rows are 1-indexed
+        break;
+      }
+    }
+    
+    if (rowToUpdate === -1) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Transaction not found: ' + transactionId
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Update specific columns based on data provided
+    // Column indices: G = จำนวน (กก.) = 7, H = จำนวน (ลัง) = 8, I = คงเหลือ (ลัง) = 9
+    // With time column: G = 7, H = 8, I = 9 (0-indexed: 6, 7, 8)
+    
+    if (data.qtyKg !== undefined) {
+      transSheet.getRange(rowToUpdate, 7).setValue(data.qtyKg); // Column G
+    }
+    if (data.qtyCartons !== undefined) {
+      transSheet.getRange(rowToUpdate, 8).setValue(data.qtyCartons); // Column H
+    }
+    if (data.remainingStock !== undefined) {
+      transSheet.getRange(rowToUpdate, 9).setValue(data.remainingStock); // Column I
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'Updated transaction ' + transactionId
     })).setMimeType(ContentService.MimeType.JSON);
     
   } catch (error) {

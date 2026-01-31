@@ -672,19 +672,37 @@ const loadData = async () => {
                 if (data.transactions && Array.isArray(data.transactions)) {
                     let loadedTrans = data.transactions;
                     if (loadedTrans.length > 0 && (loadedTrans[0]["ชื่อสินค้า"] || loadedTrans[0]["วันที่"])) {
-                        loadedTrans = loadedTrans.map(row => ({
-                            id: row["ID"],
-                            date: row["วันที่"],
-                            time: row["เวลา"] || '', // เวลาที่บันทึก
-                            type: row["ประเภท"],
-                            itemIndex: row["ItemIndex"],
-                            itemName: row["ชื่อสินค้า"],
-                            qtyKg: row["จำนวน (กก.)"],
-                            qtyCartons: row["จำนวน (ลัง)"],
-                            qtyUnit: row["จำนวน (ลัง)"], // For roll items: qtyUnit = qtyCartons
-                            remainingStock: row["คงเหลือ (ลัง)"],
-                            note: row["หมายเหตุ"]
-                        }));
+                        loadedTrans = loadedTrans.map(row => {
+                            // Format time - handle both string and Date object from Sheet
+                            let timeStr = '';
+                            if (row["เวลา"]) {
+                                if (typeof row["เวลา"] === 'string') {
+                                    // If it's an ISO date string like "1899-12-30T03:52:56.000Z"
+                                    if (row["เวลา"].includes('T')) {
+                                        const d = new Date(row["เวลา"]);
+                                        timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                                    } else {
+                                        timeStr = row["เวลา"]; // Already formatted like "10:33"
+                                    }
+                                } else {
+                                    timeStr = row["เวลา"].toString();
+                                }
+                            }
+
+                            return {
+                                id: row["ID"],
+                                date: row["วันที่"],
+                                time: timeStr,
+                                type: row["ประเภท"],
+                                itemIndex: row["ItemIndex"],
+                                itemName: row["ชื่อสินค้า"],
+                                qtyKg: row["จำนวน (กก.)"],
+                                qtyCartons: row["จำนวน (ลัง)"],
+                                qtyUnit: row["จำนวน (ลัง)"], // For roll items: qtyUnit = qtyCartons
+                                remainingStock: row["คงเหลือ (ลัง)"],
+                                note: row["หมายเหตุ"]
+                            };
+                        });
                     }
                     transactions = loadedTrans.reverse();
                 }

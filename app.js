@@ -1035,7 +1035,9 @@ function renderStockCardsRM(products) {
             // MFD & EXP with Short Date
             entriesHtml += '<td class="col-date"><span class="date-full">' + highlightText(entry.mfgDate || '-', q) + '</span><span class="date-short">' + highlightText(toShortDate(entry.mfgDate), q) + '</span></td>';
             entriesHtml += '<td class="col-date"><span class="date-full">' + highlightText(entry.expDate || '-', q) + '</span><span class="date-short">' + highlightText(toShortDate(entry.expDate), q) + '</span></td>';
-            entriesHtml += '<td class="col-num ' + daysLeftClass + '">' + highlightText(entry.daysLeft || '-', q) + '</td>';
+            // Show Days Left only on the LAST row of this product (not per lot)
+            var isLastRowForProduct = (entryIndex === prod.entries.length - 1);
+            entriesHtml += '<td class="col-num ' + (isLastRowForProduct ? daysLeftClass : '') + '">' + (isLastRowForProduct ? highlightText(entry.daysLeft || '-', q) : '-') + '</td>';
             entriesHtml += '<td class="col-num">' + (isLastRowForLot && entry.lotBalance > 0 ? formatNumber(entry.lotBalance) : '-') + '</td>';
             entriesHtml += '<td class="col-supplier">' + highlightText(entry.supplier || '-', q) + '</td>';
             entriesHtml += '<td class="no-print"><button class="btn btn-delete" onclick="deleteEntryRM(' + entry.rowIndex + ', \'' + prod.code + '\', \'' + entry.type + '\')">ลบ</button></td>';

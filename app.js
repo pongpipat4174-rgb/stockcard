@@ -2397,8 +2397,8 @@ async function saveEntryRM() {
             console.log('targetConfig.sheetName:', targetConfig.sheetName);
             console.log('entry.type:', entry.type);
 
-            // Uncomment line below to see popup debug (for testing only)
-            alert('DEBUG:\nModule: ' + currentModule + '\nSheet: ' + targetConfig.sheetName + '\nType: ' + entry.type);
+            // Debug popup disabled (fixed)
+            // alert('DEBUG:\nModule: ' + currentModule + '\nSheet: ' + targetConfig.sheetName + '\nType: ' + entry.type);
 
             // Using fetch in await mode
             await fetch(APPS_SCRIPT_URL, {

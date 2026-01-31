@@ -1305,9 +1305,12 @@ window.printHistory = (title) => {
 window.deleteTransaction = async (transId, itemIndex) => {
     if (!confirm('ต้องการลบรายการประวัตินี้ใช่หรือไม่? (สต็อกจะถูกคำนวณย้อนกลับ)')) return;
 
-    // 1. Find transaction
-    const transIdx = transactions.findIndex(t => t.id === transId);
-    if (transIdx === -1) return;
+    // 1. Find transaction - compare as strings
+    const transIdx = transactions.findIndex(t => String(t.id) === String(transId));
+    if (transIdx === -1) {
+        alert('ไม่พบรายการนี้');
+        return;
+    }
     const trans = transactions[transIdx];
 
     // 2. Revert Stock
@@ -1349,8 +1352,31 @@ window.deleteTransaction = async (transId, itemIndex) => {
         });
     }
 
-    // 4. Remove transaction and Save
+    // 4. Remove transaction from local array
     transactions.splice(transIdx, 1);
+
+    // 5. Delete from Google Sheet
+    try {
+        const deletePayload = {
+            action: 'delete_consumable_transaction',
+            transactionId: transId
+        };
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(deletePayload),
+            headers: { "Content-Type": "text/plain" }
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            console.log('Deleted from Sheet:', transId);
+        } else {
+            console.error('Sheet delete failed:', result.error);
+        }
+    } catch (e) {
+        console.error('Delete from Sheet failed:', e);
+    }
 
     // Re-render modal list immediately (visual only)
     openHistoryModal(itemIndex);

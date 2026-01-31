@@ -41,6 +41,9 @@ function doPost(e) {
     } else if (action === 'save_all') {
       // Consumable module save
       return saveConsumableData(data);
+    } else if (action === 'delete_consumable_transaction') {
+      // Delete a specific transaction from Consumable_Transactions
+      return deleteConsumableTransaction(data);
     }
     
     return ContentService.createTextOutput(JSON.stringify({
@@ -992,6 +995,65 @@ function saveConsumableTransactions(ss, transactions) {
     
   } catch (error) {
     Logger.log('Save Consumable transactions error: ' + error.message);
+  }
+}
+
+/**
+ * Delete a specific transaction from Consumable_Transactions sheet
+ */
+function deleteConsumableTransaction(data) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var transSheetName = 'Consumable_Transactions';
+    var transSheet = ss.getSheetByName(transSheetName);
+    
+    if (!transSheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Sheet not found: ' + transSheetName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var transactionId = data.transactionId ? data.transactionId.toString() : '';
+    
+    if (!transactionId) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'No transaction ID provided'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Find and delete the row with matching ID (Column A)
+    var allData = transSheet.getDataRange().getValues();
+    var rowToDelete = -1;
+    
+    for (var i = 1; i < allData.length; i++) {
+      if (allData[i][0] && allData[i][0].toString() === transactionId) {
+        rowToDelete = i + 1; // Sheet rows are 1-indexed
+        break;
+      }
+    }
+    
+    if (rowToDelete === -1) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Transaction not found: ' + transactionId
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Delete the row
+    transSheet.deleteRow(rowToDelete);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'Deleted transaction ' + transactionId
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 

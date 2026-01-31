@@ -2065,6 +2065,22 @@ function openEntryModal() {
             modal.style.opacity = '1';
             modal.style.visibility = 'visible';
 
+            // Change modal header color based on module
+            var modalHeader = modal.querySelector('.modal-header');
+            if (modalHeader) {
+                // Remove existing module classes
+                modalHeader.classList.remove('modal-header-rm', 'modal-header-rm-production');
+
+                // Add appropriate class based on current module
+                if (currentModule === 'rm_production') {
+                    modalHeader.classList.add('modal-header-rm-production');
+                    document.getElementById('entryModalTitleRM').innerHTML = '🏭 เพิ่มรายการวัตถุดิบ (RM Production)';
+                } else {
+                    modalHeader.classList.add('modal-header-rm');
+                    document.getElementById('entryModalTitleRM').innerHTML = '🧪 เพิ่มรายการวัตถุดิบ (RM Center)';
+                }
+            }
+
             var today = new Date();
             var yyyy = today.getFullYear();
             var mm = String(today.getMonth() + 1).padStart(2, '0');

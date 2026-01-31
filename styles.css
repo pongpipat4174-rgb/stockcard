@@ -2240,6 +2240,16 @@ mark.search-highlight {
     color: white;
 }
 
+/* RM Production modal header - Blue */
+.modal-header-rm-production {
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+    color: white;
+}
+
+.modal-header-rm-production h2 {
+    color: white;
+}
+
 /* ==================== STAT CARD CLICKABLE ==================== */
 .stat-card.clickable {
     cursor: pointer;

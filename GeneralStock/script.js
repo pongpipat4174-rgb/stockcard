@@ -1,5 +1,5 @@
 // --- CONFIGURATION ---
-const API_URL = "https://script.google.com/macros/s/AKfycbxJglmGvcDbVBSTcGlCXg0NFDXIJm-RyIXe_-G-70nIlK3rxZVFT_tWAbHYP-mb-zOG3w/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz-b515sRQbqzNH-5jkdQTDjpnpBNVdYipV9C_0zU04O7m5RY-vEoAZoNcnm0d5-VU1xw/exec";
 // Note: You might want to use a different 'sheetName' in your Apps Script for this folder.
 
 let items = [];

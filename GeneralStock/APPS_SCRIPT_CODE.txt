@@ -31,25 +31,29 @@ function loadGeneralStock() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
   // 1. Load Items (อ่านข้อมูลสินค้า 12 คอลัมน์)
+  // โครงสร้าง: A=id, B=name, C=spec, D=category, E=unit, F=stock, G=min, H=Price, I=Lead Time, J=Supplier, K=Country, L=Image
   var itemSheet = ss.getSheetByName('GeneralStock');
   var items = [];
   if (itemSheet && itemSheet.getLastRow() > 1) {
     // อ่าน A ถึง L (12 คอลัมน์)
     var data = itemSheet.getRange(2, 1, itemSheet.getLastRow() - 1, 12).getValues();
-    items = data.map(function(r) {
+    items = data.filter(function(r) {
+      // กรองแถวที่มีข้อมูล (ตรวจสอบว่า id หรือ name ไม่ว่าง)
+      return (r[0] && r[0].toString().trim() !== '') || (r[1] && r[1].toString().trim() !== '');
+    }).map(function(r, index) {
       return {
-        id: r[0],
-        name: r[1],
-        spec: r[2],
-        category: r[3],
-        unit: r[4],
-        stock: r[5],
-        min: r[6],
-        price: r[7],       // คอลัมน์ H
-        leadTime: r[8],    // คอลัมน์ I
-        supplier: r[9],    // คอลัมน์ J
-        country: r[10],    // คอลัมน์ K
-        image: r[11]       // คอลัมน์ L
+        id: r[0] ? String(r[0]) : String(Date.now() + index), // A: id
+        name: r[1] || '',         // B: name
+        spec: r[2] || '',         // C: spec
+        category: r[3] || '',     // D: category
+        unit: r[4] || '',         // E: unit
+        stock: r[5] || 0,         // F: stock
+        min: r[6] || 0,           // G: min
+        price: r[7] || '',        // H: Price
+        leadTime: r[8] || '',     // I: Lead Time
+        supplier: r[9] || '',     // J: Supplier
+        country: r[10] || '',     // K: Country
+        image: r[11] || ''        // L: Image
       };
     });
   }

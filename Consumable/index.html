@@ -11,6 +11,9 @@
         rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=mobile_fix_2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Flatpickr Date Picker CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_green.css">
     <style>
         /* Zone Backgrounds - Removed */
         .bg-shrink {
@@ -947,6 +950,27 @@
         </div>
 
         <script src="script_v4.js"></script>
+        <!-- Flatpickr Date Picker JS -->
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // Initialize Flatpickr for date inputs with DD/MM/YYYY format
+                const dateInput = document.getElementById('trans-date');
+                if (dateInput) {
+                    flatpickr(dateInput, {
+                        dateFormat: 'd/m/Y',
+                        locale: 'th',
+                        allowInput: true,
+                        altInput: true,
+                        altFormat: 'd/m/Y',
+                        disableMobile: true,
+                        defaultDate: new Date()
+                    });
+                }
+                console.log('[Consumable] Flatpickr initialized with DD/MM/YYYY format');
+            });
+        </script>
 </body>
 
 </html>

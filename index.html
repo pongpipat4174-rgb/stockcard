@@ -11,7 +11,10 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=23">
+    <!-- Flatpickr Date Picker CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_green.css">
+    <link rel="stylesheet" href="styles.css?v=24">
 </head>
 
 <body>
@@ -892,6 +895,65 @@
 
         // RM Production uses app.js switchModule (same as RM Center)
         document.getElementById('tabRMProduction').onclick = (e) => switchModule('rm_production', e);
+    </script>
+
+    <!-- Flatpickr Date Picker JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+    <script>
+        // Initialize Flatpickr for all date inputs with DD/MM/YYYY format
+        document.addEventListener('DOMContentLoaded', function () {
+            // Flatpickr configuration - Thai format DD/MM/YYYY
+            const flatpickrConfig = {
+                dateFormat: 'd/m/Y',
+                locale: 'th',
+                allowInput: true,
+                altInput: true,
+                altFormat: 'd/m/Y',
+                disableMobile: true, // Use same UI on mobile
+                defaultDate: new Date(),
+                onReady: function (selectedDates, dateStr, instance) {
+                    // Add clear button
+                    if (instance.altInput) {
+                        instance.altInput.placeholder = 'วัน/เดือน/ปี';
+                    }
+                }
+            };
+
+            // Initialize all date inputs in the main page
+            const dateInputIds = [
+                'entryDate',      // Package modal
+                'entryDateRM',    // RM Center / RM Production modal
+                'entryMfgDateRM', // MFD date
+                'entryExpDateRM', // EXP date
+                'swDate',         // Smart Withdraw date
+                'dateFilter'      // Filter date
+            ];
+
+            dateInputIds.forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) {
+                    flatpickr(el, flatpickrConfig);
+                }
+            });
+
+            console.log('[Flatpickr] Date pickers initialized with DD/MM/YYYY format');
+        });
+
+        // Helper function to initialize flatpickr on dynamically added elements
+        window.initDatePicker = function (element) {
+            if (element && !element._flatpickr) {
+                flatpickr(element, {
+                    dateFormat: 'd/m/Y',
+                    locale: 'th',
+                    allowInput: true,
+                    altInput: true,
+                    altFormat: 'd/m/Y',
+                    disableMobile: true,
+                    defaultDate: new Date()
+                });
+            }
+        };
     </script>
 </body>
 

@@ -2212,15 +2212,19 @@ async function saveEntryRM() {
         var containerOut = parseFloat(document.getElementById('entryContainerOutRM').value) || 0;
         var containerWeightOut = parseFloat(document.getElementById('entryContainerWeightOutRM').value) || 0;
 
-        if (containerOut <= 0 || containerWeightOut <= 0) {
-            alert('⚠️ กรุณากรอกข้อมูลให้ครบ:\n• ภาชนะที่เบิก (ใบ)\n• น.น./ภาชนะ (Kg)');
-            return;
+        // Option 1: User entered Kg directly
+        if (outQty > 0) {
+            // OK - user entered Kg directly, no container info needed
         }
-
-        // If outQty is empty, calculate from container
-        if (outQty <= 0) {
+        // Option 2: User entered container info - calculate Kg
+        else if (containerOut > 0 && containerWeightOut > 0) {
             outQty = containerOut * containerWeightOut;
             document.getElementById('entryOutQtyRM').value = outQty.toFixed(2);
+        }
+        // Neither option provided
+        else {
+            alert('⚠️ กรุณากรอกข้อมูลให้ครบ:\n• เบิกออก (Kg) หรือ\n• ภาชนะที่เบิก + น.น./ภาชนะ');
+            return;
         }
     }
 

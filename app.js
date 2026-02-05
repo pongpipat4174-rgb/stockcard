@@ -1729,10 +1729,16 @@ function deleteEntry(rowIndex, productCode, type) {
         hideLoading();
         showToast('✅ ลบรายการเรียบร้อย! กำลังโหลดข้อมูลใหม่...');
 
+        // First fetch after 2 seconds
         setTimeout(async function () {
             await fetchPackageData();
             showToast('📊 ข้อมูลอัปเดตแล้ว');
-        }, 1500);
+
+            // Retry fetch after 2 more seconds to ensure cache is updated
+            setTimeout(async function () {
+                await fetchPackageData();
+            }, 2000);
+        }, 2000);
     }).catch(function (e) { alert(e); hideLoading(); });
 }
 
@@ -1766,6 +1772,7 @@ function deleteEntryRM(rowIndex, productCode, type) {
         hideLoading();
         showToast('✅ ลบรายการเรียบร้อย! กำลังโหลดข้อมูลใหม่...');
 
+        // First fetch after 2 seconds
         setTimeout(async function () {
             if (currentModule === 'rm_production') {
                 await fetchRMProductionData();
@@ -1773,7 +1780,16 @@ function deleteEntryRM(rowIndex, productCode, type) {
                 await fetchRMData();
             }
             showToast('📊 ข้อมูลอัปเดตแล้ว');
-        }, 1500);
+
+            // Retry fetch after 2 more seconds to ensure cache is updated
+            setTimeout(async function () {
+                if (currentModule === 'rm_production') {
+                    await fetchRMProductionData();
+                } else {
+                    await fetchRMData();
+                }
+            }, 2000);
+        }, 2000);
     }).catch(function (e) { alert(e); hideLoading(); });
 }
 
@@ -2191,10 +2207,16 @@ function saveEntry() {
         document.getElementById('entryDocRef').value = '';
         document.getElementById('entryRemark').value = '';
 
+        // First fetch after 2 seconds
         setTimeout(async function () {
             await fetchPackageData();
             showToast('📊 ข้อมูลอัปเดตแล้ว');
-        }, 1500);
+
+            // Retry fetch after 2 more seconds to ensure cache is updated
+            setTimeout(async function () {
+                await fetchPackageData();
+            }, 2000);
+        }, 2000);
     }).catch(function (e) { alert(e); hideLoading(); });
 }
 
@@ -2511,10 +2533,15 @@ async function saveEntryRM() {
         hideLoading();
         showToast('✅ บันทึกสำเร็จ! กำลังโหลดข้อมูลใหม่...');
 
-        // Short delay to allow Google Sheets to update before refetching
-        await new Promise(r => setTimeout(r, 1500));
+        // First fetch after 2 seconds
+        await new Promise(r => setTimeout(r, 2000));
         await fetchRMData();
         showToast('📊 ข้อมูลอัปเดตแล้ว');
+
+        // Retry fetch after 2 more seconds to ensure cache is updated
+        setTimeout(async function () {
+            await fetchRMData();
+        }, 2000);
 
     } catch (e) {
         console.error('Save Error:', e);

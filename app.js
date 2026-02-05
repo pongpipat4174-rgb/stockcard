@@ -2972,7 +2972,14 @@ function getSortedActiveLots(productCode) {
         }
 
         // FIFO fallback when expDays are equal: earlier firstDate comes first
-        return (a.firstDate || '') > (b.firstDate || '') ? 1 : -1;
+        var aDate = a.firstDate || '';
+        var bDate = b.firstDate || '';
+        if (aDate !== bDate) {
+            return aDate > bDate ? 1 : -1;
+        }
+
+        // Final tiebreaker: Lower lot number (created earlier) comes first
+        return (a.lotNo || '') < (b.lotNo || '') ? -1 : 1;
     });
 
     return revalLots.concat(otherLots);

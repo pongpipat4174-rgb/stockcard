@@ -3005,6 +3005,12 @@ function autoFillRMForm(productCode) {
 
             // Show available containers for this RM
             showContainerInfoForWithdraw(productCode, sortedLots);
+
+            // Check split lot if there's already an outQty entered
+            var outQty = parseFloat(document.getElementById('entryOutQtyRM')?.value) || 0;
+            if (outQty > 0) {
+                checkLotSplit(productCode, outQty);
+            }
         } else {
             console.log('[AutoFill] No active lots found for:', productCode);
         }
@@ -3283,6 +3289,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (outQtyInput) {
                 outQtyInput.value = totalKg.toFixed(2);
             }
+            // Trigger split lot check after calculating Kg
+            reverseCalculateRM();
         }
     }
 

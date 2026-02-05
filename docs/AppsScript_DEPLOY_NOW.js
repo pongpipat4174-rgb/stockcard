@@ -256,9 +256,10 @@ function addRMEntry(sheetId, sheetName, entry) {
         map[12] = entry.mfgDate || "";                // M: MFG Date
         map[13] = entry.expDate || "";                // N: EXP Date
 
-        // O (Days Left) -> Calculate from EXP date
+        // O (Days Left) -> Calculate from EXP date (ONLY for receive entries, not withdrawal)
         var daysLeft = "";
-        if (entry.expDate && entry.expDate !== "-") {
+        var isReceive = inQty > 0 && outQty <= 0;
+        if (isReceive && entry.expDate && entry.expDate !== "-") {
             try {
                 var expParts = String(entry.expDate).split("/");
                 if (expParts.length === 3) {

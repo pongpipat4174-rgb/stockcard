@@ -1768,28 +1768,38 @@ function deleteEntryRM(rowIndex, productCode, type) {
             criteria: { productCode: productCode, type: type }
         })
     }).then(function () {
-        // Hide loading screen immediately, show toast for refresh
-        hideLoading();
-        showToast('✅ ลบรายการเรียบร้อย! กำลังโหลดข้อมูลใหม่...');
+        showToast('✅ ลบรายการเรียบร้อย! รอซิงค์ข้อมูล...');
 
-        // First fetch after 2 seconds
+        // Keep loading while waiting for Google Sheets to update
         setTimeout(async function () {
+            // First fetch after 3 seconds
             if (currentModule === 'rm_production') {
                 await fetchRMProductionData();
             } else {
                 await fetchRMData();
             }
-            showToast('📊 ข้อมูลอัปเดตแล้ว');
+            hideLoading();
+            showToast('📊 กำลังอัปเดต...');
 
-            // Retry fetch after 2 more seconds to ensure cache is updated
+            // Retry fetch after 2 more seconds
             setTimeout(async function () {
                 if (currentModule === 'rm_production') {
                     await fetchRMProductionData();
                 } else {
                     await fetchRMData();
                 }
+
+                // Third retry after 2 more seconds
+                setTimeout(async function () {
+                    if (currentModule === 'rm_production') {
+                        await fetchRMProductionData();
+                    } else {
+                        await fetchRMData();
+                    }
+                    showToast('📊 ข้อมูลอัปเดตแล้ว');
+                }, 2000);
             }, 2000);
-        }, 2000);
+        }, 3000);
     }).catch(function (e) { alert(e); hideLoading(); });
 }
 

@@ -2489,8 +2489,14 @@ async function saveEntryRM() {
             await transferToProductionAuto(transferEntries);
         }
 
-        await fetchRMData();
+        // Hide loading screen immediately after save, show toast for refresh
         hideLoading();
+        showToast('✅ บันทึกสำเร็จ! กำลังโหลดข้อมูลใหม่...');
+
+        // Short delay to allow Google Sheets to update before refetching
+        await new Promise(r => setTimeout(r, 1500));
+        await fetchRMData();
+        showToast('📊 ข้อมูลอัปเดตแล้ว');
 
     } catch (e) {
         console.error('Save Error:', e);

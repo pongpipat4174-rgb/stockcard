@@ -2887,17 +2887,18 @@ function getSortedActiveLots(productCode) {
         else otherLots.push(lotObj);
     });
 
-    // Sort Others by FEFO (ExpDays) then FIFO (Date)
+    // Sort Others by FEFO (ExpDays) - Always prioritize earlier expiry
+    // Then FIFO (Date) as secondary sort when expDays are equal or undefined
     otherLots.sort(function (a, b) {
-        // FEFO: if expDays <= 90
-        var aUrgent = (a.expDays !== undefined && a.expDays <= 90);
-        var bUrgent = (b.expDays !== undefined && b.expDays <= 90);
+        var aExp = (a.expDays !== undefined && !isNaN(a.expDays)) ? a.expDays : 999999;
+        var bExp = (b.expDays !== undefined && !isNaN(b.expDays)) ? b.expDays : 999999;
 
-        if (aUrgent && !bUrgent) return -1;
-        if (!aUrgent && bUrgent) return 1;
-        if (aUrgent && bUrgent) return (a.expDays - b.expDays);
+        // FEFO: Lower expDays = expires sooner = should come first
+        if (aExp !== bExp) {
+            return aExp - bExp;
+        }
 
-        // FIFO fallback
+        // FIFO fallback when expDays are equal: earlier firstDate comes first
         return (a.firstDate || '') > (b.firstDate || '') ? 1 : -1;
     });
 

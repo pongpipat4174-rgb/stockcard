@@ -1759,15 +1759,18 @@ function deleteEntryRM(rowIndex, productCode, type) {
             criteria: { productCode: productCode, type: type }
         })
     }).then(function () {
+        // Hide loading screen immediately, show toast for refresh
+        hideLoading();
+        showToast('✅ ลบรายการเรียบร้อย! กำลังโหลดข้อมูลใหม่...');
+
         setTimeout(async function () {
-            showToast('ลบรายการวัตถุดิบเรียบร้อย!');
             if (currentModule === 'rm_production') {
                 await fetchRMProductionData();
             } else {
                 await fetchRMData();
             }
-            hideLoading();
-        }, 2000);
+            showToast('📊 ข้อมูลอัปเดตแล้ว');
+        }, 1500);
     }).catch(function (e) { alert(e); hideLoading(); });
 }
 

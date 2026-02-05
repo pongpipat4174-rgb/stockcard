@@ -2083,11 +2083,18 @@ function openEntryModal() {
                 }
             }
 
-            var today = new Date();
-            var yyyy = today.getFullYear();
-            var mm = String(today.getMonth() + 1).padStart(2, '0');
-            var dd = String(today.getDate()).padStart(2, '0');
-            document.getElementById('entryDateRM').value = yyyy + '-' + mm + '-' + dd;
+            // Set today's date using Flatpickr API
+            var dateInputRM = document.getElementById('entryDateRM');
+            if (dateInputRM && dateInputRM._flatpickr) {
+                dateInputRM._flatpickr.setDate(new Date(), true);
+            } else {
+                // Fallback if Flatpickr not initialized
+                var today = new Date();
+                var yyyy = today.getFullYear();
+                var mm = String(today.getMonth() + 1).padStart(2, '0');
+                var dd = String(today.getDate()).padStart(2, '0');
+                dateInputRM.value = yyyy + '-' + mm + '-' + dd;
+            }
         }
     }
 }

@@ -655,7 +655,15 @@ async function fetchRMData() {
         populateRMProductDropdown();
         populateRMSupplierDropdown();
         updateStatsRM();
-        showAllProductsRM();
+
+        // Reapply search/filter if any exists, otherwise show all
+        var searchQuery = document.getElementById('searchInput')?.value?.trim() || '';
+        if (searchQuery) {
+            handleSearch(); // Reapply existing search filter
+        } else {
+            showAllProductsRM();
+        }
+
         updateExpiryAlerts(); // Update expiry alert banners
         hideLoading();
 

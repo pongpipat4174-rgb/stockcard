@@ -1725,11 +1725,14 @@ function deleteEntry(rowIndex, productCode, type) {
             criteria: { productCode: productCode, type: type }
         })
     }).then(function () {
+        // Hide loading screen immediately, show toast for refresh
+        hideLoading();
+        showToast('✅ ลบรายการเรียบร้อย! กำลังโหลดข้อมูลใหม่...');
+
         setTimeout(async function () {
-            showToast('ลบเรียบร้อย!');
             await fetchPackageData();
-            hideLoading();
-        }, 2000);
+            showToast('📊 ข้อมูลอัปเดตแล้ว');
+        }, 1500);
     }).catch(function (e) { alert(e); hideLoading(); });
 }
 
@@ -2176,18 +2179,22 @@ function saveEntry() {
             }
         })
     }).then(function () {
+        // Hide loading screen immediately, show toast for refresh
+        hideLoading();
+        closeEntryModal();
+        showToast('✅ บันทึกเรียบร้อย! กำลังโหลดข้อมูลใหม่...');
+
+        document.getElementById('entryDate').value = '';
+        document.getElementById('entryInQty').value = '';
+        document.getElementById('entryOutQty').value = '';
+        document.getElementById('entryLotNo').value = '';
+        document.getElementById('entryDocRef').value = '';
+        document.getElementById('entryRemark').value = '';
+
         setTimeout(async function () {
-            showToast('บันทึกเรียบร้อย!');
-            closeEntryModal();
-            document.getElementById('entryDate').value = '';
-            document.getElementById('entryInQty').value = '';
-            document.getElementById('entryOutQty').value = '';
-            document.getElementById('entryLotNo').value = '';
-            document.getElementById('entryDocRef').value = '';
-            document.getElementById('entryRemark').value = '';
             await fetchPackageData();
-            hideLoading();
-        }, 2000);
+            showToast('📊 ข้อมูลอัปเดตแล้ว');
+        }, 1500);
     }).catch(function (e) { alert(e); hideLoading(); });
 }
 

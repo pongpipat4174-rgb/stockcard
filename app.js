@@ -2355,20 +2355,26 @@ async function saveEntryRM() {
         var remainder = parseFloat(document.getElementById('entryRemainderRM').value) || 0;
         var lotNo = document.getElementById('entryLotNoRM').value || '-';
         var containerOut = parseFloat(document.getElementById('entryContainerOutRM').value) || 0;
-        var mfgDate = document.getElementById('entryMfgDateRM')?.value || '';
-        var expDate = document.getElementById('entryExpDateRM')?.value || '';
         var vendorLot = document.getElementById('entryVendorLotRM')?.value || '';
+        var mfgDate = '';
+        var expDate = '';
 
-        // For withdrawal: get MFD/EXP/VendorLot from the source lot
+        // For withdrawal: ALWAYS get MFD/EXP/VendorLot from the source lot (ignore form values)
+        // This fixes the issue where Flatpickr sets default date which causes incorrect MFD/EXP
         if (isWithdrawal && lotNo && lotNo !== '-') {
             var allLots = getSortedActiveLots(productCode);
             var sourceLot = allLots.find(function (l) { return l.lotNo === lotNo; });
             if (sourceLot) {
-                if (!vendorLot || vendorLot === '') vendorLot = sourceLot.vendorLot || '';
-                if (!mfgDate || mfgDate === '') mfgDate = sourceLot.mfdDate || '';
-                if (!expDate || expDate === '') expDate = sourceLot.expDate || '';
-                if (!vendor || vendor === '') vendor = sourceLot.supplier || '';
+                // For withdrawal: always use source lot data
+                vendorLot = sourceLot.vendorLot || '';
+                mfgDate = sourceLot.mfdDate || '';
+                expDate = sourceLot.expDate || '';
+                if (!vendor || vendor === '-' || vendor === '') vendor = sourceLot.supplier || '';
             }
+        } else {
+            // For receiving: use form values
+            mfgDate = document.getElementById('entryMfgDateRM')?.value || '';
+            expDate = document.getElementById('entryExpDateRM')?.value || '';
         }
 
         entriesToSave.push({

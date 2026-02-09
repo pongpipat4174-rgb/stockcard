@@ -2960,6 +2960,17 @@ function getSortedActiveLots(productCode) {
         else otherLots.push(lotObj);
     });
 
+    // Helper: Parse DD/MM/YYYY date string to timestamp for correct comparison
+    function parseDateToTimestamp(dateStr) {
+        if (!dateStr) return Infinity;
+        var parts = dateStr.split('/');
+        if (parts.length === 3) {
+            // DD/MM/YYYY -> new Date(YYYY, MM-1, DD)
+            return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+        }
+        return Infinity;
+    }
+
     // Sort Others by FEFO (ExpDays) - Always prioritize earlier expiry
     // Then FIFO (Date) as secondary sort when expDays are equal or undefined
     otherLots.sort(function (a, b) {
@@ -2972,10 +2983,11 @@ function getSortedActiveLots(productCode) {
         }
 
         // FIFO fallback when expDays are equal: earlier firstDate comes first
-        var aDate = a.firstDate || '';
-        var bDate = b.firstDate || '';
-        if (aDate !== bDate) {
-            return aDate > bDate ? 1 : -1;
+        // FIX: Parse date properly instead of comparing as string
+        var aTime = parseDateToTimestamp(a.firstDate);
+        var bTime = parseDateToTimestamp(b.firstDate);
+        if (aTime !== bTime) {
+            return aTime - bTime; // Earlier date (smaller timestamp) comes first
         }
 
         // Final tiebreaker: Lower lot number (created earlier) comes first

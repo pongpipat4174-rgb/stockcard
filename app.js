@@ -2902,12 +2902,9 @@ function getSortedActiveLots(productCode) {
             lotTotalKgOut[e.lotNo] += e.outQty;
         }
 
-        var days = parseInt(e.daysLeft);
-        if (!isNaN(days)) {
-            if (lotExpDays[e.lotNo] === undefined || days < lotExpDays[e.lotNo]) {
-                lotExpDays[e.lotNo] = days;
-                lotExpDate[e.lotNo] = e.expDate || '-';
-            }
+        // Track EXP date (don't use daysLeft from sheet - it may be stale)
+        if (e.expDate && e.expDate !== '-' && !lotExpDate[e.lotNo]) {
+            lotExpDate[e.lotNo] = e.expDate;
         }
     });
 
@@ -2931,14 +2928,27 @@ function getSortedActiveLots(productCode) {
             var partialFraction = remainingContainers - fullContainers;
             var partialKg = avgContainerWeight > 0 ? Math.round(partialFraction * avgContainerWeight * 100) / 100 : 0;
 
+            // Calculate expDays LIVE from expDate (not from stored daysLeft)
+            var expDateStr = lotExpDate[lot] || '-';
+            var calcExpDays = undefined;
+            if (expDateStr && expDateStr !== '-') {
+                var expParts = expDateStr.split('/');
+                if (expParts.length === 3) {
+                    var expDateObj = new Date(parseInt(expParts[2]), parseInt(expParts[1]) - 1, parseInt(expParts[0]));
+                    var today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    calcExpDays = Math.ceil((expDateObj.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                }
+            }
+
             return {
                 lotNo: lot,
                 balance: balance,
                 firstDate: lotFirstDate[lot],
-                mfdDate: lotMfdDate[lot] || '-',  // Add MFD
-                expDays: lotExpDays[lot],
-                expDate: lotExpDate[lot] || '-',
-                vendorLot: lotVendorLot[lot] || '',  // Add Vendor Lot
+                mfdDate: lotMfdDate[lot] || '-',
+                expDays: calcExpDays,
+                expDate: expDateStr,
+                vendorLot: lotVendorLot[lot] || '',
                 supplier: lotVendor[lot],
                 containerWeight: Math.round(avgContainerWeight * 100) / 100,
                 originalContainers: totalContainersIn,

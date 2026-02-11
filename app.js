@@ -2971,19 +2971,25 @@ function getSortedActiveLots(productCode) {
         return Infinity;
     }
 
-    // Sort Others by FEFO (ExpDays) - Always prioritize earlier expiry
-    // Then FIFO (Date) as secondary sort when expDays are equal or undefined
+    // Sort Others by FEFO (actual EXP date) then FIFO (receive date)
+    // FIX: Use actual EXP calendar date instead of expDays to avoid
+    // false differences when lots have same EXP but different receive dates
     otherLots.sort(function (a, b) {
-        var aExp = (a.expDays !== undefined && !isNaN(a.expDays)) ? a.expDays : 999999;
-        var bExp = (b.expDays !== undefined && !isNaN(b.expDays)) ? b.expDays : 999999;
+        // FEFO: Compare actual expiry DATE (not remaining days)
+        // This ensures lots with same EXP date are treated equally
+        var aExpTime = parseDateToTimestamp(a.expDate);
+        var bExpTime = parseDateToTimestamp(b.expDate);
 
-        // FEFO: Lower expDays = expires sooner = should come first
-        if (aExp !== bExp) {
-            return aExp - bExp;
+        // If one has no EXP and other does, use expDays as fallback
+        if (aExpTime === Infinity && bExpTime === Infinity) {
+            // Neither has EXP date - skip FEFO, go to FIFO
+        } else if (aExpTime !== bExpTime) {
+            // Different EXP dates: earlier expiry comes first (FEFO)
+            return aExpTime - bExpTime;
         }
+        // Same EXP date → fall through to FIFO
 
-        // FIFO fallback when expDays are equal: earlier firstDate comes first
-        // FIX: Parse date properly instead of comparing as string
+        // FIFO: Earlier receive date (firstDate) comes first
         var aTime = parseDateToTimestamp(a.firstDate);
         var bTime = parseDateToTimestamp(b.firstDate);
         if (aTime !== bTime) {

@@ -3215,7 +3215,10 @@ function showContainerInfoForWithdraw(productCode, sortedLots) {
                 html += ' <span style="color:#888;">| ' + containers + '×' + lot.containerWeight + 'Kg</span>';
             }
         } else {
-            // NEW LOT: Show full container info
+            // NEW LOT: Show MFD + full container info + EXP
+            if (lot.mfdDate && lot.mfdDate !== '-') {
+                html += 'MFD: ' + lot.mfdDate + ' | ';
+            }
             if (containers > 0) {
                 html += containers + ' ภาชนะ';
                 if (lot.containerWeight) html += ' (' + lot.containerWeight + ' Kg/ภาชนะ)';

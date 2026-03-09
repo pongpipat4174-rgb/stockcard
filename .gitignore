@@ -2,3 +2,9 @@ server.js
 server.py
 *.log
 .DS_Store
+.env
+database/.env
+database/verify_*.js
+database/speed_test.js
+database/check_tables.js
+node_modules/

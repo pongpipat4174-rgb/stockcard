@@ -21,6 +21,15 @@ window.onerror = function (msg, url, lineNo, columnNo, error) {
 // Configuration
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFUoMhdUiCHJtwKAuDdCw29uM3205tQ5LikrW3HcX1MMwARhZtXPISjmjG4fR6Y6Jy/exec';
 
+// DB API Base URL (ใช้ DB ในการอ่านข้อมูล - เร็วกว่า Sheet)
+let DB_API_BASE = '';
+const _dbReady = (async function detectDbApi() {
+    try {
+        const r = await fetch(window.location.origin + '/api/config', { signal: AbortSignal.timeout(3000) });
+        if (r.ok) { const c = await r.json(); DB_API_BASE = c.apiBase; console.log('[DB] API Base:', DB_API_BASE); }
+    } catch (e) { console.log('[DB] API not available, using Sheet only'); }
+})();
+
 // Google Sheet URLs for direct data fetching
 const SHEET_CONFIG = {
     package: {
@@ -435,12 +444,45 @@ async function init() {
 // ==================== PACKAGE DATA ====================
 
 async function fetchPackageData() {
+    // รอ config โหลดเสร็จก่อน
+    await _dbReady;
+    // === ลอง DB API ก่อน (เร็วกว่า Sheet) ===
+    if (DB_API_BASE) {
+        try {
+            console.log('[Package] Loading from DB...');
+            const r = await fetch(DB_API_BASE + '/package/data');
+            if (r.ok) {
+                const result = await r.json();
+                if (result.success && result.data && result.data.length > 0) {
+                    stockData = result.data;
+                    console.log('[Package] ✅ Loaded ' + stockData.length + ' records from DB');
+
+                    var uniqueProducts = new Map();
+                    stockData.forEach(function (item) {
+                        if (item.productCode && !uniqueProducts.has(item.productCode)) {
+                            uniqueProducts.set(item.productCode, { code: item.productCode, name: item.productName });
+                        }
+                    });
+                    productMasterData = Array.from(uniqueProducts.values());
+
+                    populateProductDropdown();
+                    updateStats();
+                    showAllProducts();
+                    hideLoading();
+                    return; // สำเร็จ ไม่ต้อง fallback
+                }
+            }
+        } catch (dbErr) {
+            console.warn('[Package] DB API failed, falling back to Sheet:', dbErr.message);
+        }
+    }
+
+    // === Fallback: Google Sheets (ของเดิม) ===
     try {
         var timestamp = new Date().getTime();
         var sheetName = encodeURIComponent(SHEET_CONFIG.package.sheetName);
         var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_CONFIG.package.id + '/gviz/tq?tqx=out:json&sheet=' + sheetName + '&tq=SELECT%20*&_=' + timestamp;
 
-        // Fetch with explicit 15s timeout
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -462,18 +504,15 @@ async function fetchPackageData() {
 
         var text = await response.text();
 
-        // Check if response is HTML (login page) instead of JSON
         if (text.trim().startsWith('<!DOCTYPE html>') || text.includes('google.com/accounts')) {
             throw new Error('Unauthorized: Please checking Google Sheet sharing settings (Must be "Anyone with the link")');
         }
 
-        // Robust JSON extraction using Regex
         const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
         var jsonText = '';
         if (jsonMatch && jsonMatch[1]) {
             jsonText = jsonMatch[1];
         } else {
-            // Fallback for simple JSON or unexpected format
             jsonText = text;
         }
 
@@ -482,7 +521,6 @@ async function fetchPackageData() {
             json = JSON.parse(jsonText);
         } catch (e) {
             console.error('JSON Parse Error:', e);
-            console.log('Raw text:', text);
             throw new Error('Invalid Data Format from Google Sheet');
         }
         var rows = json.table.rows;
@@ -504,9 +542,7 @@ async function fetchPackageData() {
                 remark: c[12]?.v || ''
             };
         }).filter(function (item) {
-            // Basic check - only filter out header row
             if (!item.productCode || item.productCode === 'code') return false;
-
             return true;
         });
 
@@ -568,9 +604,54 @@ function showAllProducts() {
 // ==================== RM DATA ====================
 
 async function fetchRMData() {
+    // รอ config โหลดเสร็จก่อน
+    await _dbReady;
+    var moduleKey = (currentModule === 'rm_production') ? 'rm_production' : 'rm';
+
+    // === ลอง DB API ก่อน (เร็วกว่า Sheet) ===
+    if (DB_API_BASE) {
+        try {
+            console.log('[RM] Loading ' + moduleKey + ' from DB...');
+            const r = await fetch(DB_API_BASE + '/rm/data?module=' + moduleKey);
+            if (r.ok) {
+                const result = await r.json();
+                if (result.success && result.data && result.data.length > 0) {
+                    rmStockData = result.data;
+                    console.log('[RM] ✅ Loaded ' + rmStockData.length + ' records from DB (' + moduleKey + ')');
+
+                    var uniqueProducts = new Map();
+                    rmStockData.forEach(function (item) {
+                        if (item.productCode && !uniqueProducts.has(item.productCode)) {
+                            uniqueProducts.set(item.productCode, { code: item.productCode, name: item.productName });
+                        }
+                    });
+                    rmProductMasterData = Array.from(uniqueProducts.values());
+
+                    var uniqueSuppliers = new Set();
+                    rmStockData.forEach(function (item) {
+                        if (item.supplier && item.supplier.trim() !== '') {
+                            uniqueSuppliers.add(item.supplier.trim());
+                        }
+                    });
+                    rmSuppliersList = Array.from(uniqueSuppliers).sort();
+
+                    populateRMProductDropdown();
+                    populateRMSupplierDropdown();
+                    updateStatsRM();
+                    var searchQuery = document.getElementById('searchInput')?.value?.trim() || '';
+                    if (searchQuery) { handleSearch(); } else { showAllProductsRM(); }
+                    updateExpiryAlerts();
+                    hideLoading();
+                    return; // สำเร็จ
+                }
+            }
+        } catch (dbErr) {
+            console.warn('[RM] DB API failed, falling back to Sheet:', dbErr.message);
+        }
+    }
+
+    // === Fallback: Google Sheets (ของเดิม) ===
     try {
-        // Use current module config (rm or rm_production)
-        var moduleKey = (currentModule === 'rm_production') ? 'rm_production' : 'rm';
         var config = SHEET_CONFIG[moduleKey];
         var timestamp = new Date().getTime();
         var sheetName = encodeURIComponent(config.sheetName);
@@ -582,32 +663,18 @@ async function fetchRMData() {
         }
         var text = await response.text();
 
-        // Check if response is HTML (login page) instead of JSON
         if (text.trim().startsWith('<!DOCTYPE html>') || text.includes('google.com/accounts')) {
-            throw new Error('Unauthorized: Please checking Google Sheet sharing settings (Must be "Anyone with the link")');
+            throw new Error('Unauthorized: Please checking Google Sheet sharing settings');
         }
 
-        // Robust JSON extraction using Regex
         const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
         var jsonText = '';
-        if (jsonMatch && jsonMatch[1]) {
-            jsonText = jsonMatch[1];
-        } else {
-            // Fallback for simple JSON or unexpected format
-            jsonText = text;
-        }
+        if (jsonMatch && jsonMatch[1]) { jsonText = jsonMatch[1]; } else { jsonText = text; }
 
         var json;
-        try {
-            json = JSON.parse(jsonText);
-        } catch (e) {
-            console.error('JSON Parse Error:', e);
-            console.log('Raw text:', text);
-            throw new Error('Invalid Data Format from Google Sheet (RM)');
-        }
+        try { json = JSON.parse(jsonText); } catch (e) { throw new Error('Invalid Data Format from Google Sheet (RM)'); }
         var rows = json.table.rows;
 
-        // RM columns: A-วันที่, B-รหัส, C-ชื่อ, D-รายการ, E-จำนวนCont, F-นน.Cont, G-เศษ, H-IN, I-OUT, J-Balance, K-LotNo, L-VendorLot, M-MFD, N-EXP, O-DaysLeft, P-LotBalance, Q-Supplier
         rmStockData = rows.map(function (row, index) {
             var c = row.c;
             return {
@@ -629,12 +696,11 @@ async function fetchRMData() {
                 daysLeft: c[14]?.v || '',
                 lotBalance: parseFloat(c[15]?.v) || 0,
                 supplier: c[16]?.v || '',
-                remark: c[17]?.v || '', // Column R: หมายเหตุ (ระบุ "ต่ออายุ" ที่นี่)
-                containerOut: parseFloat(c[18]?.v) || 0 // Column S: ถังที่เบิก
+                remark: c[17]?.v || '',
+                containerOut: parseFloat(c[18]?.v) || 0
             };
         }).filter(function (item) { return item.productCode && item.productCode !== 'รหัสสินค้า'; });
 
-        // Create unique products list
         var uniqueProducts = new Map();
         rmStockData.forEach(function (item) {
             if (item.productCode && !uniqueProducts.has(item.productCode)) {
@@ -643,7 +709,6 @@ async function fetchRMData() {
         });
         rmProductMasterData = Array.from(uniqueProducts.values());
 
-        // Create unique suppliers list for dropdown
         var uniqueSuppliers = new Set();
         rmStockData.forEach(function (item) {
             if (item.supplier && item.supplier.trim() !== '') {
@@ -656,26 +721,20 @@ async function fetchRMData() {
         populateRMSupplierDropdown();
         updateStatsRM();
 
-        // Reapply search/filter if any exists, otherwise show all
         var searchQuery = document.getElementById('searchInput')?.value?.trim() || '';
-        if (searchQuery) {
-            handleSearch(); // Reapply existing search filter
-        } else {
-            showAllProductsRM();
-        }
+        if (searchQuery) { handleSearch(); } else { showAllProductsRM(); }
 
-        updateExpiryAlerts(); // Update expiry alert banners
+        updateExpiryAlerts();
         hideLoading();
 
     } catch (error) {
         console.error('Error fetching RM data:', error);
-        // Show error message to user instead of silently failing
         var container = document.getElementById('cardsContainer');
         if (container) {
             container.innerHTML = '<div class="no-results" style="color: red; text-align: center; padding: 20px;">' +
                 '<h3>⚠️ ไม่สามารถโหลดข้อมูลวัตถุดิบได้</h3>' +
                 '<p>' + error.message + '</p>' +
-                '<p>กรุณาตรวจสอบการตั้งค่า "แชร์" (Share) ใน Google Sheet ให้เป็น "ทุกคนที่มีลิงก์" (Anyone with the link)</p>' +
+                '<p>กรุณาตรวจสอบการตั้งค่า "แชร์" (Share) ใน Google Sheet</p>' +
                 '</div>';
         }
         hideLoading();
@@ -1709,12 +1768,25 @@ function printSingleCard(cardId, productName, productCode) {
 }
 
 // Delete Entry (Package)
-function deleteEntry(rowIndex, productCode, type) {
+async function deleteEntry(rowIndex, productCode, type) {
     if (!confirm('ยืนยันการลบรายการนี้?')) return;
 
     showLoading();
     showToast('กำลังลบ...');
 
+    // Dual-write: ลบจาก DB ก่อน
+    if (DB_API_BASE) {
+        try {
+            await fetch(DB_API_BASE + '/package/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rowIndex, criteria: { productCode, type } })
+            });
+            console.log('[Package] ✅ Deleted from DB');
+        } catch (dbErr) { console.warn('[Package] DB delete failed:', dbErr.message); }
+    }
+
+    // ยังส่ง Sheet ด้วย (backup)
     fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -1725,25 +1797,17 @@ function deleteEntry(rowIndex, productCode, type) {
             criteria: { productCode: productCode, type: type }
         })
     }).then(function () {
-        // Hide loading screen immediately, show toast for refresh
         hideLoading();
-        showToast('✅ ลบรายการเรียบร้อย! กำลังโหลดข้อมูลใหม่...');
-
-        // First fetch after 2 seconds
+        showToast('✅ ลบรายการเรียบร้อย!');
         setTimeout(async function () {
             await fetchPackageData();
             showToast('📊 ข้อมูลอัปเดตแล้ว');
-
-            // Retry fetch after 2 more seconds to ensure cache is updated
-            setTimeout(async function () {
-                await fetchPackageData();
-            }, 2000);
-        }, 2000);
+        }, 1000);
     }).catch(function (e) { alert(e); hideLoading(); });
 }
 
 // Delete Entry (RM)
-function deleteEntryRM(rowIndex, productCode, type) {
+async function deleteEntryRM(rowIndex, productCode, type) {
     if (!confirm('ยืนยันการลบรายการวัตถุดิบนี้?')) return;
 
     showLoading();
@@ -1751,11 +1815,25 @@ function deleteEntryRM(rowIndex, productCode, type) {
 
     // Determine sheet based on current module
     var config = SHEET_CONFIG.rm;
+    var sourceModule = 'rm';
     if (currentModule === 'rm_production') {
         config = SHEET_CONFIG.rm_production;
+        sourceModule = 'rm_production';
     }
 
-    // Send delete request to RM sheet
+    // Dual-write: ลบจาก DB ก่อน
+    if (DB_API_BASE) {
+        try {
+            await fetch(DB_API_BASE + '/rm/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rowIndex, sourceModule, criteria: { productCode, type } })
+            });
+            console.log('[RM] ✅ Deleted from DB');
+        } catch (dbErr) { console.warn('[RM] DB delete failed:', dbErr.message); }
+    }
+
+    // ยังส่ง Sheet ด้วย (backup)
     fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -1768,38 +1846,16 @@ function deleteEntryRM(rowIndex, productCode, type) {
             criteria: { productCode: productCode, type: type }
         })
     }).then(function () {
-        showToast('✅ ลบรายการเรียบร้อย! รอซิงค์ข้อมูล...');
-
-        // Keep loading while waiting for Google Sheets to update
+        showToast('✅ ลบรายการเรียบร้อย!');
         setTimeout(async function () {
-            // First fetch after 3 seconds
             if (currentModule === 'rm_production') {
                 await fetchRMProductionData();
             } else {
                 await fetchRMData();
             }
             hideLoading();
-            showToast('📊 กำลังอัปเดต...');
-
-            // Retry fetch after 2 more seconds
-            setTimeout(async function () {
-                if (currentModule === 'rm_production') {
-                    await fetchRMProductionData();
-                } else {
-                    await fetchRMData();
-                }
-
-                // Third retry after 2 more seconds
-                setTimeout(async function () {
-                    if (currentModule === 'rm_production') {
-                        await fetchRMProductionData();
-                    } else {
-                        await fetchRMData();
-                    }
-                    showToast('📊 ข้อมูลอัปเดตแล้ว');
-                }, 2000);
-            }, 2000);
-        }, 3000);
+            showToast('📊 ข้อมูลอัปเดตแล้ว');
+        }, 1000);
     }).catch(function (e) { alert(e); hideLoading(); });
 }
 
@@ -2158,7 +2214,7 @@ function closeEntryModalRM() {
 }
 
 // Save Entry for Package
-function saveEntry() {
+async function saveEntry() {
     var productCode = document.getElementById('entryProductCode').value;
     var date = document.getElementById('entryDate').value;
     var type = document.getElementById('entryType').value;
@@ -2184,31 +2240,42 @@ function saveEntry() {
     showLoading();
     showToast('กำลังบันทึก...');
 
+    var entryData = {
+        date: formatDateThai(date),
+        productCode: productCode,
+        productName: productName,
+        type: type,
+        inQty: inQty,
+        outQty: outQty,
+        balance: balance,
+        lotNo: lotNo,
+        pkId: pkId,
+        docRef: docRef,
+        remark: remark
+    };
+
+    // Dual-write: บันทึก DB ก่อน
+    if (DB_API_BASE) {
+        try {
+            await fetch(DB_API_BASE + '/package/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ entry: entryData })
+            });
+            console.log('[Package] ✅ Saved to DB');
+        } catch (dbErr) { console.warn('[Package] DB save failed:', dbErr.message); }
+    }
+
+    // ยังส่ง Sheet ด้วย (backup)
     fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'add',
-            entry: {
-                date: formatDateThai(date),
-                productCode: productCode,
-                productName: productName,
-                type: type,
-                inQty: inQty,
-                outQty: outQty,
-                balance: balance,
-                lotNo: lotNo,
-                pkId: pkId,
-                docRef: docRef,
-                remark: remark
-            }
-        })
+        body: JSON.stringify({ action: 'add', entry: entryData })
     }).then(function () {
-        // Hide loading screen immediately, show toast for refresh
         hideLoading();
         closeEntryModal();
-        showToast('✅ บันทึกเรียบร้อย! กำลังโหลดข้อมูลใหม่...');
+        showToast('✅ บันทึกเรียบร้อย!');
 
         document.getElementById('entryDate').value = '';
         document.getElementById('entryInQty').value = '';
@@ -2217,16 +2284,10 @@ function saveEntry() {
         document.getElementById('entryDocRef').value = '';
         document.getElementById('entryRemark').value = '';
 
-        // First fetch after 2 seconds
         setTimeout(async function () {
             await fetchPackageData();
             showToast('📊 ข้อมูลอัปเดตแล้ว');
-
-            // Retry fetch after 2 more seconds to ensure cache is updated
-            setTimeout(async function () {
-                await fetchPackageData();
-            }, 2000);
-        }, 2000);
+        }, 1000);
     }).catch(function (e) { alert(e); hideLoading(); });
 }
 
@@ -2482,16 +2543,24 @@ async function saveEntryRM() {
             console.log('targetConfig.sheetName:', targetConfig.sheetName);
             console.log('entry.type:', entry.type);
 
-            // Debug popup disabled (fixed)
-            // alert('DEBUG:\nModule: ' + currentModule + '\nSheet: ' + targetConfig.sheetName + '\nType: ' + entry.type);
+            // Dual-write: บันทึก DB ก่อน
+            if (DB_API_BASE) {
+                try {
+                    var rmModule = (currentModule === 'rm_production') ? 'rm_production' : 'rm';
+                    await fetch(DB_API_BASE + '/rm/add', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entry: entry, sourceModule: rmModule })
+                    });
+                    console.log('[RM] ✅ Entry ' + (i + 1) + ' saved to DB');
+                } catch (dbErr) { console.warn('[RM] DB save failed:', dbErr.message); }
+            }
 
-            // Using fetch in await mode
+            // ยังส่ง Sheet ด้วย (backup)
             await fetch(APPS_SCRIPT_URL, {
                 method: "POST",
                 mode: "no-cors",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 redirect: "follow",
                 body: JSON.stringify({
                     action: 'add_rm',
@@ -2587,13 +2656,25 @@ async function transferToProductionAuto(entries) {
             };
         });
 
-        // Send to Apps Script
+        // Dual-write: บันทึก DB ก่อน (เป็น "รับเข้า" ใน rm_production)
+        if (DB_API_BASE) {
+            try {
+                for (var td of transferData) {
+                    await fetch(DB_API_BASE + '/rm/add', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entry: { date: td.transferDate, productCode: td.productCode, productName: td.productName, type: 'รับเข้า', inQty: td.quantity, containerQty: td.containerQty, containerWeight: td.containerWeight, remainder: td.remainder, lotNo: td.lotNo, vendorLot: td.vendorLot, mfgDate: td.mfgDate, expDate: td.expDate, supplier: td.supplier, containerOut: td.containerOut }, sourceModule: 'rm_production' })
+                    });
+                }
+                console.log('[Transfer] ✅ Saved', transferData.length, 'entries to DB (rm_production)');
+            } catch (dbErr) { console.warn('[Transfer] DB save failed:', dbErr.message); }
+        }
+
+        // ยังส่ง Sheet ด้วย (backup)
         await fetch(APPS_SCRIPT_URL, {
             method: "POST",
             mode: "no-cors",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             redirect: "follow",
             body: JSON.stringify({
                 action: 'transferToProduction',
@@ -3950,12 +4031,23 @@ async function confirmSmartWithdraw() {
                 showToast('บันทึกรายการที่ ' + (i + 1) + '/' + entriesToSave.length + '...');
             }
 
+            // Dual-write: บันทึก DB ก่อน (Smart Withdraw)
+            if (DB_API_BASE) {
+                try {
+                    await fetch(DB_API_BASE + '/rm/add', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entry: entry, sourceModule: 'rm' })
+                    });
+                    console.log('[SmartWithdraw] ✅ Entry ' + (i + 1) + ' saved to DB');
+                } catch (dbErr) { console.warn('[SmartWithdraw] DB save failed:', dbErr.message); }
+            }
+
+            // ยังส่ง Sheet ด้วย (backup)
             await fetch(APPS_SCRIPT_URL, {
                 method: "POST",
                 mode: "no-cors",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 redirect: "follow",
                 body: JSON.stringify({
                     action: 'add_rm',
@@ -4220,13 +4312,25 @@ async function confirmTransferToProduction() {
             });
         });
 
-        // เรียก Apps Script
+        // Dual-write: บันทึก DB ก่อน (Manual Transfer)
+        if (DB_API_BASE) {
+            try {
+                for (var si of selectedItems) {
+                    await fetch(DB_API_BASE + '/rm/add', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entry: { date: si.transferDate, productCode: si.productCode, productName: si.productName, type: 'รับเข้า', inQty: si.quantity, containerQty: si.containerQty, containerWeight: si.containerWeight, remainder: si.remainder, lotNo: si.lotNo, vendorLot: si.vendorLot, mfgDate: si.mfgDate, expDate: si.expDate, supplier: si.supplier, containerOut: si.containerOut }, sourceModule: 'rm_production' })
+                    });
+                }
+                console.log('[ManualTransfer] ✅ Saved', selectedItems.length, 'entries to DB');
+            } catch (dbErr) { console.warn('[ManualTransfer] DB save failed:', dbErr.message); }
+        }
+
+        // ยังส่ง Sheet ด้วย (backup)
         var response = await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'transferToProduction',
                 data: selectedItems
@@ -4286,13 +4390,25 @@ async function transferToProductionAuto(entries) {
             };
         });
 
-        // Call Apps Script
+        // Dual-write: บันทึก DB ก่อน (Auto Transfer)
+        if (DB_API_BASE) {
+            try {
+                for (var atd of transferData) {
+                    await fetch(DB_API_BASE + '/rm/add', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entry: { date: atd.transferDate, productCode: atd.productCode, productName: atd.productName, type: 'รับเข้า', inQty: atd.quantity, containerQty: atd.containerQty, containerWeight: atd.containerWeight, remainder: atd.remainder, lotNo: atd.lotNo, vendorLot: atd.vendorLot, mfgDate: atd.mfgDate, expDate: atd.expDate, supplier: atd.supplier, containerOut: atd.containerOut }, sourceModule: 'rm_production' })
+                    });
+                }
+                console.log('[AutoTransfer] ✅ Saved', transferData.length, 'entries to DB (rm_production)');
+            } catch (dbErr) { console.warn('[AutoTransfer] DB save failed:', dbErr.message); }
+        }
+
+        // ยังส่ง Sheet ด้วย (backup)
         await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'transferToProduction',
                 data: transferData

@@ -41,6 +41,9 @@ function doPost(e) {
     } else if (action === 'save_all') {
       // Consumable module save
       return saveConsumableData(data);
+    } else if (action === 'save_all_general') {
+      // GeneralStock module save
+      return saveGeneralStockData(data);
     } else if (action === 'delete_consumable_transaction') {
       // Delete a specific transaction from Consumable_Transactions
       return deleteConsumableTransaction(data);
@@ -1124,6 +1127,98 @@ function updateConsumableTransaction(data) {
     })).setMimeType(ContentService.MimeType.JSON);
     
   } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ======================= GENERAL STOCK MODULE =======================
+
+/**
+ * Save GeneralStock items and transactions
+ * Called from GeneralStock web app with action: 'save_all_general'
+ * Items sheet: GeneralStock (columns A-L)
+ * Transactions sheet: GeneralTrans (columns A-I)
+ */
+function saveGeneralStockData(data) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. Save Items
+    var itemSheet = ss.getSheetByName('GeneralStock');
+    if (!itemSheet) {
+      itemSheet = ss.insertSheet('GeneralStock');
+      itemSheet.appendRow(['ID', 'Name', 'Spec', 'Category', 'Unit', 'Stock', 'Min', 'Price', 'LeadTime', 'Supplier', 'Country', 'Image']);
+    }
+    
+    // Clear existing data (keep header row)
+    if (itemSheet.getLastRow() > 1) {
+      itemSheet.getRange(2, 1, itemSheet.getLastRow() - 1, 12).clearContent();
+    }
+    
+    var items = data.items;
+    if (items && items.length > 0) {
+      var rows = items.map(function(item) {
+        return [
+          "'" + (item.id || ''),
+          item.name || '',
+          item.spec || '',
+          item.category || '',
+          item.unit || '',
+          item.stock || 0,
+          item.min || 0,
+          item.price || '',
+          item.leadTime || '',
+          item.supplier || '',
+          item.country || '',
+          item.image || ''
+        ];
+      });
+      itemSheet.getRange(2, 1, rows.length, 12).setValues(rows);
+    }
+    
+    // 2. Save Transactions
+    var transSheet = ss.getSheetByName('GeneralTrans');
+    if (!transSheet) {
+      transSheet = ss.insertSheet('GeneralTrans');
+      transSheet.appendRow(['ID', 'ItemID', 'ItemName', 'Type', 'Qty', 'Date', 'Time', 'Note', 'Remaining']);
+    }
+    
+    // Clear existing transactions (keep header row)
+    if (transSheet.getLastRow() > 1) {
+      transSheet.getRange(2, 1, transSheet.getLastRow() - 1, 9).clearContent();
+    }
+    
+    var trans = data.transactions;
+    if (trans && trans.length > 0) {
+      var tRows = trans.map(function(t) {
+        return [
+          "'" + (t.id || ''),
+          "'" + (t.itemId || ''),
+          t.itemName || '',
+          t.type || '',
+          t.qty || 0,
+          t.date || '',
+          t.time || '',
+          t.note || '',
+          t.remaining || 0
+        ];
+      });
+      transSheet.getRange(2, 1, tRows.length, 9).setValues(tRows);
+    }
+    
+    Logger.log('GeneralStock saved: ' + (items ? items.length : 0) + ' items, ' + (trans ? trans.length : 0) + ' transactions');
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      status: 'success',
+      message: 'GeneralStock saved successfully'
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    Logger.log('saveGeneralStockData error: ' + error.message);
     return ContentService.createTextOutput(JSON.stringify({
       success: false,
       error: error.message

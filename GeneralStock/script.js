@@ -1,6 +1,11 @@
+// ============================================================
+// GeneralStock - Frontend Script
+// ============================================================
+// เชื่อมต่อกับ Node.js API Server แทน Google Apps Script
+// ============================================================
+
 // --- CONFIGURATION ---
-const API_URL = "https://script.google.com/macros/s/AKfycbz-b515sRQbqzNH-5jkdQTDjpnpBNVdYipV9C_0zU04O7m5RY-vEoAZoNcnm0d5-VU1xw/exec";
-// Note: You might want to use a different 'sheetName' in your Apps Script for this folder.
+let API_BASE = ''; // จะถูก set อัตโนมัติจาก /api/config
 
 let items = [];
 let transactions = [];
@@ -12,6 +17,27 @@ const tableBody = document.getElementById('table-body');
 const loader = document.getElementById('app-loader');
 const itemForm = document.getElementById('item-form');
 const transForm = document.getElementById('trans-form');
+
+// --- Detect API Base URL ---
+async function detectApiBase() {
+    // ลองดึงจาก server config ก่อน
+    try {
+        // ถ้าเปิดผ่าน server (localhost:4000) จะใช้ relative path
+        const baseUrl = window.location.origin;
+        const configRes = await fetch(`${baseUrl}/api/config`);
+        if (configRes.ok) {
+            const config = await configRes.json();
+            API_BASE = config.apiBase;
+            console.log('[Config] API Base:', API_BASE);
+            return;
+        }
+    } catch (e) {
+        console.warn('[Config] ไม่สามารถดึง config จาก server:', e.message);
+    }
+    // Fallback: ใช้ relative path
+    API_BASE = `${window.location.origin}/api`;
+    console.log('[Config] Fallback API Base:', API_BASE);
+}
 
 // --- HELPER: Resize Image to Base64 ---
 function resizeImage(file, maxWidth, maxHeight, callback) {
@@ -39,7 +65,7 @@ function resizeImage(file, maxWidth, maxHeight, callback) {
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            callback(canvas.toDataURL('image/jpeg', 0.7)); // Compress to 70% quality
+            callback(canvas.toDataURL('image/jpeg', 0.7));
         };
         img.src = e.target.result;
     };
@@ -90,6 +116,7 @@ window.removeImage = function () {
 // --- INITIALIZATION ---
 async function initApp() {
     showLoading();
+    await detectApiBase();
     await loadData();
     hideLoading();
     renderTable();
@@ -102,42 +129,75 @@ function hideLoading() { loader.style.display = 'none'; }
 
 // --- DATA MANAGEMENT ---
 async function loadData() {
-    // 1. Try Google Sheets
     try {
-        const response = await fetch(`${API_URL}?action=load_all&sheet=GeneralStock`);
-        const data = await response.json();
-        if (data.items) items = data.items;
-        if (data.transactions) transactions = data.transactions;
-        console.log("Loaded from Sheets");
+        // โหลด items จาก API
+        const itemsRes = await fetch(`${API_BASE}/items`);
+        if (!itemsRes.ok) throw new Error('Items API error: ' + itemsRes.status);
+        items = await itemsRes.json();
+
+        // โหลด transactions จาก API
+        const transRes = await fetch(`${API_BASE}/transactions`);
+        if (!transRes.ok) throw new Error('Transactions API error: ' + transRes.status);
+        transactions = await transRes.json();
+
+        // Ensure numbers
+        items.forEach(item => {
+            item.stock = parseFloat(item.stock) || 0;
+            item.min = parseFloat(item.min) || 0;
+        });
+        transactions.forEach(t => {
+            t.qty = parseFloat(t.qty) || 0;
+            t.remaining = parseFloat(t.remaining) || 0;
+        });
+
+        // Backup to LocalStorage
+        localStorage.setItem('genItems', JSON.stringify(items));
+        localStorage.setItem('genTransactions', JSON.stringify(transactions));
+
+        console.log(`✅ Loaded from DB: ${items.length} items, ${transactions.length} transactions`);
     } catch (e) {
-        console.warn("API Load failed, using LocalStorage", e);
+        console.warn("⚠️ API Load failed, using LocalStorage", e);
         items = JSON.parse(localStorage.getItem('genItems')) || [];
         transactions = JSON.parse(localStorage.getItem('genTransactions')) || [];
+        console.log(`📦 Loaded from LocalStorage: ${items.length} items, ${transactions.length} transactions`);
     }
 }
 
-async function saveData() {
-    // Save to LocalStorage
-    localStorage.setItem('genItems', JSON.stringify(items));
-    localStorage.setItem('genTransactions', JSON.stringify(transactions));
+// Visual save status indicator
+function showSaveStatus(success) {
+    const existing = document.getElementById('save-status-toast');
+    if (existing) existing.remove();
 
-    // Save to Google Sheets
-    try {
-        await fetch(API_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'save_all',
-                sheet: 'GeneralStock',
-                items: items,
-                transactions: transactions
-            })
-        });
-        console.log("Saved to Sheets");
-    } catch (e) {
-        console.error("API Save failed", e);
-    }
+    const toast = document.createElement('div');
+    toast.id = 'save-status-toast';
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        color: white;
+        font-size: 0.9rem;
+        font-weight: 600;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease;
+        background: ${success ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #dc2626, #ef4444)'};
+    `;
+    toast.innerHTML = success
+        ? '<i class="fa-solid fa-database"></i> บันทึกลง DB สำเร็จ'
+        : '<i class="fa-solid fa-triangle-exclamation"></i> บันทึก DB ล้มเหลว (ข้อมูลอยู่ใน Local)';
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, success ? 2000 : 5000);
 }
 
 // --- UI RENDERING ---
@@ -208,16 +268,11 @@ function updateStats() {
 
 function setCategoryFilter(cat) {
     categoryFilter = cat;
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.textContent.includes(cat === 'Spare Part' ? 'อะไหล่' : cat === 'Cleaning' ? 'น้ำยา' : cat === 'Other' ? 'อื่นๆ' : 'ทั้งหมด'));
-    });
-    // Fix: the toggle logic above is a bit hardcoded, let's simplify
     const btns = document.querySelectorAll('.filter-btn');
     btns[0].classList.toggle('active', cat === 'all');
     btns[1].classList.toggle('active', cat === 'Spare Part');
     btns[2].classList.toggle('active', cat === 'Cleaning');
     btns[3].classList.toggle('active', cat === 'Other');
-
     renderTable();
 }
 
@@ -236,14 +291,11 @@ window.openModal = (index = null) => {
         document.getElementById('input-unit').value = item.unit;
         document.getElementById('input-stock').value = item.stock;
         document.getElementById('input-min').value = item.min;
-
-        // New Fields
         document.getElementById('input-price').value = item.price || '';
         document.getElementById('input-leadtime').value = item.leadTime || '';
         document.getElementById('input-supplier').value = item.supplier || '';
         document.getElementById('input-country').value = item.country || '';
 
-        // Image
         if (item.image) {
             document.getElementById('image-preview').src = item.image;
             document.getElementById('image-preview').style.display = 'block';
@@ -256,7 +308,6 @@ window.openModal = (index = null) => {
             document.getElementById('remove-image-btn').style.display = 'none';
         }
     } else {
-        // Clear image on new item
         document.getElementById('image-preview').style.display = 'none';
         document.getElementById('image-preview').src = '';
         document.getElementById('input-image-base64').value = '';
@@ -280,27 +331,48 @@ itemForm.addEventListener('submit', async (e) => {
         unit: document.getElementById('input-unit').value,
         stock: parseFloat(document.getElementById('input-stock').value),
         min: parseFloat(document.getElementById('input-min').value),
-
-        // New Fields
         price: document.getElementById('input-price').value,
         leadTime: document.getElementById('input-leadtime').value,
         supplier: document.getElementById('input-supplier').value,
         country: document.getElementById('input-country').value,
-        image: document.getElementById('input-image-base64').value, // Save Base64
-
+        image: document.getElementById('input-image-base64').value,
         id: index !== '' ? items[index].id : Date.now().toString()
     };
 
-    if (index !== '') {
-        items[index] = newItem;
-    } else {
-        items.push(newItem);
-    }
+    // Save to DB via API
+    try {
+        const res = await fetch(`${API_BASE}/items`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newItem),
+        });
+        if (!res.ok) throw new Error('Save failed');
 
-    closeModal('item-modal');
-    renderTable();
-    updateStats();
-    await saveData();
+        // Update local state
+        if (index !== '') {
+            items[index] = newItem;
+        } else {
+            items.push(newItem);
+        }
+
+        closeModal('item-modal');
+        renderTable();
+        updateStats();
+        showSaveStatus(true);
+    } catch (err) {
+        console.error('❌ Save item failed:', err);
+        // Fallback: save locally
+        if (index !== '') {
+            items[index] = newItem;
+        } else {
+            items.push(newItem);
+        }
+        localStorage.setItem('genItems', JSON.stringify(items));
+        closeModal('item-modal');
+        renderTable();
+        updateStats();
+        showSaveStatus(false);
+    }
 });
 
 // --- TRANSACTION LOGIC ---
@@ -329,20 +401,15 @@ transForm.addEventListener('submit', async (e) => {
     const note = document.getElementById('trans-note').value;
 
     const item = items[index];
-    if (type === 'IN') {
-        item.stock += qty;
-    } else {
-        if (item.stock < qty) {
-            if (!confirm(`ยอดเบิก (${qty}) มากกว่าคงเหลือ (${item.stock}) ยืนยันที่จะติดลบหรือไม่?`)) return;
-        }
-        item.stock -= qty;
+
+    if (type === 'OUT' && item.stock < qty) {
+        if (!confirm(`ยอดเบิก (${qty}) มากกว่าคงเหลือ (${item.stock}) ยืนยันที่จะติดลบหรือไม่?`)) return;
     }
 
-    // Get current time
     const now = new Date();
     const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
-    const trans = {
+    const transData = {
         id: Date.now().toString(),
         itemId: item.id,
         itemName: item.name,
@@ -351,26 +418,52 @@ transForm.addEventListener('submit', async (e) => {
         date: date,
         time: timeStr,
         note: note,
-        remaining: item.stock
     };
 
-    transactions.unshift(trans);
+    try {
+        const res = await fetch(`${API_BASE}/transactions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(transData),
+        });
 
-    closeModal('trans-modal');
-    renderTable();
-    updateStats();
-    await saveData();
+        if (!res.ok) throw new Error('Transaction save failed');
+        const result = await res.json();
+
+        // Update local state
+        item.stock = result.remaining !== undefined ? result.remaining : (type === 'IN' ? item.stock + qty : item.stock - qty);
+        transData.remaining = item.stock;
+        transactions.unshift(transData);
+
+        closeModal('trans-modal');
+        renderTable();
+        updateStats();
+        showSaveStatus(true);
+    } catch (err) {
+        console.error('❌ Transaction failed:', err);
+        // Fallback local
+        if (type === 'IN') {
+            item.stock += qty;
+        } else {
+            item.stock -= qty;
+        }
+        transData.remaining = item.stock;
+        transactions.unshift(transData);
+        localStorage.setItem('genItems', JSON.stringify(items));
+        localStorage.setItem('genTransactions', JSON.stringify(transactions));
+        closeModal('trans-modal');
+        renderTable();
+        updateStats();
+        showSaveStatus(false);
+    }
 });
-
-
 
 // --- DETAIL VIEW LOGIC ---
 window.viewItemDetails = (index) => {
-    currentDetailIndex = index; // Store for edit image button
+    currentDetailIndex = index;
     const item = items[index];
     const isLow = item.stock <= item.min;
 
-    // Populate Data
     document.getElementById('detail-name').textContent = item.name;
     document.getElementById('detail-category').textContent = item.category === 'Spare Part' ? 'อะไหล่เครื่องจักร' :
         item.category === 'Cleaning' ? 'อุปกรณ์ทั่วไป' : 'อื่นๆ';
@@ -389,7 +482,6 @@ window.viewItemDetails = (index) => {
     document.getElementById('detail-supplier').textContent = item.supplier || '-';
     document.getElementById('detail-country').textContent = item.country || '-';
 
-    // Image Handling
     const imgEl = document.getElementById('detail-image');
     const placeholderEl = document.getElementById('detail-image-placeholder');
 
@@ -404,18 +496,18 @@ window.viewItemDetails = (index) => {
 
     document.getElementById('detail-modal').style.display = 'flex';
 };
+
 // --- HISTORY LOGIC ---
-let currentHistoryItemIndex = null; // Store item index for transaction operations
+let currentHistoryItemIndex = null;
 
 window.openHistoryModal = (index) => {
-    currentHistoryItemIndex = index; // Store for edit/delete operations
+    currentHistoryItemIndex = index;
     const item = items[index];
     const itemTrans = transactions.filter(t => t.itemId === item.id);
     const hBody = document.getElementById('history-body');
     hBody.innerHTML = '';
 
     itemTrans.forEach((t, tIndex) => {
-        // Format time - only show if it's a valid time format (HH:MM)
         let timeDisplay = '';
         if (t.time && typeof t.time === 'string' && t.time.match(/^\d{1,2}:\d{2}/)) {
             timeDisplay = t.time;
@@ -455,33 +547,52 @@ window.deleteTransaction = async (transId) => {
     const trans = transactions[transIndex];
     if (!confirm(`ยืนยันลบรายการ: ${trans.type === 'IN' ? 'รับเข้า' : 'เบิกออก'} ${trans.qty} ชิ้น วันที่ ${trans.date}?`)) return;
 
-    // Revert stock change
-    const itemIndex = items.findIndex(i => i.id === trans.itemId);
-    if (itemIndex !== -1) {
-        if (trans.type === 'IN') {
-            items[itemIndex].stock -= trans.qty; // Undo receive
-        } else {
-            items[itemIndex].stock += trans.qty; // Undo withdraw
+    try {
+        const res = await fetch(`${API_BASE}/transactions/${transId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Delete failed');
+        const result = await res.json();
+
+        // Update local state
+        const itemIndex = items.findIndex(i => i.id === trans.itemId);
+        if (itemIndex !== -1 && result.remaining !== undefined) {
+            items[itemIndex].stock = result.remaining;
         }
-    }
+        transactions.splice(transIndex, 1);
 
-    // Remove transaction
-    transactions.splice(transIndex, 1);
+        closeModal('history-modal');
+        renderTable();
+        updateStats();
+        showSaveStatus(true);
 
-    // Close and reopen to refresh
-    closeModal('history-modal');
-    renderTable();
-    updateStats();
-    await saveData();
-
-    // Reopen history modal
-    if (currentHistoryItemIndex !== null) {
-        openHistoryModal(currentHistoryItemIndex);
+        if (currentHistoryItemIndex !== null) {
+            openHistoryModal(currentHistoryItemIndex);
+        }
+    } catch (err) {
+        console.error('❌ Delete transaction failed:', err);
+        // Fallback local
+        const itemIndex = items.findIndex(i => i.id === trans.itemId);
+        if (itemIndex !== -1) {
+            if (trans.type === 'IN') {
+                items[itemIndex].stock -= trans.qty;
+            } else {
+                items[itemIndex].stock += trans.qty;
+            }
+        }
+        transactions.splice(transIndex, 1);
+        localStorage.setItem('genItems', JSON.stringify(items));
+        localStorage.setItem('genTransactions', JSON.stringify(transactions));
+        closeModal('history-modal');
+        renderTable();
+        updateStats();
+        showSaveStatus(false);
+        if (currentHistoryItemIndex !== null) {
+            openHistoryModal(currentHistoryItemIndex);
+        }
     }
 };
 
 // --- EDIT TRANSACTION ---
-window.editTransaction = (transId) => {
+window.editTransaction = async (transId) => {
     const trans = transactions.find(t => t.id === transId);
     if (!trans) return;
 
@@ -494,41 +605,76 @@ window.editTransaction = (transId) => {
         return;
     }
 
-    const qtyDiff = parsedQty - trans.qty;
+    try {
+        const res = await fetch(`${API_BASE}/transactions/${transId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newQty: parsedQty }),
+        });
+        if (!res.ok) throw new Error('Edit failed');
+        const result = await res.json();
 
-    // Update item stock
-    const itemIndex = items.findIndex(i => i.id === trans.itemId);
-    if (itemIndex !== -1) {
-        if (trans.type === 'IN') {
-            items[itemIndex].stock += qtyDiff; // Adjust for receive
-        } else {
-            items[itemIndex].stock -= qtyDiff; // Adjust for withdraw
+        // Update local
+        const itemIndex = items.findIndex(i => i.id === trans.itemId);
+        if (itemIndex !== -1 && result.remaining !== undefined) {
+            items[itemIndex].stock = result.remaining;
         }
-    }
+        trans.qty = parsedQty;
+        trans.remaining = items[itemIndex]?.stock || trans.remaining;
 
-    // Update transaction
-    trans.qty = parsedQty;
-    trans.remaining = items[itemIndex]?.stock || trans.remaining;
+        closeModal('history-modal');
+        renderTable();
+        updateStats();
+        showSaveStatus(true);
 
-    // Refresh UI
-    closeModal('history-modal');
-    renderTable();
-    updateStats();
-    saveData();
-
-    // Reopen history modal
-    if (currentHistoryItemIndex !== null) {
-        openHistoryModal(currentHistoryItemIndex);
+        if (currentHistoryItemIndex !== null) {
+            openHistoryModal(currentHistoryItemIndex);
+        }
+    } catch (err) {
+        console.error('❌ Edit transaction failed:', err);
+        // Fallback local
+        const qtyDiff = parsedQty - trans.qty;
+        const itemIndex = items.findIndex(i => i.id === trans.itemId);
+        if (itemIndex !== -1) {
+            if (trans.type === 'IN') {
+                items[itemIndex].stock += qtyDiff;
+            } else {
+                items[itemIndex].stock -= qtyDiff;
+            }
+        }
+        trans.qty = parsedQty;
+        trans.remaining = items[itemIndex]?.stock || trans.remaining;
+        localStorage.setItem('genItems', JSON.stringify(items));
+        localStorage.setItem('genTransactions', JSON.stringify(transactions));
+        closeModal('history-modal');
+        renderTable();
+        updateStats();
+        showSaveStatus(false);
+        if (currentHistoryItemIndex !== null) {
+            openHistoryModal(currentHistoryItemIndex);
+        }
     }
 };
 
 // --- DELETE LOGIC ---
 window.deleteItem = async (index) => {
-    if (confirm(`ยืนยันการลบรายการ: ${items[index].name}?`)) {
+    if (!confirm(`ยืนยันการลบรายการ: ${items[index].name}?`)) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/items/${items[index].id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Delete failed');
+
         items.splice(index, 1);
         renderTable();
         updateStats();
-        await saveData();
+        showSaveStatus(true);
+    } catch (err) {
+        console.error('❌ Delete item failed:', err);
+        items.splice(index, 1);
+        localStorage.setItem('genItems', JSON.stringify(items));
+        renderTable();
+        updateStats();
+        showSaveStatus(false);
     }
 };
 
@@ -547,7 +693,6 @@ window.editImageFromDetail = function () {
     if (currentDetailIndex !== null) {
         closeModal('detail-modal');
         openModal(currentDetailIndex);
-        // Scroll to image section after a short delay
         setTimeout(() => {
             document.querySelector('.image-upload-options')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 300);

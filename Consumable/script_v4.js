@@ -523,7 +523,51 @@ const loadData = async () => {
         localStorage.removeItem('shrinkItems');
     } catch (e) { }
 
-    // 1. Try Online First
+    // === 0. Try DB API First (เร็วกว่า Sheet) ===
+    try {
+        const dbBase = window.location.origin + '/api';
+        console.log('[Consumable] Trying DB API...');
+
+        const [itemsRes, transRes] = await Promise.all([
+            fetch(dbBase + '/consumable/items', { signal: AbortSignal.timeout(5000) }),
+            fetch(dbBase + '/consumable/transactions', { signal: AbortSignal.timeout(5000) })
+        ]);
+
+        if (itemsRes.ok && transRes.ok) {
+            const itemsData = await itemsRes.json();
+            const transData = await transRes.json();
+
+            if (itemsData.success && itemsData.items && itemsData.items.length > 0) {
+                items = itemsData.items.map(item => ({
+                    name: item.name,
+                    category: item.category || 'weight',
+                    stockCartons: Number(item.stockCartons || 0),
+                    stockPartialKg: Number(item.stockPartialKg || 0),
+                    kgPerCarton: Number(item.kgPerCarton || 25),
+                    pcsPerKg: Number(item.pcsPerKg || 0),
+                    minThreshold: Number(item.minThreshold || 0),
+                    pcsPerPack: (item.pcsPerPack !== undefined && item.pcsPerPack !== null) ? Number(item.pcsPerPack) : 1,
+                    fgPcsPerCarton: Number(item.fgPcsPerCarton || 1),
+                    rollLength: Number(item.rollLength || 0),
+                    cutLength: Number(item.cutLength || 0),
+                    pcsPerRoll: Number(item.pcsPerRoll || 0),
+                    fgYieldPerRoll: Number(item.fgYieldPerRoll || 0),
+                    stockCode: item.stockCode || ""
+                }));
+
+                if (transData.success && transData.transactions) {
+                    transactions = transData.transactions;
+                }
+
+                console.log(`[Consumable] ✅ Loaded ${items.length} items, ${transactions.length} trans from DB`);
+                return; // สำเร็จ ไม่ต้อง fallback
+            }
+        }
+    } catch (dbErr) {
+        console.warn('[Consumable] DB API not available, falling back to Sheet:', dbErr.message);
+    }
+
+    // === 1. Fallback: Google Apps Script (ของเดิม) ===
     if (API_URL) {
         try {
             const controller = new AbortController();
@@ -747,7 +791,24 @@ window.saveData = async () => {
     localStorage.setItem('shrinkItems', JSON.stringify(items));
     localStorage.setItem('shrinkTransactions', JSON.stringify(transactions));
 
-    // 2. If Online, Sync to Cloud
+    // 2. Save to DB first (primary)
+    try {
+        const dbBase = window.location.origin + '/api';
+        const dbRes = await fetch(dbBase + '/consumable/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items, transactions })
+        });
+        if (dbRes.ok) {
+            console.log('[Consumable] ✅ Saved to DB');
+        } else {
+            console.warn('[Consumable] DB save failed:', await dbRes.text());
+        }
+    } catch (dbErr) {
+        console.warn('[Consumable] DB not available for save:', dbErr.message);
+    }
+
+    // 3. Dual-write: Also sync to Google Sheet (backup)
     if (API_URL) {
         try {
             // SAFETY FILTER

@@ -523,51 +523,47 @@ const loadData = async () => {
         localStorage.removeItem('shrinkItems');
     } catch (e) { }
 
-    // === 0. Try DB API First (เร็วกว่า Sheet) ===
+    // === 1. ลอง DB API ก่อน (เร็วกว่า Google Sheet มาก) ===
     try {
-        const dbBase = window.location.origin + '/api';
-        console.log('[Consumable] Trying DB API...');
+        const dbRes = await fetch('/api/consumable/data');
+        if (dbRes.ok) {
+            const ct = dbRes.headers.get('content-type') || '';
+            if (ct.includes('application/json')) {
+                const dbData = await dbRes.json();
+                if (dbData.success && dbData.items && dbData.items.length > 0) {
+                    // DB data is already in correct format — no Thai header mapping needed
+                    items = dbData.items.map(item => ({
+                        name: item.name,
+                        category: item.category || 'weight',
+                        stockCartons: Number(item.stockCartons || 0),
+                        stockPartialKg: Number(item.stockPartialKg || 0),
+                        kgPerCarton: Number(item.kgPerCarton || 25),
+                        pcsPerKg: Number(item.pcsPerKg || 0),
+                        minThreshold: Number(item.minThreshold || 0),
+                        pcsPerPack: (item.pcsPerPack !== undefined && item.pcsPerPack !== null) ? Number(item.pcsPerPack) : 1,
+                        fgPcsPerCarton: Number(item.fgPcsPerCarton || 1),
+                        rollLength: Number(item.rollLength || 0),
+                        cutLength: Number(item.cutLength || 0),
+                        pcsPerRoll: Number(item.pcsPerRoll || 0),
+                        fgYieldPerRoll: Number(item.fgYieldPerRoll || 0),
+                        stockCode: item.stockCode || ""
+                    }));
 
-        const [itemsRes, transRes] = await Promise.all([
-            fetch(dbBase + '/consumable/items', { signal: AbortSignal.timeout(5000) }),
-            fetch(dbBase + '/consumable/transactions', { signal: AbortSignal.timeout(5000) })
-        ]);
+                    if (dbData.transactions && Array.isArray(dbData.transactions)) {
+                        transactions = dbData.transactions;
+                    }
 
-        if (itemsRes.ok && transRes.ok) {
-            const itemsData = await itemsRes.json();
-            const transData = await transRes.json();
-
-            if (itemsData.success && itemsData.items && itemsData.items.length > 0) {
-                items = itemsData.items.map(item => ({
-                    name: item.name,
-                    category: item.category || 'weight',
-                    stockCartons: Number(item.stockCartons || 0),
-                    stockPartialKg: Number(item.stockPartialKg || 0),
-                    kgPerCarton: Number(item.kgPerCarton || 25),
-                    pcsPerKg: Number(item.pcsPerKg || 0),
-                    minThreshold: Number(item.minThreshold || 0),
-                    pcsPerPack: (item.pcsPerPack !== undefined && item.pcsPerPack !== null) ? Number(item.pcsPerPack) : 1,
-                    fgPcsPerCarton: Number(item.fgPcsPerCarton || 1),
-                    rollLength: Number(item.rollLength || 0),
-                    cutLength: Number(item.cutLength || 0),
-                    pcsPerRoll: Number(item.pcsPerRoll || 0),
-                    fgYieldPerRoll: Number(item.fgYieldPerRoll || 0),
-                    stockCode: item.stockCode || ""
-                }));
-
-                if (transData.success && transData.transactions) {
-                    transactions = transData.transactions;
+                    console.log(`[Consumable] ✅ Loaded from DB: ${items.length} items, ${transactions.length} transactions`);
+                    return; // สำเร็จ ไม่ต้อง fallback
                 }
-
-                console.log(`[Consumable] ✅ Loaded ${items.length} items, ${transactions.length} trans from DB`);
-                return; // สำเร็จ ไม่ต้อง fallback
             }
         }
+        console.warn('[Consumable] DB returned empty/invalid, falling back to Sheet');
     } catch (dbErr) {
-        console.warn('[Consumable] DB API not available, falling back to Sheet:', dbErr.message);
+        console.warn('[Consumable] DB failed, falling back to Sheet:', dbErr.message);
     }
 
-    // === 1. Fallback: Google Apps Script (ของเดิม) ===
+    // === 2. Fallback: Google Apps Script (ของเดิม) ===
     if (API_URL) {
         try {
             const controller = new AbortController();

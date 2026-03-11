@@ -21,14 +21,9 @@ window.onerror = function (msg, url, lineNo, columnNo, error) {
 // Configuration
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFUoMhdUiCHJtwKAuDdCw29uM3205tQ5LikrW3HcX1MMwARhZtXPISjmjG4fR6Y6Jy/exec';
 
-// DB API Base URL (ใช้ DB ในการอ่านข้อมูล - เร็วกว่า Sheet)
-let DB_API_BASE = '';
-const _dbReady = (async function detectDbApi() {
-    try {
-        const r = await fetch(window.location.origin + '/api/config', { signal: AbortSignal.timeout(3000) });
-        if (r.ok) { const c = await r.json(); DB_API_BASE = c.apiBase; console.log('[DB] API Base:', DB_API_BASE); }
-    } catch (e) { console.log('[DB] API not available, using Sheet only'); }
-})();
+// DB API Base URL (ใช้ local server — same origin)
+const DB_API_BASE = '';
+const _dbReady = Promise.resolve(); 
 
 // Google Sheet URLs for direct data fetching
 const SHEET_CONFIG = {
@@ -308,29 +303,45 @@ function refreshData() {
     }
 }
 
-// Fetch RM Master Data (code, name, supplier) from master sheet
+// Fetch RM Master Data (code, name, supplier) from DB → fallback Apps Script
 async function fetchRMMasterData() {
-    console.log('[RM Master] Fetching from API...');
+    console.log('[RM Master] Fetching...');
+
+    // === ลอง DB API ก่อน ===
+    if (DB_API_BASE !== false) {
+        try {
+            var dbRes = await fetch((DB_API_BASE || '') + '/api/rm/master');
+            if (dbRes.ok) {
+                var ct = dbRes.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                    var dbResult = await dbRes.json();
+                    if (dbResult.success && dbResult.data && dbResult.data.length > 0) {
+                        rmMasterWithSupplier = dbResult.data;
+                        console.log('[RM Master] ✅ Loaded from DB:', rmMasterWithSupplier.length, 'products');
+                        rmProductMasterData = rmMasterWithSupplier.map(function (p) {
+                            return { code: p.code, name: p.name };
+                        });
+                        populateProductDropdownRM();
+                        return; // สำเร็จ ไม่ต้อง fallback
+                    }
+                }
+            }
+        } catch (dbErr) {
+            console.warn('[RM Master] DB failed, trying Apps Script:', dbErr.message);
+        }
+    }
+
+    // === Fallback: Apps Script ===
     try {
         var url = APPS_SCRIPT_URL + '?action=getRMMaster';
-        console.log('[RM Master] URL:', url);
-
         var response = await fetch(url);
-        console.log('[RM Master] Response status:', response.status);
-
         var result = await response.json();
-        console.log('[RM Master] Result:', result);
-
         if (result.success && result.data) {
             rmMasterWithSupplier = result.data;
-            console.log('[RM Master] Loaded:', rmMasterWithSupplier.length, 'products');
-
-            // Update rmProductMasterData with master data
+            console.log('[RM Master] Loaded from Sheet:', rmMasterWithSupplier.length, 'products');
             rmProductMasterData = rmMasterWithSupplier.map(function (p) {
                 return { code: p.code, name: p.name };
             });
-
-            // Populate dropdown
             populateProductDropdownRM();
         } else {
             console.warn('[RM Master] API returned:', result);
@@ -444,36 +455,39 @@ async function init() {
 // ==================== PACKAGE DATA ====================
 
 async function fetchPackageData() {
-    // รอ config โหลดเสร็จก่อน
     await _dbReady;
+
     // === ลอง DB API ก่อน (เร็วกว่า Sheet) ===
-    if (DB_API_BASE) {
+    if (DB_API_BASE !== false) {
         try {
-            console.log('[Package] Loading from DB...');
-            const r = await fetch(DB_API_BASE + '/package/data');
-            if (r.ok) {
-                const result = await r.json();
-                if (result.success && result.data && result.data.length > 0) {
-                    stockData = result.data;
-                    console.log('[Package] ✅ Loaded ' + stockData.length + ' records from DB');
+            var dbRes = await fetch((DB_API_BASE || '') + '/api/package/data');
+            if (dbRes.ok) {
+                var ct = dbRes.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                    var dbResult = await dbRes.json();
+                    if (dbResult.success && dbResult.data && dbResult.data.length > 0) {
+                        stockData = dbResult.data;
+                        console.log('[Package] ✅ Loaded from DB:', stockData.length, 'records');
 
-                    var uniqueProducts = new Map();
-                    stockData.forEach(function (item) {
-                        if (item.productCode && !uniqueProducts.has(item.productCode)) {
-                            uniqueProducts.set(item.productCode, { code: item.productCode, name: item.productName });
-                        }
-                    });
-                    productMasterData = Array.from(uniqueProducts.values());
+                        var uniqueProducts = new Map();
+                        stockData.forEach(function (item) {
+                            if (item.productCode && !uniqueProducts.has(item.productCode)) {
+                                uniqueProducts.set(item.productCode, { code: item.productCode, name: item.productName });
+                            }
+                        });
+                        productMasterData = Array.from(uniqueProducts.values());
 
-                    populateProductDropdown();
-                    updateStats();
-                    showAllProducts();
-                    hideLoading();
-                    return; // สำเร็จ ไม่ต้อง fallback
+                        populateProductDropdown();
+                        updateStats();
+                        showAllProducts();
+                        hideLoading();
+                        return; // สำเร็จ ไม่ต้อง fallback
+                    }
                 }
             }
+            console.warn('[Package] DB returned empty/invalid, falling back to Sheet');
         } catch (dbErr) {
-            console.warn('[Package] DB API failed, falling back to Sheet:', dbErr.message);
+            console.warn('[Package] DB failed, falling back to Sheet:', dbErr.message);
         }
     }
 
@@ -546,6 +560,8 @@ async function fetchPackageData() {
             return true;
         });
 
+        console.log('[Package] Loaded from Sheet:', stockData.length, 'records');
+
         var uniqueProducts = new Map();
         stockData.forEach(function (item) {
             if (item.productCode && !uniqueProducts.has(item.productCode)) {
@@ -604,49 +620,53 @@ function showAllProducts() {
 // ==================== RM DATA ====================
 
 async function fetchRMData() {
-    // รอ config โหลดเสร็จก่อน
     await _dbReady;
     var moduleKey = (currentModule === 'rm_production') ? 'rm_production' : 'rm';
 
     // === ลอง DB API ก่อน (เร็วกว่า Sheet) ===
-    if (DB_API_BASE) {
+    if (DB_API_BASE !== false) {
         try {
-            console.log('[RM] Loading ' + moduleKey + ' from DB...');
-            const r = await fetch(DB_API_BASE + '/rm/data?module=' + moduleKey);
-            if (r.ok) {
-                const result = await r.json();
-                if (result.success && result.data && result.data.length > 0) {
-                    rmStockData = result.data;
-                    console.log('[RM] ✅ Loaded ' + rmStockData.length + ' records from DB (' + moduleKey + ')');
+            var dbRes = await fetch((DB_API_BASE || '') + '/api/rm/data?module=' + moduleKey);
+            if (dbRes.ok) {
+                var ct = dbRes.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                    var dbResult = await dbRes.json();
+                    if (dbResult.success && dbResult.data && dbResult.data.length > 0) {
+                        rmStockData = dbResult.data;
+                        console.log('[RM] ✅ Loaded from DB (' + moduleKey + '):', rmStockData.length, 'records');
 
-                    var uniqueProducts = new Map();
-                    rmStockData.forEach(function (item) {
-                        if (item.productCode && !uniqueProducts.has(item.productCode)) {
-                            uniqueProducts.set(item.productCode, { code: item.productCode, name: item.productName });
-                        }
-                    });
-                    rmProductMasterData = Array.from(uniqueProducts.values());
+                        var uniqueProducts = new Map();
+                        rmStockData.forEach(function (item) {
+                            if (item.productCode && !uniqueProducts.has(item.productCode)) {
+                                uniqueProducts.set(item.productCode, { code: item.productCode, name: item.productName });
+                            }
+                        });
+                        rmProductMasterData = Array.from(uniqueProducts.values());
 
-                    var uniqueSuppliers = new Set();
-                    rmStockData.forEach(function (item) {
-                        if (item.supplier && item.supplier.trim() !== '') {
-                            uniqueSuppliers.add(item.supplier.trim());
-                        }
-                    });
-                    rmSuppliersList = Array.from(uniqueSuppliers).sort();
+                        var uniqueSuppliers = new Set();
+                        rmStockData.forEach(function (item) {
+                            if (item.supplier && item.supplier.trim() !== '') {
+                                uniqueSuppliers.add(item.supplier.trim());
+                            }
+                        });
+                        rmSuppliersList = Array.from(uniqueSuppliers).sort();
 
-                    populateRMProductDropdown();
-                    populateRMSupplierDropdown();
-                    updateStatsRM();
-                    var searchQuery = document.getElementById('searchInput')?.value?.trim() || '';
-                    if (searchQuery) { handleSearch(); } else { showAllProductsRM(); }
-                    updateExpiryAlerts();
-                    hideLoading();
-                    return; // สำเร็จ
+                        populateRMProductDropdown();
+                        populateRMSupplierDropdown();
+                        updateStatsRM();
+
+                        var searchQuery = document.getElementById('searchInput')?.value?.trim() || '';
+                        if (searchQuery) { handleSearch(); } else { showAllProductsRM(); }
+
+                        updateExpiryAlerts();
+                        hideLoading();
+                        return; // สำเร็จ ไม่ต้อง fallback
+                    }
                 }
             }
+            console.warn('[RM] DB returned empty/invalid, falling back to Sheet');
         } catch (dbErr) {
-            console.warn('[RM] DB API failed, falling back to Sheet:', dbErr.message);
+            console.warn('[RM] DB failed, falling back to Sheet:', dbErr.message);
         }
     }
 
@@ -700,6 +720,8 @@ async function fetchRMData() {
                 containerOut: parseFloat(c[18]?.v) || 0
             };
         }).filter(function (item) { return item.productCode && item.productCode !== 'รหัสสินค้า'; });
+
+        console.log('[RM] Loaded from Sheet (' + moduleKey + '):', rmStockData.length, 'records');
 
         var uniqueProducts = new Map();
         rmStockData.forEach(function (item) {
@@ -2543,18 +2565,7 @@ async function saveEntryRM() {
             console.log('targetConfig.sheetName:', targetConfig.sheetName);
             console.log('entry.type:', entry.type);
 
-            // Dual-write: บันทึก DB ก่อน
-            if (DB_API_BASE) {
-                try {
-                    var rmModule = (currentModule === 'rm_production') ? 'rm_production' : 'rm';
-                    await fetch(DB_API_BASE + '/rm/add', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ entry: entry, sourceModule: rmModule })
-                    });
-                    console.log('[RM] ✅ Entry ' + (i + 1) + ' saved to DB');
-                } catch (dbErr) { console.warn('[RM] DB save failed:', dbErr.message); }
-            }
+            // ข้ามขั้นตอน Dual-write (route ไม่มีอยู่จริงทำให้เกิด Error)
 
             // ยังส่ง Sheet ด้วย (backup)
             await fetch(APPS_SCRIPT_URL, {
@@ -2656,19 +2667,7 @@ async function transferToProductionAuto(entries) {
             };
         });
 
-        // Dual-write: บันทึก DB ก่อน (เป็น "รับเข้า" ใน rm_production)
-        if (DB_API_BASE) {
-            try {
-                for (var td of transferData) {
-                    await fetch(DB_API_BASE + '/rm/add', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ entry: { date: td.transferDate, productCode: td.productCode, productName: td.productName, type: 'รับเข้า', inQty: td.quantity, containerQty: td.containerQty, containerWeight: td.containerWeight, remainder: td.remainder, lotNo: td.lotNo, vendorLot: td.vendorLot, mfgDate: td.mfgDate, expDate: td.expDate, supplier: td.supplier, containerOut: td.containerOut }, sourceModule: 'rm_production' })
-                    });
-                }
-                console.log('[Transfer] ✅ Saved', transferData.length, 'entries to DB (rm_production)');
-            } catch (dbErr) { console.warn('[Transfer] DB save failed:', dbErr.message); }
-        }
+        // ข้ามขั้นตอน Dual-write (route ไม่มีอยู่จริงทำให้ได้ Response ผิดปกติ)
 
         // ยังส่ง Sheet ด้วย (backup)
         await fetch(APPS_SCRIPT_URL, {
@@ -4031,17 +4030,7 @@ async function confirmSmartWithdraw() {
                 showToast('บันทึกรายการที่ ' + (i + 1) + '/' + entriesToSave.length + '...');
             }
 
-            // Dual-write: บันทึก DB ก่อน (Smart Withdraw)
-            if (DB_API_BASE) {
-                try {
-                    await fetch(DB_API_BASE + '/rm/add', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ entry: entry, sourceModule: 'rm' })
-                    });
-                    console.log('[SmartWithdraw] ✅ Entry ' + (i + 1) + ' saved to DB');
-                } catch (dbErr) { console.warn('[SmartWithdraw] DB save failed:', dbErr.message); }
-            }
+            // ข้ามขั้นตอน Dual-write (Smart Withdraw)
 
             // ยังส่ง Sheet ด้วย (backup)
             await fetch(APPS_SCRIPT_URL, {
@@ -4312,19 +4301,7 @@ async function confirmTransferToProduction() {
             });
         });
 
-        // Dual-write: บันทึก DB ก่อน (Manual Transfer)
-        if (DB_API_BASE) {
-            try {
-                for (var si of selectedItems) {
-                    await fetch(DB_API_BASE + '/rm/add', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ entry: { date: si.transferDate, productCode: si.productCode, productName: si.productName, type: 'รับเข้า', inQty: si.quantity, containerQty: si.containerQty, containerWeight: si.containerWeight, remainder: si.remainder, lotNo: si.lotNo, vendorLot: si.vendorLot, mfgDate: si.mfgDate, expDate: si.expDate, supplier: si.supplier, containerOut: si.containerOut }, sourceModule: 'rm_production' })
-                    });
-                }
-                console.log('[ManualTransfer] ✅ Saved', selectedItems.length, 'entries to DB');
-            } catch (dbErr) { console.warn('[ManualTransfer] DB save failed:', dbErr.message); }
-        }
+        // ข้ามขั้นตอน Dual-write (Manual Transfer)
 
         // ยังส่ง Sheet ด้วย (backup)
         var response = await fetch(APPS_SCRIPT_URL, {
@@ -4390,19 +4367,7 @@ async function transferToProductionAuto(entries) {
             };
         });
 
-        // Dual-write: บันทึก DB ก่อน (Auto Transfer)
-        if (DB_API_BASE) {
-            try {
-                for (var atd of transferData) {
-                    await fetch(DB_API_BASE + '/rm/add', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ entry: { date: atd.transferDate, productCode: atd.productCode, productName: atd.productName, type: 'รับเข้า', inQty: atd.quantity, containerQty: atd.containerQty, containerWeight: atd.containerWeight, remainder: atd.remainder, lotNo: atd.lotNo, vendorLot: atd.vendorLot, mfgDate: atd.mfgDate, expDate: atd.expDate, supplier: atd.supplier, containerOut: atd.containerOut }, sourceModule: 'rm_production' })
-                    });
-                }
-                console.log('[AutoTransfer] ✅ Saved', transferData.length, 'entries to DB (rm_production)');
-            } catch (dbErr) { console.warn('[AutoTransfer] DB save failed:', dbErr.message); }
-        }
+        // ข้ามขั้นตอน Dual-write (Auto Transfer)
 
         // ยังส่ง Sheet ด้วย (backup)
         await fetch(APPS_SCRIPT_URL, {

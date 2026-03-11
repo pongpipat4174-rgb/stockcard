@@ -7,7 +7,8 @@
 // การใช้งาน: node sync_from_sheets.js
 // ============================================================
 
-require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+// โหลดจาก stockcard/.env (แหล่งเดียว)
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 const { Pool } = require('pg');
 const fetch = require('node-fetch');

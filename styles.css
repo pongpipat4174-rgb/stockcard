@@ -4180,6 +4180,73 @@ mark.search-highlight {
     color: white;
 }
 
+/* DB Settings Modal */
+.db-mode-current {
+    margin-bottom: 1rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+.db-mode-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.btn-db-mode {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    background: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-db-mode:hover {
+    border-color: var(--primary-400);
+    background: var(--primary-50);
+}
+.btn-db-mode.active {
+    border-color: var(--primary-600);
+    background: var(--primary-100);
+    color: var(--primary-700);
+}
+.db-mode-hint {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+.db-token-row {
+    margin-top: 1rem;
+}
+.db-token-row label {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-bottom: 0.25rem;
+}
+.db-token-row input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    font-size: 0.9375rem;
+}
+.db-token-row input:focus {
+    outline: none;
+    border-color: var(--primary-400);
+}
+.db-token-row input.input-error {
+    border-color: var(--danger-500);
+    background: #fef2f2;
+}
+.db-settings-error {
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    background: #fef2f2;
+    color: var(--danger-500);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+}
+
 /* Step Title */
 .step-title {
     font-size: 1rem;

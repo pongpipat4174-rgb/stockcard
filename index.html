@@ -127,6 +127,13 @@
                     </svg>
                     พิมพ์ทั้งหมด
                 </button>
+                <button class="btn btn-outline" id="settingsBtn" title="ตั้งค่า DB">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    ตั้งค่า
+                </button>
             </div>
         </div>
     </header>
@@ -840,6 +847,37 @@
         </div>
     </div>
 
+    <!-- DB Settings Modal -->
+    <div class="modal" id="dbSettingsModal">
+        <div class="modal-backdrop" onclick="closeDbSettingsModal()"></div>
+        <div class="modal-content" style="max-width: 420px;">
+            <div class="modal-header">
+                <h2>⚙️ ตั้งค่า Database</h2>
+                <button class="modal-close" onclick="closeDbSettingsModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="db-mode-current" id="dbModeCurrent">โหลด...</p>
+                <div class="db-mode-buttons">
+                    <button type="button" class="btn btn-db-mode" data-mode="local">Local</button>
+                    <button type="button" class="btn btn-db-mode" data-mode="tunnel">Tunnel</button>
+                    <button type="button" class="btn btn-db-mode" data-mode="test">เทส</button>
+                </div>
+                <p class="db-mode-hint">สลับโหมดแล้วต้อง <strong>restart server</strong> จึงจะมีผล</p>
+                <div class="db-token-row">
+                    <label for="dbAdminToken">Admin Token (ถ้ามี ADMIN_SECRET ใน .env):</label>
+                    <input type="password" id="dbAdminToken" placeholder="ใส่รหัส Admin" autocomplete="off"
+                        oninput="this.classList.remove('input-error')">
+                </div>
+                <div id="dbSettingsError" class="db-settings-error" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js?v=104"></script>
 
     <script>
@@ -895,6 +933,75 @@
 
         // RM Production uses app.js switchModule (same as RM Center)
         document.getElementById('tabRMProduction').onclick = (e) => switchModule('rm_production', e);
+
+        // DB Settings Modal
+        document.getElementById('settingsBtn').onclick = openDbSettingsModal;
+        document.querySelectorAll('.btn-db-mode').forEach(btn => {
+            btn.onclick = () => switchDbMode(btn.dataset.mode);
+        });
+
+        function getAdminHeaders() {
+            const token = document.getElementById('dbAdminToken')?.value?.trim();
+            const h = { 'Content-Type': 'application/json' };
+            if (token) h['X-Admin-Token'] = token;
+            return h;
+        }
+        async function openDbSettingsModal() {
+            const modal = document.getElementById('dbSettingsModal');
+            modal.classList.add('active');
+            document.getElementById('dbModeCurrent').textContent = 'โหลด...';
+            document.getElementById('dbSettingsError').style.display = 'none';
+            const tokenEl = document.getElementById('dbAdminToken');
+            tokenEl.classList.remove('input-error');
+            if (sessionStorage.dbAdminToken) tokenEl.value = sessionStorage.dbAdminToken;
+            try {
+                const r = await fetch(window.location.origin + '/api/admin/db-mode', { headers: getAdminHeaders() });
+                if (!r.ok) throw new Error(r.status === 403 ? 'กรุณาใส่ Admin Token ด้านล่าง' : 'โหลดไม่ได้');
+                const d = await r.json();
+                const labels = { local: 'Local (port 5432)', tunnel: 'Tunnel (port 15432)', test: 'เทส pddoc_dev' };
+                document.getElementById('dbModeCurrent').textContent = 'โหมดปัจจุบัน: ' + (labels[d.mode] || d.mode);
+                document.querySelectorAll('.btn-db-mode').forEach(b => {
+                    b.classList.toggle('active', b.dataset.mode === d.mode);
+                });
+            } catch (e) {
+                document.getElementById('dbModeCurrent').textContent = 'โหลดไม่ได้ (ต้องรันผ่าน server)';
+                document.getElementById('dbSettingsError').textContent = e.message;
+                document.getElementById('dbSettingsError').style.display = 'block';
+                if (e.message.includes('Admin Token')) {
+                    document.getElementById('dbAdminToken').focus();
+                    document.getElementById('dbAdminToken').classList.add('input-error');
+                }
+            }
+        }
+        function closeDbSettingsModal() {
+            document.getElementById('dbSettingsModal').classList.remove('active');
+        }
+        async function switchDbMode(mode) {
+            const errEl = document.getElementById('dbSettingsError');
+            errEl.style.display = 'none';
+            const token = document.getElementById('dbAdminToken')?.value?.trim();
+            if (token) sessionStorage.dbAdminToken = token;
+            try {
+                const r = await fetch(window.location.origin + '/api/admin/switch-db-mode', {
+                    method: 'POST',
+                    headers: getAdminHeaders(),
+                    body: JSON.stringify({ mode })
+                });
+                const d = await r.json().catch(() => ({}));
+                if (!r.ok) {
+                    if (r.status === 403) document.getElementById('dbAdminToken').classList.add('input-error');
+                    throw new Error(d.error || 'สลับโหมดไม่ได้');
+                }
+                document.getElementById('dbAdminToken').classList.remove('input-error');
+                document.getElementById('dbModeCurrent').textContent = 'สลับเป็น ' + mode + ' แล้ว — กรุณา restart server';
+                document.querySelectorAll('.btn-db-mode').forEach(b => {
+                    b.classList.toggle('active', b.dataset.mode === mode);
+                });
+            } catch (e) {
+                errEl.textContent = e.message;
+                errEl.style.display = 'block';
+            }
+        }
     </script>
 
     <!-- Flatpickr Date Picker JS -->

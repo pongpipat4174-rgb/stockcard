@@ -1,8 +1,8 @@
-server.js
 server.py
 *.log
 .DS_Store
 .env
+!.env.example
 database/.env
 database/verify_*.js
 database/speed_test.js

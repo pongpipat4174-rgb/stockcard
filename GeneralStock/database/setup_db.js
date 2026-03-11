@@ -6,7 +6,8 @@
 // การใช้งาน: node setup_db.js
 // ============================================================
 
-require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+// โหลดจาก stockcard/.env (แหล่งเดียว)
+require('dotenv').config({ path: require('path').join(__dirname, '..', '..', '.env') });
 
 const { Client } = require('pg');
 

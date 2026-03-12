@@ -1441,62 +1441,130 @@ window.deleteTransaction = async (transId, itemIndex) => {
     await saveData();
 };
 
-// Edit Transaction - แก้ไขจำนวนแทนการลบ
+// Edit Transaction - แก้ไขจำนวน (ใช้ Modal เต็มรูปแบบ เหมือนหน้าบันทึกใหม่)
 window.editTransaction = async (transId, itemIndex) => {
-    // Compare as strings to handle both number and string IDs
     const transIdx = transactions.findIndex(t => String(t.id) === String(transId));
     if (transIdx === -1) {
-        console.log('Transaction not found. Looking for:', transId);
-        console.log('Available IDs:', transactions.map(t => t.id));
         alert('ไม่พบรายการนี้ กรุณารีเฟรชหน้าแล้วลองใหม่');
         return;
     }
 
     const trans = transactions[transIdx];
     const item = items[itemIndex];
-    const isRoll = item.category === 'unit'; // 'unit' means roll items (ม้วน)
+    const isRoll = item.category === 'unit';
 
-    const currentQty = isRoll ? (trans.qtyUnit || trans.qtyCartons) : (trans.qtyKg || trans.qtyCartons);
-    const unitLabel = isRoll ? 'ม้วน' : 'กก.';
+    // Show modal
+    const modal = document.getElementById('edit-trans-modal');
+    const infoEl = document.getElementById('edit-trans-info');
 
-    const newQtyStr = prompt(`แก้ไขจำนวน (${trans.type === 'IN' ? 'รับเข้า' : 'เบิกออก'})\n\nจำนวนเดิม: ${currentQty} ${unitLabel}\n\nใส่จำนวนใหม่:`, currentQty);
+    infoEl.innerHTML = `
+        <div style="font-weight:600; font-size:1rem; color:#1e293b; margin-bottom:4px;">${item.name}</div>
+        <div style="color:#64748b;">แก้ไขรายการจากวันที่ ${formatDate(trans.date)}</div>
+    `;
 
-    if (newQtyStr === null) return; // Cancelled
+    // Set type radio
+    const typeRadio = document.querySelector(`input[name="edit-trans-type"][value="${trans.type}"]`);
+    if (typeRadio) typeRadio.checked = true;
 
-    const newQty = parseFloat(newQtyStr);
-    if (isNaN(newQty) || newQty < 0) {
-        alert('กรุณาใส่ตัวเลขที่ถูกต้อง');
-        return;
-    }
+    // Set qty fields
+    document.getElementById('edit-trans-qty-cartons').value = trans.qtyCartons || 0;
+    document.getElementById('edit-trans-qty-partial').value = trans.qtyPartial || trans.stockPartialKg || 0;
 
-    // Calculate difference
-    const diff = newQty - currentQty;
-
-    if (diff === 0) {
-        alert('ไม่มีการเปลี่ยนแปลง');
-        return;
-    }
-
-    // Update stock based on transaction type and difference
-    // If IN: more qty = more stock, less qty = less stock
-    // If OUT: more qty = less stock, less qty = more stock
-    if (trans.type === 'IN') {
-        item.stockCartons += diff;
+    // Handle roll vs weight label
+    const labelCartons = document.getElementById('edit-trans-label-cartons');
+    const partialGroup = document.getElementById('edit-trans-partial-group');
+    if (isRoll) {
+        labelCartons.textContent = 'จำนวน (ม้วน)';
+        partialGroup.style.display = 'none';
     } else {
-        item.stockCartons -= diff;
+        labelCartons.textContent = 'จำนวนเต็ม (ลัง)';
+        partialGroup.style.display = 'block';
     }
 
-    // Update transaction record - update ALL fields to ensure display works
-    trans.qtyUnit = newQty; // Always update for unit/roll display
-    trans.qtyCartons = newQty; // Column H in sheet
+    // Set date
+    const dateInput = document.getElementById('edit-trans-date');
+    if (trans.date) {
+        const d = new Date(trans.date);
+        dateInput.value = d.toISOString().split('T')[0];
+    }
+
+    // Set note
+    document.getElementById('edit-trans-note').value = trans.note || '';
+
+    // Store hidden values
+    document.getElementById('edit-trans-id').value = transId;
+    document.getElementById('edit-trans-item-index').value = itemIndex;
+
+    modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('edit-trans-qty-cartons').focus(), 100);
+};
+
+// Confirm Edit Transaction (called from modal form submit)
+window.confirmEditTransaction = async () => {
+    const transId = document.getElementById('edit-trans-id').value;
+    const itemIndex = parseInt(document.getElementById('edit-trans-item-index').value);
+
+    const transIdx = transactions.findIndex(t => String(t.id) === String(transId));
+    if (transIdx === -1) {
+        alert('ไม่พบรายการนี้');
+        return;
+    }
+
+    const trans = transactions[transIdx];
+    const item = items[itemIndex];
+    const isRoll = item.category === 'unit';
+
+    // Read new values from form
+    const newType = document.querySelector('input[name="edit-trans-type"]:checked').value;
+    const newCartons = parseFloat(document.getElementById('edit-trans-qty-cartons').value) || 0;
+    const newPartial = isRoll ? 0 : (parseFloat(document.getElementById('edit-trans-qty-partial').value) || 0);
+    const newDate = document.getElementById('edit-trans-date').value;
+    const newNote = document.getElementById('edit-trans-note').value;
+
+    if (newCartons === 0 && newPartial === 0) {
+        alert('กรุณาระบุจำนวน');
+        return;
+    }
+
+    // --- 1. Revert old transaction from stock ---
+    const oldCartons = parseFloat(trans.qtyCartons) || 0;
+    const oldPartial = parseFloat(trans.qtyPartial) || 0;
+    if (trans.type === 'IN') {
+        item.stockCartons -= oldCartons;
+        if (!isRoll) item.stockPartialKg = (item.stockPartialKg || 0) - oldPartial;
+    } else {
+        item.stockCartons += oldCartons;
+        if (!isRoll) item.stockPartialKg = (item.stockPartialKg || 0) + oldPartial;
+    }
+
+    // --- 2. Apply new transaction to stock ---
+    if (newType === 'IN') {
+        item.stockCartons += newCartons;
+        if (!isRoll) item.stockPartialKg = (item.stockPartialKg || 0) + newPartial;
+    } else {
+        item.stockCartons -= newCartons;
+        if (!isRoll) item.stockPartialKg = (item.stockPartialKg || 0) - newPartial;
+    }
+
+    // Auto-break logic (ตัดลังอัตโนมัติ)
     if (!isRoll) {
-        trans.qtyKg = newQty; // For weight items
+        while (item.stockPartialKg < 0 && item.stockCartons > 0 && item.kgPerCarton > 0) {
+            item.stockCartons -= 1;
+            item.stockPartialKg += item.kgPerCarton;
+        }
     }
 
-    console.log('Updated trans:', trans.qtyUnit, trans.qtyCartons, trans.qtyKg);
-
-    // Recalculate remaining stock
+    // --- 3. Update transaction record ---
+    const totalMove = isRoll ? newCartons : ((newCartons * (item.kgPerCarton || 25)) + newPartial);
+    trans.type = newType;
+    trans.qtyCartons = newCartons;
+    trans.qtyPartial = newPartial;
+    trans.qtyKg = isRoll ? 0 : totalMove;
+    trans.qtyUnit = isRoll ? newCartons : 0;
     trans.remainingStock = item.stockCartons;
+    trans.stockPartialKg = item.stockPartialKg;
+    trans.date = newDate || trans.date;
+    trans.note = newNote;
 
     // Sync linked stock
     if (item.stockCode) {
@@ -1508,14 +1576,17 @@ window.editTransaction = async (transId, itemIndex) => {
         });
     }
 
-    // Update transaction in Google Sheet
+    // Update in Sheet
     try {
         const updatePayload = {
             action: 'update_consumable_transaction',
             transactionId: transId,
+            type: newType,
             qtyKg: trans.qtyKg || 0,
             qtyCartons: trans.qtyCartons,
-            remainingStock: trans.remainingStock
+            remainingStock: trans.remainingStock,
+            note: newNote,
+            date: newDate
         };
 
         const response = await fetch(API_URL, {
@@ -1534,11 +1605,10 @@ window.editTransaction = async (transId, itemIndex) => {
         console.error('Update in Sheet failed:', e);
     }
 
-    // Re-render and save
+    // Close edit modal, re-render history and save
+    closeModal('edit-trans-modal');
     openHistoryModal(itemIndex);
     await saveData();
-
-    alert(`แก้ไขสำเร็จ! จาก ${currentQty} เป็น ${newQty} ${unitLabel}`);
 };
 
 // Modal Operations

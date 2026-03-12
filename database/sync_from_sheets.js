@@ -225,7 +225,7 @@ async function syncConsumable() {
 
                 let itemCount = 0;
                 for (const item of data.items) {
-                    // Map fields — handle both mapped and Thai header formats
+                    // Map fields — handle both English and Thai header formats from Apps Script
                     const name = item.name || item['ชื่อสินค้า'] || '';
                     if (!name) continue;
 
@@ -234,19 +234,19 @@ async function syncConsumable() {
                          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
                         [
                             name,
-                            item.category || 'weight',
-                            parseFloat(item.stock || item.stockCartons || 0),
-                            parseFloat(item.stockPartial || item.stockPartialKg || 0),
-                            parseFloat(item.kgPerCarton || 25),
-                            parseFloat(item.pcsPerKg || 0),
-                            parseFloat(item.min || item.minThreshold || 0),
-                            parseFloat(item.pcsPerPack || 1),
-                            parseFloat(item.fgPerCarton || item.fgPcsPerCarton || 1),
-                            parseFloat(item.rollLength || 0),
-                            parseFloat(item.cutLength || 0),
-                            parseFloat(item.pcsPerRoll || 0),
-                            parseFloat(item.fgYieldPerRoll || 0),
-                            item.stockCode || '',
+                            item.category || item['ประเภท'] || 'weight',
+                            parseFloat(item.stockCartons || item['สต็อก (ลัง)'] || item.stock || 0),
+                            parseFloat(item.stockPartialKg || item['เศษ(กก.)'] || item.stockPartial || 0),
+                            parseFloat(item.kgPerCarton || item['กก./ลัง'] || 25),
+                            parseFloat(item.pcsPerKg || item['ชิ้น/กก.'] || 0),
+                            parseFloat(item.minThreshold || item['จุดสั่งซื้อ (กก.)'] || item.min || 0),
+                            parseFloat(item.pcsPerPack || item['ชิ้นงาน/ถุง'] || 1),
+                            parseFloat(item.fgPcsPerCarton || item['ชิ้น FG/ลัง'] || item.fgPerCarton || 1),
+                            parseFloat(item.rollLength || item['ความยาวม้วน (ม.)'] || 0),
+                            parseFloat(item.cutLength || item['ความยาวตัด (มม.)'] || 0),
+                            parseFloat(item.pcsPerRoll || item['ชิ้น/ม้วน'] || 0),
+                            parseFloat(item.fgYieldPerRoll || item['Yield/ม้วน'] || 0),
+                            item.stockCode || item['StockCode'] || '',
                         ]
                     );
                     itemCount++;
@@ -327,6 +327,9 @@ async function syncGeneralStock() {
             const client = await pool.connect();
             try {
                 await client.query('BEGIN');
+                // Clear existing data before fresh sync
+                await client.query('DELETE FROM gs_transactions');
+                await client.query('DELETE FROM gs_items');
 
                 let itemCount = 0;
                 for (const item of data.items) {

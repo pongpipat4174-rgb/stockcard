@@ -949,6 +949,63 @@
             </div>
         </div>
 
+        <!-- Edit Transaction Modal -->
+        <div id="edit-trans-modal" class="modal" style="z-index: 10001;">
+            <div class="modal-content" style="max-width: 500px; padding: 24px;">
+                <span class="close-btn" onclick="closeModal('edit-trans-modal')">&times;</span>
+                <h2 style="margin-bottom: 16px; color: #3b82f6;"><i class="fa-solid fa-pencil"></i> แก้ไขรายการ</h2>
+
+                <div id="edit-trans-info" style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem; color: #475569;"></div>
+
+                <form id="edit-trans-form" onsubmit="event.preventDefault(); confirmEditTransaction();">
+                    <input type="hidden" id="edit-trans-id">
+                    <input type="hidden" id="edit-trans-item-index">
+
+                    <div class="form-group">
+                        <label>ประเภทรายการ</label>
+                        <div class="trans-type-selector" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <label style="flex: 1; cursor: pointer; padding: 10px; background: #dcfce7; border-radius: 8px; border: 1px solid #86efac; display: flex; align-items: center; justify-content: center; gap: 8px; color: #166534; font-weight: 600;">
+                                <input type="radio" name="edit-trans-type" value="IN" checked>
+                                <span><i class="fa-solid fa-arrow-down"></i> รับเข้า (IN)</span>
+                            </label>
+                            <label style="flex: 1; cursor: pointer; padding: 10px; background: #fee2e2; border-radius: 8px; border: 1px solid #fca5a5; display: flex; align-items: center; justify-content: center; gap: 8px; color: #991b1b; font-weight: 600;">
+                                <input type="radio" name="edit-trans-type" value="OUT">
+                                <span><i class="fa-solid fa-arrow-up"></i> เบิกออก (OUT)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 12px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label id="edit-trans-label-cartons" style="font-weight: 600;">จำนวนเต็ม (ลัง)</label>
+                            <input type="number" id="edit-trans-qty-cartons" step="1" min="0" class="large-input"
+                                style="font-size: 1.2em; border-color: #3b82f6; padding: 10px;" placeholder="0">
+                        </div>
+                        <div class="form-group" id="edit-trans-partial-group" style="flex: 1;">
+                            <label style="font-weight: 600;" class="text-blue">เศษ (กิโลกรัม)</label>
+                            <input type="number" id="edit-trans-qty-partial" step="0.01" min="0" class="large-input"
+                                style="font-size: 1.2em; border-color: #3b82f6; padding: 10px;" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>วันที่</label>
+                        <input type="date" id="edit-trans-date" style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>เลขที่เอกสาร / Lot / หมายเหตุ</label>
+                        <input type="text" id="edit-trans-note" placeholder="เช่น PO-67001, Lot A" style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%;">
+                    </div>
+
+                    <div class="form-actions" style="margin-top: 16px; display: flex; gap: 10px;">
+                        <button type="button" class="btn secondary" onclick="closeModal('edit-trans-modal')" style="flex:1;">ยกเลิก</button>
+                        <button type="submit" class="btn primary" style="flex:1;">บันทึก</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <script src="script_v4.js"></script>
         <!-- Flatpickr Date Picker JS -->
         <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

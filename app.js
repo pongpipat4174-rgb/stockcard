@@ -1634,10 +1634,22 @@ function filterByDate(dateStr) {
     }
 
     // Convert input date to Thai format for comparison
-    var inputDate = new Date(dateStr);
-    var day = inputDate.getDate();
-    var month = inputDate.getMonth() + 1;
-    var year = inputDate.getFullYear();
+    // dateStr from flatpickr is "DD/MM/YYYY" (e.g. "17/03/2026")
+    // dateStr from native input is "YYYY-MM-DD" (e.g. "2026-03-17")
+    var day, month, year;
+    if (dateStr.includes('/')) {
+        // DD/MM/YYYY from flatpickr
+        var parts = dateStr.split('/');
+        day = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10);
+        year = parseInt(parts[2], 10);
+    } else {
+        // YYYY-MM-DD from native date input
+        var inputDate = new Date(dateStr);
+        day = inputDate.getDate();
+        month = inputDate.getMonth() + 1;
+        year = inputDate.getFullYear();
+    }
     var thaiDateStr = day + '/' + month + '/' + year;
 
     if (currentModule === 'package') {

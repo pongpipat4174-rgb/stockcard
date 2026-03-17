@@ -2277,16 +2277,19 @@ async function saveEntry() {
     };
 
     // Dual-write: บันทึก DB ก่อน
-    if (DB_API_BASE) {
-        try {
-            await fetch(DB_API_BASE + '/package/add', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ entry: entryData })
-            });
-            console.log('[Package] ✅ Saved to DB');
-        } catch (dbErr) { console.warn('[Package] DB save failed:', dbErr.message); }
-    }
+    try {
+        var dbSaveRes = await fetch((DB_API_BASE || '') + '/api/package/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(entryData)
+        });
+        var dbSaveResult = await dbSaveRes.json();
+        if (dbSaveResult.success) {
+            console.log('[Package] ✅ Saved to DB, id:', dbSaveResult.id);
+        } else {
+            console.warn('[Package] DB save returned:', dbSaveResult);
+        }
+    } catch (dbErr) { console.warn('[Package] DB save failed:', dbErr.message); }
 
     // ยังส่ง Sheet ด้วย (backup)
     fetch(APPS_SCRIPT_URL, {
@@ -2565,7 +2568,22 @@ async function saveEntryRM() {
             console.log('targetConfig.sheetName:', targetConfig.sheetName);
             console.log('entry.type:', entry.type);
 
-            // ข้ามขั้นตอน Dual-write (route ไม่มีอยู่จริงทำให้เกิด Error)
+            // Dual-write: บันทึก DB ก่อน (ใช้ /api/rm/save)
+            try {
+                var dbSaveRes = await fetch((DB_API_BASE || '') + '/api/rm/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(Object.assign({}, entry, { sourceModule: moduleKey }))
+                });
+                var dbSaveResult = await dbSaveRes.json();
+                if (dbSaveResult.success) {
+                    console.log('[RM] ✅ Saved to DB, id:', dbSaveResult.id);
+                } else {
+                    console.warn('[RM] DB save returned:', dbSaveResult);
+                }
+            } catch (dbErr) {
+                console.warn('[RM] DB save failed:', dbErr.message);
+            }
 
             // ยังส่ง Sheet ด้วย (backup)
             await fetch(APPS_SCRIPT_URL, {
@@ -2667,7 +2685,38 @@ async function transferToProductionAuto(entries) {
             };
         });
 
-        // ข้ามขั้นตอน Dual-write (route ไม่มีอยู่จริงทำให้ได้ Response ผิดปกติ)
+        // Dual-write: บันทึก DB (โอนเป็น "รับเข้า" ใน rm_production)
+        for (var t = 0; t < transferData.length; t++) {
+            var td = transferData[t];
+            try {
+                var dbTransRes = await fetch((DB_API_BASE || '') + '/api/rm/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date: td.transferDate,
+                        productCode: td.productCode,
+                        productName: td.productName,
+                        type: 'รับเข้า',
+                        containerQty: td.containerQty,
+                        containerWeight: td.containerWeight,
+                        remainder: td.remainder,
+                        inQty: td.quantity,
+                        outQty: 0,
+                        lotNo: td.lotNo,
+                        vendorLot: td.vendorLot,
+                        mfgDate: td.mfgDate,
+                        expDate: td.expDate,
+                        supplier: td.supplier,
+                        containerOut: 0,
+                        sourceModule: 'rm_production'
+                    })
+                });
+                var dbTransResult = await dbTransRes.json();
+                console.log('[Transfer] ✅ Saved to DB production:', dbTransResult);
+            } catch (dbErr) {
+                console.warn('[Transfer] DB save failed:', dbErr.message);
+            }
+        }
 
         // ยังส่ง Sheet ด้วย (backup)
         await fetch(APPS_SCRIPT_URL, {

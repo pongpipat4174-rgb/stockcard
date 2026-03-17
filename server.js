@@ -463,6 +463,16 @@ app.post('/api/rm/save', async (req, res) => {
   const d = req.body;
   const sourceModule = d.sourceModule || 'rm';
   try {
+    // Auto-calculate row_index if not provided (append to end)
+    let rowIndex = parseInt(d.rowIndex) || 0;
+    if (rowIndex <= 0) {
+      const maxRes = await pool.query(
+        `SELECT COALESCE(MAX(row_index), 0) + 1 AS next_idx FROM sc_rm WHERE source_module = $1`,
+        [sourceModule]
+      );
+      rowIndex = maxRes.rows[0].next_idx;
+    }
+
     const result = await pool.query(
       `INSERT INTO sc_rm (date, product_code, product_name, type, container_qty, container_weight,
        remainder, in_qty, out_qty, balance, lot_no, vendor_lot, mfg_date, exp_date,
@@ -475,9 +485,9 @@ app.post('/api/rm/save', async (req, res) => {
        parseFloat(d.balance) || 0, d.lotNo || '', d.vendorLot || '',
        d.mfgDate || '', d.expDate || '', d.daysLeft || '',
        parseFloat(d.lotBalance) || 0, d.supplier || '', d.remark || '',
-       parseFloat(d.containerOut) || 0, sourceModule, d.rowIndex || 0]
+       parseFloat(d.containerOut) || 0, sourceModule, rowIndex]
     );
-    console.log(`[RM] ✅ Saved to DB (${sourceModule}), id:`, result.rows[0].id);
+    console.log(`[RM] ✅ Saved to DB (${sourceModule}), id:`, result.rows[0].id, 'row_index:', rowIndex);
     res.json({ success: true, id: result.rows[0].id });
   } catch (err) {
     console.error('[RM API] POST error:', err.message);

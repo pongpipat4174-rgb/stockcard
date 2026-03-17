@@ -465,7 +465,7 @@ async function fetchPackageData() {
                 var ct = dbRes.headers.get('content-type') || '';
                 if (ct.includes('application/json')) {
                     var dbResult = await dbRes.json();
-                    if (dbResult.success && dbResult.data && dbResult.data.length > 0) {
+                    if (dbResult.success && Array.isArray(dbResult.data)) {
                         stockData = dbResult.data;
                         console.log('[Package] ✅ Loaded from DB:', stockData.length, 'records');
 
@@ -631,7 +631,7 @@ async function fetchRMData() {
                 var ct = dbRes.headers.get('content-type') || '';
                 if (ct.includes('application/json')) {
                     var dbResult = await dbRes.json();
-                    if (dbResult.success && dbResult.data && dbResult.data.length > 0) {
+                    if (dbResult.success && Array.isArray(dbResult.data)) {
                         rmStockData = dbResult.data;
                         console.log('[RM] ✅ Loaded from DB (' + moduleKey + '):', rmStockData.length, 'records');
 
@@ -1809,9 +1809,9 @@ async function deleteEntry(rowIndex, productCode, type) {
     showToast('กำลังลบ...');
 
     // Dual-write: ลบจาก DB ก่อน
-    if (DB_API_BASE) {
+    if (DB_API_BASE !== false) {
         try {
-            await fetch(DB_API_BASE + '/package/delete', {
+            await fetch((DB_API_BASE || '') + '/api/package/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ rowIndex, criteria: { productCode, type } })
@@ -1856,9 +1856,9 @@ async function deleteEntryRM(rowIndex, productCode, type) {
     }
 
     // Dual-write: ลบจาก DB ก่อน
-    if (DB_API_BASE) {
+    if (DB_API_BASE !== false) {
         try {
-            await fetch(DB_API_BASE + '/rm/delete', {
+            await fetch((DB_API_BASE || '') + '/api/rm/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ rowIndex, sourceModule, criteria: { productCode, type } })

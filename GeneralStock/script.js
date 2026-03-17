@@ -6,6 +6,7 @@
 
 // --- CONFIGURATION ---
 let API_BASE = ''; // จะถูก set อัตโนมัติจาก /api/config
+let APPS_SCRIPT_GENERALSTOCK = '';
 
 let items = [];
 let transactions = [];
@@ -28,6 +29,7 @@ async function detectApiBase() {
         if (configRes.ok) {
             const config = await configRes.json();
             API_BASE = config.apiBase;
+            APPS_SCRIPT_GENERALSTOCK = config.appsScriptGeneralStock || '';
             console.log('[Config] API Base:', API_BASE);
             return;
         }
@@ -37,6 +39,27 @@ async function detectApiBase() {
     // Fallback: ใช้ relative path
     API_BASE = `${window.location.origin}/api`;
     console.log('[Config] Fallback API Base:', API_BASE);
+}
+
+async function syncGeneralStockToSheet() {
+    if (!APPS_SCRIPT_GENERALSTOCK) return;
+
+    const payload = {
+        action: 'save_all',
+        sheet: 'GeneralStock',
+        items: items,
+        transactions: transactions
+    };
+
+    const response = await fetch(APPS_SCRIPT_GENERALSTOCK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        throw new Error('Sheet sync failed: ' + response.status);
+    }
 }
 
 // --- HELPER: Resize Image to Base64 ---
@@ -356,6 +379,11 @@ itemForm.addEventListener('submit', async (e) => {
         }
 
         closeModal('item-modal');
+        try {
+            await syncGeneralStockToSheet();
+        } catch (sheetErr) {
+            console.warn('⚠️ Sync GeneralStock sheet failed:', sheetErr);
+        }
         renderTable();
         updateStats();
         showSaveStatus(true);
@@ -436,6 +464,11 @@ transForm.addEventListener('submit', async (e) => {
         transactions.unshift(transData);
 
         closeModal('trans-modal');
+        try {
+            await syncGeneralStockToSheet();
+        } catch (sheetErr) {
+            console.warn('⚠️ Sync GeneralStock sheet failed:', sheetErr);
+        }
         renderTable();
         updateStats();
         showSaveStatus(true);
@@ -560,6 +593,11 @@ window.deleteTransaction = async (transId) => {
         transactions.splice(transIndex, 1);
 
         closeModal('history-modal');
+        try {
+            await syncGeneralStockToSheet();
+        } catch (sheetErr) {
+            console.warn('⚠️ Sync GeneralStock sheet failed:', sheetErr);
+        }
         renderTable();
         updateStats();
         showSaveStatus(true);
@@ -623,6 +661,11 @@ window.editTransaction = async (transId) => {
         trans.remaining = items[itemIndex]?.stock || trans.remaining;
 
         closeModal('history-modal');
+        try {
+            await syncGeneralStockToSheet();
+        } catch (sheetErr) {
+            console.warn('⚠️ Sync GeneralStock sheet failed:', sheetErr);
+        }
         renderTable();
         updateStats();
         showSaveStatus(true);
@@ -665,6 +708,11 @@ window.deleteItem = async (index) => {
         if (!res.ok) throw new Error('Delete failed');
 
         items.splice(index, 1);
+        try {
+            await syncGeneralStockToSheet();
+        } catch (sheetErr) {
+            console.warn('⚠️ Sync GeneralStock sheet failed:', sheetErr);
+        }
         renderTable();
         updateStats();
         showSaveStatus(true);

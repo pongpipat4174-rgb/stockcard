@@ -530,7 +530,7 @@ const loadData = async () => {
             const ct = dbRes.headers.get('content-type') || '';
             if (ct.includes('application/json')) {
                 const dbData = await dbRes.json();
-                if (dbData.success && dbData.items && dbData.items.length > 0) {
+                if (dbData.success && Array.isArray(dbData.items) && Array.isArray(dbData.transactions)) {
                     // DB data is already in correct format — no Thai header mapping needed
                     items = dbData.items.map(item => ({
                         name: item.name,

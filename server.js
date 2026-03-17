@@ -47,8 +47,96 @@ const pool = new Pool({
 app.get('/api/config', (req, res) => {
   const protocol = req.protocol;
   const host = req.get('host');
-  res.json({ apiBase: `${protocol}://${host}/api` });
+  res.json({
+    apiBase: `${protocol}://${host}/api`,
+    appsScriptGeneralStock: process.env.APPS_SCRIPT_GENERALSTOCK || ''
+  });
 });
+
+function calculateDaysLeft(expDateValue) {
+  const expDate = expDateValue || '';
+  if (!expDate || expDate === '-') return '';
+
+  const parts = String(expDate).split('/');
+  if (parts.length !== 3) return '';
+
+  let year = parseInt(parts[2], 10);
+  if (year > 2500) year -= 543;
+
+  const exp = new Date(year, parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+  exp.setHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return Math.ceil((exp - today) / (1000 * 60 * 60 * 24)) + 1;
+}
+
+async function recalculatePackageRows(client) {
+  const rowsRes = await client.query(
+    `SELECT id, product_code, in_qty, out_qty
+     FROM sc_package
+     WHERE source_module = 'package'
+     ORDER BY row_index ASC, id ASC`
+  );
+
+  const balances = new Map();
+  for (let i = 0; i < rowsRes.rows.length; i++) {
+    const row = rowsRes.rows[i];
+    const nextBalance = (balances.get(row.product_code) || 0)
+      + (parseFloat(row.in_qty) || 0)
+      - (parseFloat(row.out_qty) || 0);
+
+    balances.set(row.product_code, nextBalance);
+
+    await client.query(
+      `UPDATE sc_package
+       SET balance = $1, row_index = $2
+       WHERE id = $3`,
+      [nextBalance, i + 2, row.id]
+    );
+  }
+}
+
+async function recalculateRMRows(client, sourceModule) {
+  const rowsRes = await client.query(
+    `SELECT id, product_code, lot_no, exp_date, in_qty, out_qty
+     FROM sc_rm
+     WHERE source_module = $1
+     ORDER BY row_index ASC, id ASC`,
+    [sourceModule]
+  );
+
+  const balances = new Map();
+  const lotBalances = new Map();
+
+  for (let i = 0; i < rowsRes.rows.length; i++) {
+    const row = rowsRes.rows[i];
+    const productKey = row.product_code || '';
+    const lotKey = `${productKey}||${row.lot_no || ''}`;
+
+    const nextBalance = (balances.get(productKey) || 0)
+      + (parseFloat(row.in_qty) || 0)
+      - (parseFloat(row.out_qty) || 0);
+
+    let nextLotBalance = 0;
+    if (row.lot_no && row.lot_no !== '-') {
+      nextLotBalance = (lotBalances.get(lotKey) || 0)
+        + (parseFloat(row.in_qty) || 0)
+        - (parseFloat(row.out_qty) || 0);
+      lotBalances.set(lotKey, nextLotBalance);
+    }
+
+    balances.set(productKey, nextBalance);
+
+    await client.query(
+      `UPDATE sc_rm
+       SET balance = $1, lot_balance = $2, days_left = $3, row_index = $4
+       WHERE id = $5`,
+      [nextBalance, nextLotBalance, String(calculateDaysLeft(row.exp_date)), i + 2, row.id]
+    );
+  }
+}
 
 // ============================================================
 // GeneralStock Items API
@@ -357,16 +445,34 @@ app.get('/api/package/data', async (req, res) => {
 app.post('/api/package/save', async (req, res) => {
   const d = req.body;
   try {
+    const inQty = parseFloat(d.inQty) || 0;
+    const outQty = parseFloat(d.outQty) || 0;
+
+    const rowIndexRes = await pool.query(
+      `SELECT GREATEST(COALESCE(MAX(row_index), 1), 1) + 1 AS next_idx
+       FROM sc_package
+       WHERE source_module = 'package'`
+    );
+    const rowIndex = parseInt(d.rowIndex, 10) || rowIndexRes.rows[0].next_idx;
+
+    const balanceRes = await pool.query(
+      `SELECT COALESCE(SUM(in_qty - out_qty), 0) AS total
+       FROM sc_package
+       WHERE product_code = $1 AND source_module = 'package'`,
+      [d.productCode]
+    );
+    const balance = (parseFloat(balanceRes.rows[0].total) || 0) + inQty - outQty;
+
     const result = await pool.query(
       `INSERT INTO sc_package (date, product_code, product_name, type, in_qty, out_qty, balance, lot_no, pk_id, doc_ref, remark, source_module, row_index)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'package',$12)
        RETURNING id`,
       [d.date, d.productCode, d.productName, d.type,
-       parseFloat(d.inQty) || 0, parseFloat(d.outQty) || 0, parseFloat(d.balance) || 0,
-       d.lotNo || '', d.pkId || '', d.docRef || '', d.remark || '', d.rowIndex || 0]
+       inQty, outQty, balance,
+       d.lotNo || '', d.pkId || '', d.docRef || '', d.remark || '', rowIndex]
     );
-    console.log('[Package] ✅ Saved to DB, id:', result.rows[0].id);
-    res.json({ success: true, id: result.rows[0].id });
+    console.log('[Package] ✅ Saved to DB, id:', result.rows[0].id, 'balance:', balance, 'row_index:', rowIndex);
+    res.json({ success: true, id: result.rows[0].id, balance, rowIndex });
   } catch (err) {
     console.error('[Package API] POST error:', err.message);
     res.status(500).json({ error: err.message });
@@ -376,24 +482,32 @@ app.post('/api/package/save', async (req, res) => {
 // POST /api/package/delete — ลบรายการ Package จาก DB
 app.post('/api/package/delete', async (req, res) => {
   const { rowIndex, criteria } = req.body;
+  const client = await pool.connect();
   try {
-    let result;
+    await client.query('BEGIN');
+
+    let result = { rowCount: 0 };
     if (rowIndex) {
-      result = await pool.query(
+      result = await client.query(
         `DELETE FROM sc_package WHERE row_index = $1 AND source_module = 'package'`,
         [rowIndex]
       );
     } else if (criteria) {
-      result = await pool.query(
+      result = await client.query(
         `DELETE FROM sc_package WHERE product_code = $1 AND type = $2 AND source_module = 'package'`,
         [criteria.productCode, criteria.type]
       );
     }
+    await recalculatePackageRows(client);
+    await client.query('COMMIT');
     console.log('[Package] ✅ Deleted from DB, rows:', result?.rowCount);
     res.json({ success: true, deleted: result?.rowCount || 0 });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('[Package API] DELETE error:', err.message);
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -470,7 +584,7 @@ app.post('/api/rm/save', async (req, res) => {
     let rowIndex = parseInt(d.rowIndex) || 0;
     if (rowIndex <= 0) {
       const maxRes = await pool.query(
-        `SELECT COALESCE(MAX(row_index), 0) + 1 AS next_idx FROM sc_rm WHERE source_module = $1`,
+        `SELECT GREATEST(COALESCE(MAX(row_index), 1), 1) + 1 AS next_idx FROM sc_rm WHERE source_module = $1`,
         [sourceModule]
       );
       rowIndex = maxRes.rows[0].next_idx;
@@ -494,20 +608,7 @@ app.post('/api/rm/save', async (req, res) => {
     }
 
     // Auto-calculate daysLeft from expDate (format: d/m/yyyy or dd/mm/yyyy)
-    let daysLeft = '';
-    const expDate = d.expDate || '';
-    if (expDate && expDate !== '-') {
-      const parts = expDate.split('/');
-      if (parts.length === 3) {
-        let year = parseInt(parts[2]);
-        if (year > 2500) year -= 543;
-        const exp = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]));
-        exp.setHours(0, 0, 0, 0);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        daysLeft = Math.ceil((exp - today) / (1000 * 60 * 60 * 24)) + 1;
-      }
-    }
+    const daysLeft = calculateDaysLeft(d.expDate);
 
     const result = await pool.query(
       `INSERT INTO sc_rm (date, product_code, product_name, type, container_qty, container_weight,
@@ -535,24 +636,32 @@ app.post('/api/rm/save', async (req, res) => {
 app.post('/api/rm/delete', async (req, res) => {
   const { rowIndex, sourceModule, criteria } = req.body;
   const mod = sourceModule || 'rm';
+  const client = await pool.connect();
   try {
-    let result;
+    await client.query('BEGIN');
+
+    let result = { rowCount: 0 };
     if (rowIndex) {
-      result = await pool.query(
+      result = await client.query(
         `DELETE FROM sc_rm WHERE row_index = $1 AND source_module = $2`,
         [rowIndex, mod]
       );
     } else if (criteria) {
-      result = await pool.query(
+      result = await client.query(
         `DELETE FROM sc_rm WHERE product_code = $1 AND type = $2 AND source_module = $3`,
         [criteria.productCode, criteria.type, mod]
       );
     }
+    await recalculateRMRows(client, mod);
+    await client.query('COMMIT');
     console.log(`[RM] ✅ Deleted from DB (${mod}), rows:`, result?.rowCount);
     res.json({ success: true, deleted: result?.rowCount || 0 });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('[RM API] DELETE error:', err.message);
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 

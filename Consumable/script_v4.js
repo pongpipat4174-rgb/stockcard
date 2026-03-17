@@ -828,35 +828,22 @@ window.saveData = async () => {
                 const fgPcsPerCarton = item.fgPcsPerCarton || 1;
 
                 if (isRoll) {
-                    // Roll Logic
+                    // Roll Logic — same as renderTable
                     totalPcs = item.stockCartons * (item.pcsPerRoll || 0);
-                    // totalKg is not relevant for rolls, leave as 0 or calculate if needed? 
-                    // Let's keep 0 to avoid confusion in KG columns.
                 } else {
-                    // Weight Logic
+                    // Weight Logic — same as renderTable
                     totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
                     totalPcs = totalKg * item.pcsPerKg * pcsPerPack;
                 }
 
-                const fgYield = (fgPcsPerCarton > 0) ? (totalPcs / fgPcsPerCarton) : 0;
-                const isLow = isRoll ? (item.stockCartons < (item.minThreshold / 20)) : (totalKg < item.minThreshold);
-                // Note: minThreshold for Rolls? Usually threshold is in Kg. 
-                // If user didn't change threshold logic, we use existing check. 
-                // But in RenderTable line 609: `const isLowStock = totalKg < item.minThreshold;` 
-                // For rolls totalKg is 0, so it will ALWAYS be low stock?
-                // Wait, renderTable logic in Step 361:
-                // `totalKg = 0` for rolls. 
-                // `const isLowStock = totalKg < item.minThreshold;` -> 0 < 100 -> True.
-                // BAD. Accessing isLowStock for Rolls needs fixing too.
+                // FG Yield — MUST match renderTable logic exactly
+                let fgYield = 0;
+                if (isRoll && item.fgYieldPerRoll) {
+                    fgYield = item.stockCartons * item.fgYieldPerRoll;
+                } else {
+                    fgYield = (fgPcsPerCarton > 0) ? (totalPcs / fgPcsPerCarton) : 0;
+                }
 
-                // Let's fix isLow for Rolls in saveData first. 
-                // Maybe assume threshold is in 'Units' for rolls? Or just ignore for now?
-                // Let's rely on totalPcs or Cartons?
-                // To be safe and consistent with previous code which might be buggy for Rolls:
-                // Let's just use totalKg < minThreshold for Weight.
-                // For Rolls, let's use stockCartons < minThreshold (if threshold means cartons?). 
-                // User input minThreshold says "(Kg)". 
-                // Let's leave isLow logic simple for now or strictly defined:
                 const isLowSaving = isRoll ? (item.stockCartons < item.minThreshold) : (totalKg < item.minThreshold);
 
                 return {
@@ -918,6 +905,31 @@ window.saveData = async () => {
     renderTable();
     updateStats();
     hideLoading();
+};
+
+// --- Force Sync to Google Sheet ---
+// Recalculates ALL values and pushes to Sheet to ensure consistency
+window.forceSyncToSheet = async () => {
+    if (!API_URL) {
+        alert('ไม่มี API URL สำหรับ Google Sheet');
+        return;
+    }
+    
+    if (!confirm('ต้องการ Sync ข้อมูลปัจจุบันลง Google Sheet หรือไม่?\n(จะคำนวณค่าใหม่ทั้งหมดและเขียนทับข้อมูลเดิมในชีท)')) {
+        return;
+    }
+    
+    showLoading('กำลัง Sync ข้อมูลลง Google Sheet...');
+    
+    try {
+        await saveData();
+        alert('✅ Sync สำเร็จ! ข้อมูลในชีทถูกอัปเดตแล้ว');
+    } catch (e) {
+        console.error('Force Sync failed:', e);
+        alert('❌ Sync ล้มเหลว: ' + e.message);
+    } finally {
+        hideLoading();
+    }
 };
 
 // 3. Render Table

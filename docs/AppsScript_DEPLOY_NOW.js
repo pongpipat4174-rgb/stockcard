@@ -701,14 +701,142 @@ function manualRecalculateSheet(sheet) {
 }
 
 
-// ==================== CONSUMABLE FUNCTIONS (Placeholders) ====================
+// ==================== CONSUMABLE FUNCTIONS ====================
 
 function saveConsumableData(data) {
-    // Implement if needed
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = data.sheet || 'Consumable';
+    var sheet = ss.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      // Create sheet if it doesn't exist
+      sheet = ss.insertSheet(sheetName);
+      var headers = [
+        'ชื่อสินค้า', 'ประเภท', 'สต็อก (ลัง)', 'เศษ(กก.)', 'กก./ลัง',
+        'รวม (กก.)', 'จุดสั่งซื้อ (กก.)', 'ชิ้น/กก.',
+        'รวมถุง (ชิ้น)', 'ชิ้นงาน/ถุง', 'ชิ้น FG/ลัง',
+        'ผลิตได้ (ชิ้น)', 'ผลิตได้ (ลัง)', 'สถานะ',
+        'ความยาวม้วน (ม.)', 'ความยาวตัด (มม.)', 'ชิ้น/ม้วน',
+        'Yield/ม้วน', 'StockCode'
+      ];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+    
+    var items = data.items;
+    
+    if (!items || items.length === 0) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'No items to save'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Clear existing data (keep header)
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+    }
+    
+    // Convert items to rows
+    var rows = items.map(function(item) {
+      return [
+        item['ชื่อสินค้า'] || '',
+        item['ประเภท'] || 'weight',
+        item['สต็อก (ลัง)'] || 0,
+        item['เศษ(กก.)'] || 0,
+        item['กก./ลัง'] || 25,
+        item['รวม (กก.)'] || 0,
+        item['จุดสั่งซื้อ (กก.)'] || 0,
+        item['ชิ้น/กก.'] || 0,
+        item['รวมถุง (ชิ้น)'] || 0,
+        item['ชิ้นงาน/ถุง'] || 1,
+        item['ชิ้น FG/ลัง'] || 1,
+        item['ผลิตได้ (ชิ้น)'] || 0,
+        item['ผลิตได้ (ลัง)'] || 0,
+        item['สถานะ'] || 'ปกติ',
+        item['ความยาวม้วน (ม.)'] || 0,
+        item['ความยาวตัด (มม.)'] || 0,
+        item['ชิ้น/ม้วน'] || 0,
+        item['Yield/ม้วน'] || 0,
+        item['StockCode'] || ''
+      ];
+    });
+    
+    // Write all items at once
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+    }
+    
+    // Save transactions if provided
+    if (data.transactions && data.transactions.length > 0) {
+      saveConsumableTransactions(ss, data.transactions);
+    }
+    
+    SpreadsheetApp.flush();
+    
     return ContentService.createTextOutput(JSON.stringify({
-        success: true,
-        message: 'Consumable data saved'
+      success: true,
+      message: 'Saved ' + rows.length + ' items to ' + sheetName
     })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    Logger.log('saveConsumableData error: ' + error.message);
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function saveConsumableTransactions(ss, transactions) {
+  try {
+    var transSheetName = 'Consumable_Transactions';
+    var transSheet = ss.getSheetByName(transSheetName);
+    
+    if (!transSheet) {
+      transSheet = ss.insertSheet(transSheetName);
+      var headers = ['ID', 'วันที่', 'เวลา', 'ประเภท', 'ItemIndex', 'ชื่อสินค้า', 
+                     'จำนวน (กก.)', 'จำนวน (ลัง)', 'คงเหลือ (ลัง)', 'หมายเหตุ'];
+      transSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+    
+    // Get existing transaction IDs to avoid duplicates
+    var existingData = transSheet.getDataRange().getValues();
+    var existingIds = {};
+    for (var i = 1; i < existingData.length; i++) {
+      existingIds[existingData[i][0]] = true;
+    }
+    
+    // Filter new transactions
+    var newTransactions = transactions.filter(function(t) {
+      return !existingIds[t['ID']];
+    });
+    
+    if (newTransactions.length === 0) return;
+    
+    var rows = newTransactions.map(function(t) {
+      return [
+        t['ID'] || '',
+        t['วันที่'] || '',
+        t['เวลา'] || '',
+        t['ประเภท'] || '',
+        t['ItemIndex'] || 0,
+        t['ชื่อสินค้า'] || '',
+        t['จำนวน (กก.)'] || 0,
+        t['จำนวน (ลัง)'] || 0,
+        t['คงเหลือ (ลัง)'] || 0,
+        t['หมายเหตุ'] || ''
+      ];
+    });
+    
+    var lastRow = transSheet.getLastRow();
+    transSheet.getRange(lastRow + 1, 1, rows.length, rows[0].length).setValues(rows);
+    
+    Logger.log('Added ' + rows.length + ' new transactions');
+  } catch (error) {
+    Logger.log('Save transactions error: ' + error.message);
+  }
 }
 
 function deleteConsumableTransaction(data) {
@@ -728,9 +856,56 @@ function updateConsumableTransaction(data) {
 }
 
 function loadAllSheetData(sheetName) {
-    // Implement if needed
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Sheet not found: ' + sheetName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var items = [];
+    
+    for (var i = 1; i < data.length; i++) {
+      if (!data[i][0]) continue;
+      var item = {};
+      for (var j = 0; j < headers.length; j++) {
+        item[headers[j]] = data[i][j];
+      }
+      items.push(item);
+    }
+    
+    // Load transactions if Consumable
+    var transactions = [];
+    var transSheet = ss.getSheetByName(sheetName + '_Transactions');
+    if (transSheet) {
+      var transData = transSheet.getDataRange().getValues();
+      var transHeaders = transData[0];
+      for (var i = 1; i < transData.length; i++) {
+        if (!transData[i][0]) continue;
+        var trans = {};
+        for (var j = 0; j < transHeaders.length; j++) {
+          trans[transHeaders[j]] = transData[i][j];
+        }
+        transactions.push(trans);
+      }
+    }
+    
     return ContentService.createTextOutput(JSON.stringify({
-        success: true,
-        data: []
+      items: items,
+      transactions: transactions
     })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
+

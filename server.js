@@ -458,11 +458,14 @@ app.get('/api/rm/master', async (req, res) => {
   }
 });
 
-// POST /api/rm/save — บันทึกรายการ RM ลง DB
+// POST /api/rm/save — บันทึกรายการ RM ลง DB (auto-calculate balance/daysLeft/lotBalance)
 app.post('/api/rm/save', async (req, res) => {
   const d = req.body;
   const sourceModule = d.sourceModule || 'rm';
   try {
+    const inQty = parseFloat(d.inQty) || 0;
+    const outQty = parseFloat(d.outQty) || 0;
+
     // Auto-calculate row_index if not provided (append to end)
     let rowIndex = parseInt(d.rowIndex) || 0;
     if (rowIndex <= 0) {
@@ -473,6 +476,39 @@ app.post('/api/rm/save', async (req, res) => {
       rowIndex = maxRes.rows[0].next_idx;
     }
 
+    // Auto-calculate balance: cumulative (in - out) per product
+    const balanceRes = await pool.query(
+      `SELECT COALESCE(SUM(in_qty - out_qty), 0) AS total FROM sc_rm WHERE product_code = $1 AND source_module = $2`,
+      [d.productCode, sourceModule]
+    );
+    const balance = (parseFloat(balanceRes.rows[0].total) || 0) + inQty - outQty;
+
+    // Auto-calculate lotBalance: cumulative (in - out) per product+lot
+    let lotBalance = 0;
+    if (d.lotNo && d.lotNo !== '-') {
+      const lotRes = await pool.query(
+        `SELECT COALESCE(SUM(in_qty - out_qty), 0) AS total FROM sc_rm WHERE product_code = $1 AND lot_no = $2 AND source_module = $3`,
+        [d.productCode, d.lotNo, sourceModule]
+      );
+      lotBalance = (parseFloat(lotRes.rows[0].total) || 0) + inQty - outQty;
+    }
+
+    // Auto-calculate daysLeft from expDate (format: d/m/yyyy or dd/mm/yyyy)
+    let daysLeft = '';
+    const expDate = d.expDate || '';
+    if (expDate && expDate !== '-') {
+      const parts = expDate.split('/');
+      if (parts.length === 3) {
+        let year = parseInt(parts[2]);
+        if (year > 2500) year -= 543;
+        const exp = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]));
+        exp.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        daysLeft = Math.ceil((exp - today) / (1000 * 60 * 60 * 24)) + 1;
+      }
+    }
+
     const result = await pool.query(
       `INSERT INTO sc_rm (date, product_code, product_name, type, container_qty, container_weight,
        remainder, in_qty, out_qty, balance, lot_no, vendor_lot, mfg_date, exp_date,
@@ -481,14 +517,14 @@ app.post('/api/rm/save', async (req, res) => {
        RETURNING id`,
       [d.date, d.productCode, d.productName, d.type,
        parseFloat(d.containerQty) || 0, parseFloat(d.containerWeight) || 0,
-       parseFloat(d.remainder) || 0, parseFloat(d.inQty) || 0, parseFloat(d.outQty) || 0,
-       parseFloat(d.balance) || 0, d.lotNo || '', d.vendorLot || '',
-       d.mfgDate || '', d.expDate || '', d.daysLeft || '',
-       parseFloat(d.lotBalance) || 0, d.supplier || '', d.remark || '',
+       parseFloat(d.remainder) || 0, inQty, outQty,
+       balance, d.lotNo || '', d.vendorLot || '',
+       d.mfgDate || '', d.expDate || '', String(daysLeft),
+       lotBalance, d.supplier || '', d.remark || '',
        parseFloat(d.containerOut) || 0, sourceModule, rowIndex]
     );
-    console.log(`[RM] ✅ Saved to DB (${sourceModule}), id:`, result.rows[0].id, 'row_index:', rowIndex);
-    res.json({ success: true, id: result.rows[0].id });
+    console.log(`[RM] ✅ Saved to DB (${sourceModule}), id:`, result.rows[0].id, 'balance:', balance, 'lotBalance:', lotBalance);
+    res.json({ success: true, id: result.rows[0].id, balance, lotBalance, daysLeft });
   } catch (err) {
     console.error('[RM API] POST error:', err.message);
     res.status(500).json({ error: err.message });

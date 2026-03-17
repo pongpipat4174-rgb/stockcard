@@ -2559,13 +2559,15 @@ async function saveEntryRM() {
     showToast('กำลังบันทึก ' + entriesToSave.length + ' รายการ...');
     console.log('Saving entries:', entriesToSave);
 
+    // กำหนด moduleKey ให้ถูกต้องตาม currentModule
+    var saveModuleKey = (currentModule === 'rm_production') ? 'rm_production' : 'rm';
+    var dbSaveSuccess = false;
+    var sheetSaveAttempted = false;
+
     try {
         // Process sequentially with AWAIT to prevent concurrency issues
         for (var i = 0; i < entriesToSave.length; i++) {
             var entry = entriesToSave[i];
-
-            // DEBUG: Alert first entry to ensure data is correct
-            // alert('Debug: Sending Entry ' + (i+1) + '\nProduct: ' + entry.productCode + '\nQty: ' + (entry.inQty || entry.outQty));
 
             if (entriesToSave.length > 1) {
                 showToast('กำลังบันทึกรายการที่ ' + (i + 1) + '/' + entriesToSave.length + '...');
@@ -2574,9 +2576,9 @@ async function saveEntryRM() {
             // Determine which sheet to save to based on current module
             var targetConfig = (currentModule === 'rm_production') ? SHEET_CONFIG.rm_production : SHEET_CONFIG.rm;
 
-            // *** DEBUG: แสดง module และ sheetName เพื่อตรวจสอบ ***
             console.log('=== SAVE DEBUG ===');
             console.log('currentModule:', currentModule);
+            console.log('saveModuleKey:', saveModuleKey);
             console.log('targetConfig.sheetName:', targetConfig.sheetName);
             console.log('entry.type:', entry.type);
 
@@ -2585,11 +2587,12 @@ async function saveEntryRM() {
                 var dbSaveRes = await fetch((DB_API_BASE || '') + '/api/rm/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(Object.assign({}, entry, { sourceModule: moduleKey }))
+                    body: JSON.stringify(Object.assign({}, entry, { sourceModule: saveModuleKey }))
                 });
                 var dbSaveResult = await dbSaveRes.json();
                 if (dbSaveResult.success) {
                     console.log('[RM] ✅ Saved to DB, id:', dbSaveResult.id);
+                    dbSaveSuccess = true;
                 } else {
                     console.warn('[RM] DB save returned:', dbSaveResult);
                 }
@@ -2597,25 +2600,39 @@ async function saveEntryRM() {
                 console.warn('[RM] DB save failed:', dbErr.message);
             }
 
-            // ยังส่ง Sheet ด้วย (backup)
-            await fetch(APPS_SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
-                redirect: "follow",
-                body: JSON.stringify({
-                    action: 'add_rm',
-                    spreadsheetId: targetConfig.id,
-                    sheetName: targetConfig.sheetName,
-                    entry: entry
-                })
-            });
+            // ยังส่ง Sheet ด้วย (backup/primary เมื่อ DB ไม่พร้อม)
+            try {
+                sheetSaveAttempted = true;
+                await fetch(APPS_SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "application/json" },
+                    redirect: "follow",
+                    body: JSON.stringify({
+                        action: 'add_rm',
+                        spreadsheetId: targetConfig.id,
+                        sheetName: targetConfig.sheetName,
+                        entry: entry
+                    })
+                });
+                console.log('[RM] Sheet save request sent (no-cors, cannot verify)');
+            } catch (sheetErr) {
+                console.warn('[RM] Sheet save failed:', sheetErr.message);
+            }
 
             // Small safety delay between writes
             await new Promise(r => setTimeout(r, 800));
         }
 
-        showToast('บันทึกสำเร็จทั้งหมด!');
+        // แจ้งผลลัพธ์ตามจริง
+        if (dbSaveSuccess) {
+            showToast('✅ บันทึกสำเร็จ (DB + Sheet)!');
+        } else if (sheetSaveAttempted) {
+            showToast('⚠️ บันทึกไป Google Sheet แล้ว (DB ไม่พร้อม — รอ sync)');
+            console.warn('[RM] DB save failed for all entries, only Sheet was used');
+        } else {
+            showToast('❌ บันทึกไม่สำเร็จ กรุณาลองใหม่');
+        }
 
         // Check if any entry contains "เบิกผลิต" - ask to transfer to Production
         // *** IMPORTANT: Only trigger transfer when in RM CENTER, not RM Production ***
@@ -2649,19 +2666,28 @@ async function saveEntryRM() {
             await transferToProductionAuto(transferEntries);
         }
 
-        // Hide loading screen immediately after save, show toast for refresh
+        // Hide loading screen immediately after save
         hideLoading();
-        showToast('✅ บันทึกสำเร็จ! กำลังโหลดข้อมูลใหม่...');
+        showToast('กำลังโหลดข้อมูลใหม่...');
 
-        // First fetch after 2 seconds
-        await new Promise(r => setTimeout(r, 2000));
-        await fetchRMData();
-        showToast('📊 ข้อมูลอัปเดตแล้ว');
-
-        // Retry fetch after 2 more seconds to ensure cache is updated
-        setTimeout(async function () {
+        if (dbSaveSuccess) {
+            // DB พร้อม — รอแค่ 1 วินาทีแล้ว fetch จาก DB ได้เลย
+            await new Promise(r => setTimeout(r, 1000));
             await fetchRMData();
-        }, 2000);
+            showToast('📊 ข้อมูลอัปเดตแล้ว (จาก DB)');
+        } else {
+            // DB ไม่พร้อม — ต้องรอ Google Sheets propagate นานขึ้น
+            showToast('⏳ รอ Google Sheets อัปเดต (~5 วินาที)...');
+            await new Promise(r => setTimeout(r, 5000));
+            await fetchRMData();
+            showToast('📊 ข้อมูลอัปเดตแล้ว (จาก Sheet)');
+
+            // Retry อีกครั้งหลัง 5 วินาที เผื่อ Sheet ช้า
+            setTimeout(async function () {
+                await fetchRMData();
+                showToast('📊 ข้อมูลอัปเดตรอบ 2');
+            }, 5000);
+        }
 
     } catch (e) {
         console.error('Save Error:', e);

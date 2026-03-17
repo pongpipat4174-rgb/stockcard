@@ -185,6 +185,28 @@ app.post('/api/package/add', async (req, res) => {
     }
 });
 
+// Alias: /api/package/save → same as /api/package/add (frontend uses /save)
+app.post('/api/package/save', async (req, res) => {
+    try {
+        const e = req.body.entry || req.body;
+        const maxRow = await pool.query("SELECT COALESCE(MAX(row_index),1) as mx FROM sc_package WHERE source_module='package'");
+        const nextRow = (parseInt(maxRow.rows[0].mx) || 0) + 1;
+
+        const result = await pool.query(
+            `INSERT INTO sc_package (date, product_code, product_name, type, in_qty, out_qty, balance, lot_no, pk_id, doc_ref, remark, source_module, row_index)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'package',$12)
+             RETURNING id`,
+            [e.date, e.productCode, e.productName, e.type, parseFloat(e.inQty) || 0, parseFloat(e.outQty) || 0, parseFloat(e.balance) || 0, e.lotNo || '', e.pkId || '', e.docRef || '', e.remark || '', nextRow]
+        );
+        invalidateCache('package');
+        console.log('[POST /api/package/save] ✅', e.productCode, e.type);
+        res.json({ success: true, id: result.rows[0].id, rowIndex: nextRow });
+    } catch (err) {
+        console.error('[POST /api/package/save]', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // DELETE package entry from DB
 app.post('/api/package/delete', async (req, res) => {
     try {
@@ -304,6 +326,37 @@ app.post('/api/rm/add', async (req, res) => {
         res.json({ success: true, rowIndex: nextRow });
     } catch (err) {
         console.error('[POST /api/rm/add]', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Alias: /api/rm/save → same as /api/rm/add (frontend uses /save)
+app.post('/api/rm/save', async (req, res) => {
+    try {
+        const e = req.body.entry || req.body;
+        const sourceModule = req.body.sourceModule || e.sourceModule || 'rm';
+        const maxRow = await pool.query("SELECT COALESCE(MAX(row_index),1) as mx FROM sc_rm WHERE source_module = $1", [sourceModule]);
+        const nextRow = (parseInt(maxRow.rows[0].mx) || 0) + 1;
+
+        const result = await pool.query(
+            `INSERT INTO sc_rm (date, product_code, product_name, type, container_qty, container_weight, remainder, in_qty, out_qty, balance, lot_no, vendor_lot, mfg_date, exp_date, days_left, lot_balance, supplier, remark, container_out, source_module, row_index)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+             RETURNING id`,
+            [
+                e.date, e.productCode, e.productName, e.type,
+                parseFloat(e.containerQty) || 0, parseFloat(e.containerWeight) || 0, parseFloat(e.remainder) || 0,
+                parseFloat(e.inQty) || 0, parseFloat(e.outQty) || 0, parseFloat(e.balance) || 0,
+                e.lotNo || '', e.vendorLot || '', e.mfgDate || '', e.expDate || '',
+                e.daysLeft || '', parseFloat(e.lotBalance) || 0, e.supplier || '',
+                e.remark || '', parseFloat(e.containerOut) || 0,
+                sourceModule, nextRow
+            ]
+        );
+        invalidateCache('rm_');
+        console.log(`[POST /api/rm/save] ✅ ${sourceModule}:`, e.productCode, e.type, 'id:', result.rows[0].id);
+        res.json({ success: true, id: result.rows[0].id, rowIndex: nextRow });
+    } catch (err) {
+        console.error('[POST /api/rm/save]', err.message);
         res.status(500).json({ error: err.message });
     }
 });

@@ -4091,7 +4091,22 @@ async function confirmSmartWithdraw() {
                 showToast('บันทึกรายการที่ ' + (i + 1) + '/' + entriesToSave.length + '...');
             }
 
-            // ข้ามขั้นตอน Dual-write (Smart Withdraw)
+            // Dual-write: บันทึก DB ก่อน (Smart Withdraw)
+            try {
+                var dbSaveRes = await fetch((DB_API_BASE || '') + '/api/rm/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(Object.assign({}, entry, { sourceModule: 'rm' }))
+                });
+                var dbSaveResult = await dbSaveRes.json();
+                if (dbSaveResult.success) {
+                    console.log('[Smart Withdraw] ✅ Saved to DB, id:', dbSaveResult.id);
+                } else {
+                    console.warn('[Smart Withdraw] DB save returned:', dbSaveResult);
+                }
+            } catch (dbErr) {
+                console.warn('[Smart Withdraw] DB save failed:', dbErr.message);
+            }
 
             // ยังส่ง Sheet ด้วย (backup)
             await fetch(APPS_SCRIPT_URL, {
@@ -4362,7 +4377,40 @@ async function confirmTransferToProduction() {
             });
         });
 
-        // ข้ามขั้นตอน Dual-write (Manual Transfer)
+        // Dual-write: บันทึก DB ก่อน (Manual Transfer - โอนเป็น "รับเข้า" ใน rm_production)
+        for (var ti = 0; ti < selectedItems.length; ti++) {
+            var transferItem = selectedItems[ti];
+            try {
+                var dbTransRes = await fetch((DB_API_BASE || '') + '/api/rm/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date: transferItem.transferDate,
+                        productCode: transferItem.productCode,
+                        productName: transferItem.productName,
+                        type: 'รับเข้า',
+                        containerQty: transferItem.containerQty || 0,
+                        containerWeight: transferItem.containerWeight || 0,
+                        remainder: transferItem.remainder || 0,
+                        inQty: transferItem.quantity || 0,
+                        outQty: 0,
+                        lotNo: transferItem.lotNo || '',
+                        vendorLot: transferItem.vendorLot || '',
+                        mfgDate: transferItem.mfgDate || '',
+                        expDate: transferItem.expDate || '',
+                        supplier: transferItem.supplier || '',
+                        containerOut: 0,
+                        sourceModule: 'rm_production'
+                    })
+                });
+                var dbTransResult = await dbTransRes.json();
+                if (dbTransResult.success) {
+                    console.log('[Manual Transfer] ✅ Saved to DB (rm_production), id:', dbTransResult.id);
+                }
+            } catch (dbErr) {
+                console.warn('[Manual Transfer] DB save failed:', dbErr.message);
+            }
+        }
 
         // ยังส่ง Sheet ด้วย (backup)
         var response = await fetch(APPS_SCRIPT_URL, {
@@ -4428,7 +4476,40 @@ async function transferToProductionAuto(entries) {
             };
         });
 
-        // ข้ามขั้นตอน Dual-write (Auto Transfer)
+        // Dual-write: บันทึก DB ก่อน (Auto Transfer - โอนเป็น "รับเข้า" ใน rm_production)
+        for (var ai = 0; ai < transferData.length; ai++) {
+            var autoItem = transferData[ai];
+            try {
+                var dbAutoRes = await fetch((DB_API_BASE || '') + '/api/rm/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date: autoItem.transferDate || autoItem.originalDate,
+                        productCode: autoItem.productCode,
+                        productName: autoItem.productName,
+                        type: 'รับเข้า',
+                        containerQty: autoItem.containerQty || 0,
+                        containerWeight: autoItem.containerWeight || 0,
+                        remainder: autoItem.remainder || 0,
+                        inQty: autoItem.quantity || 0,
+                        outQty: 0,
+                        lotNo: autoItem.lotNo || '',
+                        vendorLot: autoItem.vendorLot || '',
+                        mfgDate: autoItem.mfgDate || '',
+                        expDate: autoItem.expDate || '',
+                        supplier: autoItem.supplier || '',
+                        containerOut: 0,
+                        sourceModule: 'rm_production'
+                    })
+                });
+                var dbAutoResult = await dbAutoRes.json();
+                if (dbAutoResult.success) {
+                    console.log('[Auto Transfer] ✅ Saved to DB (rm_production), id:', dbAutoResult.id);
+                }
+            } catch (dbErr) {
+                console.warn('[Auto Transfer] DB save failed:', dbErr.message);
+            }
+        }
 
         // ยังส่ง Sheet ด้วย (backup)
         await fetch(APPS_SCRIPT_URL, {

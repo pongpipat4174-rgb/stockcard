@@ -4696,16 +4696,18 @@ async function backupRMToSheet() {
     if (!confirm('ต้องการ Backup ข้อมูล RM ปัจจุบันไป Google Sheet หรือไม่?\n\n(ข้อมูลใน Sheet จะถูกเขียนทับด้วยข้อมูลจาก DB)')) return;
 
     showLoading();
-    showToast('กำลัง Backup ไป Sheet...');
+    showToast('กำลัง Backup ไป Sheet... อาจใช้เวลาสักครู่');
 
     var moduleKey = (currentModule === 'rm_production') ? 'rm_production' : 'rm';
     var config = SHEET_CONFIG[moduleKey];
 
     try {
-        // ส่งทั้ง rmStockData ไป Sheet
-        var response = await fetch(APPS_SCRIPT_URL, {
+        // ส่งทั้ง rmStockData ไป Sheet (no-cors เพราะ Apps Script ไม่รองรับ CORS)
+        await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
+            mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
+            redirect: 'follow',
             body: JSON.stringify({
                 action: 'save_all_rm',
                 spreadsheetId: config.id,
@@ -4714,16 +4716,15 @@ async function backupRMToSheet() {
             })
         });
 
-        var result = await response.json();
-        if (result.success) {
-            showToast('✅ Backup สำเร็จ! ข้อมูลใน Sheet อัปเดตแล้ว');
-        } else {
-            showToast('⚠️ Backup อาจไม่สมบูรณ์: ' + (result.error || 'unknown'));
-        }
+        // no-cors ทำให้อ่าน response ไม่ได้ → รอ 5 วินาทีแล้ว assume สำเร็จ
+        setTimeout(function () {
+            hideLoading();
+            showToast('✅ ส่ง Backup ไปแล้ว! เช็ค Sheet ใน 10-30 วินาที');
+        }, 5000);
+
     } catch (e) {
         console.error('[RM] Backup to Sheet failed:', e);
-        showToast('❌ Backup ล้มเหลว: ' + e.message);
-    } finally {
         hideLoading();
+        showToast('❌ Backup ล้มเหลว: ' + e.message);
     }
 }

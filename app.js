@@ -250,6 +250,9 @@ function switchModule(module, event) {
 
     // Update Alerts
     updateExpiryAlerts();
+    // Remove package banner when leaving package
+    var oldPkgBanner = document.getElementById('packageBalanceBanner');
+    if (oldPkgBanner && module !== 'package') oldPkgBanner.remove();
 
     // 2. DATA LOAD
     // Use setTimeout to allow UI to render first
@@ -259,10 +262,12 @@ function switchModule(module, event) {
                 if (stockData.length > 0) {
                     updateStats();
                     showAllProducts();
+                    updateExpiryAlerts();
                     isSwitchingModule = false;
                 } else {
                     showLoading();
                     fetchPackageData().finally(() => {
+                        updateExpiryAlerts();
                         isSwitchingModule = false;
                     });
                 }
@@ -1150,7 +1155,7 @@ function renderStockCardsRM(products) {
         html += '<div class="summary-item"><span class="summary-label">รับเข้าทั้งหมด (Kg)</span><span class="summary-value positive">+' + formatNumber(prod.totalIn) + '</span></div>';
         html += '<div class="summary-item"><span class="summary-label">เบิกออกทั้งหมด (Kg)</span><span class="summary-value negative">-' + formatNumber(prod.totalOut) + '</span></div>';
 
-        // Row 2: คงเหลือ + (empty or another stat)
+        // Row 2: คงเหลือ
         html += '<div class="summary-item"><span class="summary-label">คงเหลือปัจจุบัน (Kg)</span><span class="summary-value">' + formatNumber(prod.balance) + '</span></div>';
 
         // Row 3: Priority Boxes (Display ALL if applicable)
@@ -1475,11 +1480,18 @@ function clearAllFilters() {
 // ==================== EXPIRY ALERT BANNERS ====================
 
 function updateExpiryAlerts() {
-    // Only show for RM module
     var alertSection = document.getElementById('alertBannersSection');
     if (!alertSection) return;
 
-    if (currentModule !== 'rm') {
+    // Show balance summary for package module too
+    if (currentModule === 'package') {
+        alertSection.style.display = 'none';
+        // Show balance banner for Package (create separate approach)
+        showPackageBalanceBanner();
+        return;
+    }
+
+    if (currentModule !== 'rm' && currentModule !== 'rm_production') {
         alertSection.style.display = 'none';
         return;
     }
@@ -1540,12 +1552,255 @@ function updateExpiryAlerts() {
         alertSection.style.display = 'block';
     }
 
+    // Show Balance Summary Banner (always show for RM)
+    var balanceBanner = document.getElementById('alertBalanceSummary');
+    if (balanceBanner) {
+        var bsProducts = getBalanceSummaryData();
+        var productCount = bsProducts.length;
+        var withStock = bsProducts.filter(function (p) { return p.balance > 0; }).length;
+        var balCountEl = document.getElementById('balanceSummaryCount');
+        if (balCountEl) balCountEl.textContent = withStock + ' / ' + productCount + ' สินค้ามีสต็อก';
+        balanceBanner.style.display = 'flex';
+        // Ensure section is visible
+        alertSection.style.display = 'block';
+    }
+
     // Store for later use
     window.expiryData = {
         critical: criticalItems,
         warning: warningItems,
         reval: revalItems
     };
+}
+
+// ==================== BALANCE SUMMARY ====================
+
+function getBalanceSummaryData() {
+    var productMap = {};
+    var isPackage = currentModule === 'package';
+
+    if (isPackage) {
+        // Package module: use stockData
+        stockData.forEach(function (item) {
+            if (!item.productCode) return;
+            if (!productMap[item.productCode]) {
+                productMap[item.productCode] = { code: item.productCode, name: item.productName, balance: 0, supplier: '' };
+            }
+            productMap[item.productCode].balance = item.balance;
+        });
+    } else {
+        // RM Center / RM Production: use rmStockData
+        rmStockData.forEach(function (item) {
+            if (!item.productCode) return;
+            if (!productMap[item.productCode]) {
+                productMap[item.productCode] = { code: item.productCode, name: item.productName, balance: 0, supplier: item.supplier || '' };
+            }
+            var p = productMap[item.productCode];
+            p.balance = item.balance;
+            if (item.supplier) p.supplier = item.supplier;
+        });
+    }
+    return Object.values(productMap);
+}
+
+function getBalanceUnit() {
+    return currentModule === 'package' ? 'ชิ้น' : 'Kg';
+}
+
+function getModuleLabel() {
+    if (currentModule === 'package') return 'แพ็คเกจ';
+    if (currentModule === 'rm_production') return 'RM Production';
+    return 'RM Center';
+}
+
+function showPackageBalanceBanner() {
+    // For Package, show balanced summary as a standalone section above the filter
+    var existingBanner = document.getElementById('packageBalanceBanner');
+    if (existingBanner) existingBanner.remove();
+
+    var products = getBalanceSummaryData();
+    var withStock = products.filter(function (p) { return p.balance > 0; }).length;
+    var totalCount = products.length;
+
+    var banner = document.createElement('div');
+    banner.id = 'packageBalanceBanner';
+    banner.className = 'alert-banners-section';
+    banner.style.display = 'block';
+    banner.innerHTML = '<div class="alert-banners-container" style="grid-template-columns:1fr">' +
+        '<div class="alert-banner alert-balance-summary" style="display:flex">' +
+        '<div class="alert-banner-main" onclick="showBalanceSummary()">' +
+        '<div class="alert-banner-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></div>' +
+        '<div class="alert-banner-content"><span class="alert-banner-title">📊 สรุปยอดคงเหลือแพ็คเกจทั้งหมด</span>' +
+        '<span class="alert-banner-count">' + withStock + ' / ' + totalCount + ' สินค้ามีสต็อก</span></div>' +
+        '<div class="alert-banner-arrow">→</div></div>' +
+        '<button class="btn btn-print-alert btn-print-balance" onclick="printBalanceSummary()" title="พิมพ์สรุปยอดคงเหลือ">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>' +
+        '</button></div></div>';
+
+    var filterSection = document.querySelector('.filter-section');
+    if (filterSection) {
+        filterSection.parentNode.insertBefore(banner, filterSection);
+    }
+}
+
+function showBalanceSummary() {
+    var modal = document.getElementById('balanceSummaryModal');
+    if (!modal) return;
+
+    var titleEl = document.getElementById('balanceSummaryTitle');
+    if (titleEl) titleEl.textContent = '📊 สรุปยอดคงเหลือ ' + getModuleLabel();
+
+    renderBalanceSummaryTable();
+
+    modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    modal.style.visibility = 'visible';
+
+    // Bind search & filter events
+    var searchInput = document.getElementById('balanceSummarySearch');
+    var hideZeroCheckbox = document.getElementById('balanceSummaryHideZero');
+    if (searchInput) searchInput.oninput = function () { renderBalanceSummaryTable(); };
+    if (hideZeroCheckbox) hideZeroCheckbox.onchange = function () { renderBalanceSummaryTable(); };
+}
+
+function closeBalanceSummaryModal() {
+    var modal = document.getElementById('balanceSummaryModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+    }
+}
+
+function renderBalanceSummaryTable() {
+    var container = document.getElementById('balanceSummaryContent');
+    var footerEl = document.getElementById('balanceSummaryFooter');
+    if (!container) return;
+
+    var searchTerm = (document.getElementById('balanceSummarySearch')?.value || '').trim().toLowerCase();
+    var hideZero = document.getElementById('balanceSummaryHideZero')?.checked === true;
+    var isPackage = currentModule === 'package';
+    var unit = getBalanceUnit();
+
+    var products = getBalanceSummaryData();
+
+    // Filter
+    if (hideZero) {
+        products = products.filter(function (p) { return p.balance > 0; });
+    }
+    if (searchTerm) {
+        products = products.filter(function (p) {
+            return p.code.toLowerCase().includes(searchTerm) ||
+                   p.name.toLowerCase().includes(searchTerm) ||
+                   (p.supplier && p.supplier.toLowerCase().includes(searchTerm));
+        });
+    }
+
+    // Sort by product code
+    products.sort(function (a, b) { return a.code.localeCompare(b.code); });
+
+    // Calculate totals
+    var totalBalance = products.reduce(function (sum, p) { return sum + p.balance; }, 0);
+    var zeroCount = products.filter(function (p) { return p.balance <= 0; }).length;
+
+    // Build table
+    var html = '<table class="balance-summary-table">';
+    html += '<thead><tr>';
+    html += '<th style="width:50px;text-align:center">#</th>';
+    html += '<th>รหัสสินค้า</th>';
+    html += '<th>ชื่อสินค้า</th>';
+    html += '<th style="text-align:right">คงเหลือ (' + unit + ')</th>';
+    if (!isPackage) html += '<th>Supplier</th>';
+    html += '</tr></thead><tbody>';
+
+    products.forEach(function (p, idx) {
+        var isZero = p.balance <= 0;
+        var balStyle = isZero ? 'color:#dc2626;font-weight:700' : 'color:#059669;font-weight:700';
+        var rowStyle = isZero ? 'opacity:0.75' : '';
+        var clickAction = isPackage
+            ? 'closeBalanceSummaryModal(); filterPackageByProduct(\'' + p.code.replace(/'/g, "\\'") + '\')'
+            : 'closeBalanceSummaryModal(); filterRMByProduct(\'' + p.code.replace(/'/g, "\\'") + '\')';
+        html += '<tr class="click-row" style="' + rowStyle + '" onclick="' + clickAction + '">';
+        html += '<td style="text-align:center;color:#94a3b8">' + (idx + 1) + '</td>';
+        html += '<td><strong>' + p.code + '</strong></td>';
+        html += '<td class="product-name-cell" title="' + p.name + '">' + p.name + '</td>';
+        html += '<td style="text-align:right;' + balStyle + '">' + formatNumber(Math.round(p.balance * 100) / 100) + '</td>';
+        if (!isPackage) html += '<td>' + (p.supplier || '-') + '</td>';
+        html += '</tr>';
+    });
+
+    // Total row
+    var colSpan = isPackage ? '3' : '3';
+    html += '<tr style="background:#f0f9ff;font-weight:700;border-top:2px solid #0ea5e9;">';
+    html += '<td colspan="' + colSpan + '" style="text-align:right;padding-right:12px;">รวมทั้งหมด:</td>';
+    html += '<td style="text-align:right;color:#0369a1;font-size:1rem;">' + formatNumber(Math.round(totalBalance * 100) / 100) + ' ' + unit + '</td>';
+    if (!isPackage) html += '<td></td>';
+    html += '</tr>';
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+
+    if (footerEl) footerEl.textContent = products.length + ' สินค้า · หมดสต็อก ' + zeroCount + ' · ยอดรวม ' + formatNumber(Math.round(totalBalance * 100) / 100) + ' ' + unit;
+}
+
+function filterPackageByProduct(code) {
+    var searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = code;
+        searchInput.dispatchEvent(new Event('input'));
+    }
+}
+
+function printBalanceSummary() {
+    var isPackage = currentModule === 'package';
+    var unit = getBalanceUnit();
+    var title = 'สรุปยอดคงเหลือ ' + getModuleLabel();
+
+    var products = getBalanceSummaryData();
+    products.sort(function (a, b) { return a.code.localeCompare(b.code); });
+    var totalBalance = products.reduce(function (s, p) { return s + p.balance; }, 0);
+    var withStock = products.filter(function (p) { return p.balance > 0; }).length;
+
+    var printWindow = window.open('', '_blank');
+    var content = '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>' + title + '</title>';
+    content += '<style>*{box-sizing:border-box}body{font-family:"Sarabun","Inter",sans-serif;padding:16px;margin:0;font-size:9pt}';
+    content += '.header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #0ea5e9}';
+    content += '.header img{height:40px}.header h1{margin:0;font-size:16px;color:#0369a1}';
+    content += '.header p{margin:2px 0 0;color:#666;font-size:10px}';
+    content += 'table{width:100%;border-collapse:collapse;font-size:8.5pt}';
+    content += 'th{background:#0ea5e9;color:white;padding:6px 8px;text-align:left;font-weight:600;border:1px solid #0284c7}';
+    content += 'td{padding:5px 8px;border:1px solid #e5e7eb}';
+    content += 'tr:nth-child(even){background:#f9fafb}';
+    content += '.bal-ok{color:#059669;font-weight:700}.bal-zero{color:#dc2626;font-weight:700}';
+    content += '.total-row{background:#f0f9ff!important;font-weight:700;border-top:2px solid #0ea5e9}';
+    content += '@media print{@page{size:A4 portrait;margin:8mm}}</style></head><body>';
+    content += '<div class="header"><img src="logo.png" alt="Logo"><div><h1>📊 ' + title + '</h1>';
+    content += '<p>TAN PRODUCTION | พิมพ์เมื่อ: ' + new Date().toLocaleDateString('th-TH') + ' ' + new Date().toLocaleTimeString('th-TH') + '</p>';
+    content += '<p>สินค้าทั้งหมด: ' + products.length + ' · มีสต็อก: ' + withStock + ' · หมดสต็อก: ' + (products.length - withStock) + ' · ยอดรวม ' + formatNumber(Math.round(totalBalance * 100) / 100) + ' ' + unit + '</p></div></div>';
+    content += '<table><thead><tr><th>#</th><th>รหัสสินค้า</th><th>ชื่อสินค้า</th><th style="text-align:right">คงเหลือ (' + unit + ')</th>';
+    if (!isPackage) content += '<th>Supplier</th>';
+    content += '</tr></thead><tbody>';
+
+    products.forEach(function (p, idx) {
+        var isZero = p.balance <= 0;
+        var balClass = isZero ? 'bal-zero' : 'bal-ok';
+        content += '<tr><td>' + (idx + 1) + '</td><td><strong>' + p.code + '</strong></td><td>' + p.name + '</td>';
+        content += '<td style="text-align:right" class="' + balClass + '">' + formatNumber(Math.round(p.balance * 100) / 100) + '</td>';
+        if (!isPackage) content += '<td>' + (p.supplier || '-') + '</td>';
+        content += '</tr>';
+    });
+
+    content += '<tr class="total-row"><td colspan="3" style="text-align:right">รวมทั้งหมด:</td>';
+    content += '<td style="text-align:right;color:#0369a1;font-size:10pt">' + formatNumber(Math.round(totalBalance * 100) / 100) + ' ' + unit + '</td>';
+    if (!isPackage) content += '<td></td>';
+    content += '</tr>';
+    content += '</tbody></table>';
+    content += '<script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}};<\/script>';
+    content += '</body></html>';
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+    showToast('กำลังพิมพ์สรุปยอดคงเหลือ (' + products.length + ' สินค้า)');
 }
 
 function showExpiryItems(type) {
@@ -1808,7 +2063,7 @@ async function deleteEntry(rowIndex, productCode, type) {
     showLoading();
     showToast('กำลังลบ...');
 
-    // Dual-write: ลบจาก DB ก่อน
+    // Dual-write: ลบจาก DB
     if (DB_API_BASE !== false) {
         try {
             await fetch((DB_API_BASE || '') + '/api/package/delete', {
@@ -1820,24 +2075,30 @@ async function deleteEntry(rowIndex, productCode, type) {
         } catch (dbErr) { console.warn('[Package] DB delete failed:', dbErr.message); }
     }
 
-    // ยังส่ง Sheet ด้วย (backup)
-    fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'delete_force',
-            rowIndex: rowIndex,
-            criteria: { productCode: productCode, type: type }
-        })
-    }).then(function () {
+    // ลบจาก Sheet ด้วย
+    var config = SHEET_CONFIG.package;
+    try {
+        await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'delete_force',
+                spreadsheetId: config.id,
+                sheetName: config.sheetName,
+                rowIndex: rowIndex,
+                criteria: { productCode: productCode, type: type }
+            })
+        });
+        console.log('[Package] ✅ Sent delete to Sheet');
+    } catch (sheetErr) { console.warn('[Package] Sheet delete failed:', sheetErr.message); }
+
+    showToast('✅ ลบรายการเรียบร้อย!');
+    setTimeout(async function () {
+        await fetchPackageData();
         hideLoading();
-        showToast('✅ ลบรายการเรียบร้อย!');
-        setTimeout(async function () {
-            await fetchPackageData();
-            showToast('📊 ข้อมูลอัปเดตแล้ว');
-        }, 1000);
-    }).catch(function (e) { alert(e); hideLoading(); });
+        showToast('📊 ข้อมูลอัปเดตแล้ว');
+    }, 1500);
 }
 
 // Delete Entry (RM)
@@ -1855,7 +2116,7 @@ async function deleteEntryRM(rowIndex, productCode, type) {
         sourceModule = 'rm_production';
     }
 
-    // Dual-write: ลบจาก DB ก่อน
+    // Dual-write: ลบจาก DB
     if (DB_API_BASE !== false) {
         try {
             await fetch((DB_API_BASE || '') + '/api/rm/delete', {
@@ -1867,30 +2128,33 @@ async function deleteEntryRM(rowIndex, productCode, type) {
         } catch (dbErr) { console.warn('[RM] DB delete failed:', dbErr.message); }
     }
 
-    // ยังส่ง Sheet ด้วย (backup)
-    fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'delete_rm',
-            spreadsheetId: config.id,
-            sheetName: config.sheetName,
-            rowIndex: rowIndex,
-            criteria: { productCode: productCode, type: type }
-        })
-    }).then(function () {
-        showToast('✅ ลบรายการเรียบร้อย!');
-        setTimeout(async function () {
-            if (currentModule === 'rm_production') {
-                await fetchRMProductionData();
-            } else {
-                await fetchRMData();
-            }
-            hideLoading();
-            showToast('📊 ข้อมูลอัปเดตแล้ว');
-        }, 1000);
-    }).catch(function (e) { alert(e); hideLoading(); });
+    // ลบจาก Sheet ด้วย
+    try {
+        await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'delete_rm',
+                spreadsheetId: config.id,
+                sheetName: config.sheetName,
+                rowIndex: rowIndex,
+                criteria: { productCode: productCode, type: type }
+            })
+        });
+        console.log('[RM] ✅ Sent delete to Sheet');
+    } catch (sheetErr) { console.warn('[RM] Sheet delete failed:', sheetErr.message); }
+
+    showToast('✅ ลบรายการเรียบร้อย!');
+    setTimeout(async function () {
+        if (currentModule === 'rm_production') {
+            await fetchRMProductionData();
+        } else {
+            await fetchRMData();
+        }
+        hideLoading();
+        showToast('📊 ข้อมูลอัปเดตแล้ว');
+    }, 1500);
 }
 
 // Print All Cards (Works for both Package and RM)

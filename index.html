@@ -316,8 +316,71 @@
                     </svg>
                     พิมพ์รายการแจ้งเตือนทั้งหมด
                 </button>
+
+                <!-- Balance Summary Banner (Blue/Teal) -->
+                <div class="alert-banner alert-balance-summary" id="alertBalanceSummary" style="display: none;">
+                    <div class="alert-banner-main" onclick="showBalanceSummary()">
+                        <div class="alert-banner-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="3" width="20" height="18" rx="2" ry="2"/>
+                                <path d="M8 7h8M8 11h8M8 15h5"/>
+                            </svg>
+                        </div>
+                        <div class="alert-banner-content">
+                            <span class="alert-banner-title">📊 สรุปยอดคงเหลือสินค้าทั้งหมด</span>
+                            <span class="alert-banner-count" id="balanceSummaryCount">0 รายการ</span>
+                        </div>
+                        <div class="alert-banner-arrow">→</div>
+                    </div>
+                    <button class="btn btn-print-alert btn-print-balance" onclick="printBalanceSummary()" title="พิมพ์สรุปยอดคงเหลือ">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </section>
+
+        <!-- Balance Summary Modal -->
+        <div class="modal" id="balanceSummaryModal" style="display:none;">
+            <div class="modal-backdrop" onclick="closeBalanceSummaryModal()"></div>
+            <div class="modal-content" style="max-width:900px;width:95%;max-height:90vh;">
+                <div class="modal-header" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4);color:#fff;">
+                    <h2 id="balanceSummaryTitle">📊 สรุปยอดคงเหลือวัตถุดิบ (RM Center)</h2>
+                    <button class="modal-close" onclick="closeBalanceSummaryModal()" style="color:#fff;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding:0;overflow:auto;max-height:calc(90vh - 140px);">
+                    <div style="padding:16px 20px 8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                        <input type="text" id="balanceSummarySearch" placeholder="🔍 ค้นหาสินค้า..." style="flex:1;min-width:200px;padding:8px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+                        <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="balanceSummaryHideZero"> ซ่อนสินค้าหมด</label>
+                    </div>
+                    <div id="balanceSummaryContent" style="padding:8px 20px 20px;">
+                        <!-- Table will be generated dynamically -->
+                    </div>
+                </div>
+                <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span id="balanceSummaryFooter" style="font-size:13px;color:#64748b;">0 สินค้า</span>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-outline" onclick="closeBalanceSummaryModal()">ปิด</button>
+                        <button class="btn btn-primary" onclick="printBalanceSummary()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                <rect x="6" y="14" width="12" height="8"></rect>
+                            </svg>
+                            พิมพ์รายงาน
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Filter Section -->
         <section class="filter-section">

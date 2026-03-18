@@ -213,6 +213,9 @@ function switchModule(module, event) {
         // Show Recalculate button for RM
         const recalcBtn = document.getElementById('recalculateBtn');
         if (recalcBtn) recalcBtn.style.display = 'inline-flex';
+        // Show Backup Sheet button for RM
+        const backupBtn = document.getElementById('backupSheetBtn');
+        if (backupBtn) backupBtn.style.display = 'inline-flex';
         // Transfer button - show only for RM Center, hide for RM Production
         const transferBtn = document.getElementById('transferBtn');
         if (transferBtn) {
@@ -230,6 +233,9 @@ function switchModule(module, event) {
         // Hide Recalculate button for Package
         const recalcBtn = document.getElementById('recalculateBtn');
         if (recalcBtn) recalcBtn.style.display = 'none';
+        // Hide Backup Sheet button for Package
+        const backupBtn = document.getElementById('backupSheetBtn');
+        if (backupBtn) backupBtn.style.display = 'none';
         // Hide Transfer button for Package
         const transferBtn = document.getElementById('transferBtn');
         if (transferBtn) transferBtn.style.display = 'none';
@@ -4680,6 +4686,44 @@ async function transferToProductionAuto(entries) {
     } catch (e) {
         console.error('Auto Transfer Error:', e);
         alert('เกิดข้อผิดพลาดในการโอนข้อมูล: ' + e.message);
+        hideLoading();
+    }
+}
+
+// === Admin: Backup RM data to Google Sheet ===
+// ส่งข้อมูล rmStockData ปัจจุบันทั้งหมดไป Sheet เพื่อ sync ให้ตรงกับ DB
+async function backupRMToSheet() {
+    if (!confirm('ต้องการ Backup ข้อมูล RM ปัจจุบันไป Google Sheet หรือไม่?\n\n(ข้อมูลใน Sheet จะถูกเขียนทับด้วยข้อมูลจาก DB)')) return;
+
+    showLoading();
+    showToast('กำลัง Backup ไป Sheet...');
+
+    var moduleKey = (currentModule === 'rm_production') ? 'rm_production' : 'rm';
+    var config = SHEET_CONFIG[moduleKey];
+
+    try {
+        // ส่งทั้ง rmStockData ไป Sheet
+        var response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'save_all_rm',
+                spreadsheetId: config.id,
+                sheetName: config.sheetName,
+                data: rmStockData
+            })
+        });
+
+        var result = await response.json();
+        if (result.success) {
+            showToast('✅ Backup สำเร็จ! ข้อมูลใน Sheet อัปเดตแล้ว');
+        } else {
+            showToast('⚠️ Backup อาจไม่สมบูรณ์: ' + (result.error || 'unknown'));
+        }
+    } catch (e) {
+        console.error('[RM] Backup to Sheet failed:', e);
+        showToast('❌ Backup ล้มเหลว: ' + e.message);
+    } finally {
         hideLoading();
     }
 }

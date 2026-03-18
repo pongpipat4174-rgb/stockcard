@@ -582,6 +582,10 @@ window.saveData = async () => {
     showLoading('กำลังบันทึกข้อมูล...');
 
     // === DB-first + Sheet backup (fire-and-forget) ===
+
+    // 1. Always save to LocalStorage as backup
+    localStorage.setItem('shrinkItems', JSON.stringify(items));
+    localStorage.setItem('shrinkTransactions', JSON.stringify(transactions));
     try {
         const dbRes = await fetch('/api/consumable/save', {
             method: 'POST',

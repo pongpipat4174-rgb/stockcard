@@ -581,7 +581,7 @@ const loadData = async () => {
 window.saveData = async () => {
     showLoading('กำลังบันทึกข้อมูล...');
 
-    // === DB Only Mode — บันทึกลง DB เท่านั้น (ไม่ส่ง Sheet ทุกครั้ง) ===
+    // === DB-first + Sheet backup (fire-and-forget) ===
     try {
         const dbRes = await fetch('/api/consumable/save', {
             method: 'POST',
@@ -593,6 +593,21 @@ window.saveData = async () => {
             throw new Error('DB responded ' + dbRes.status + ': ' + errText);
         }
         console.log('[Consumable] ✅ Saved to DB');
+
+        // Sheet backup (fire-and-forget — ไม่รอผลลัพธ์ ไม่บล็อก)
+        if (API_URL) {
+            const validItems = items.filter(item => item.name && item.name.trim() !== '');
+            fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({
+                    action: 'save_all',
+                    sheet: 'Consumable',
+                    items: validItems,
+                    transactions: transactions
+                })
+            }).catch(e => console.warn('[Consumable] Sheet backup failed (ignored):', e.message));
+        }
 
         renderTable();
         updateStats();

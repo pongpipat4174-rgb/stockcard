@@ -183,6 +183,25 @@ async function loadData() {
         items = JSON.parse(localStorage.getItem('genItems')) || [];
         transactions = JSON.parse(localStorage.getItem('genTransactions')) || [];
         console.log(`📦 Loaded from LocalStorage: ${items.length} items, ${transactions.length} transactions`);
+
+        // Show error if no data at all
+        if (items.length === 0) {
+            const tableBody = document.getElementById('table-body');
+            if (tableBody) {
+                tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px 20px;">
+                    <div style="color:#dc2626;font-size:1.1rem;font-weight:600;margin-bottom:8px;">
+                        ⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูลได้
+                    </div>
+                    <div style="color:#64748b;font-size:0.9rem;">
+                        กรุณาตรวจสอบว่า cloudflared tunnel ทำงานอยู่<br>
+                        <code style="background:#f1f5f9;padding:4px 8px;border-radius:4px;font-size:0.85rem;">
+                            cloudflared access tcp --hostname postgres-db.wejlc.com --url localhost:15432
+                        </code>
+                    </div>
+                    <div style="color:#94a3b8;font-size:0.8rem;margin-top:8px;">Error: ${e.message}</div>
+                </td></tr>`;
+            }
+        }
     }
 }
 

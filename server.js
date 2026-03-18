@@ -43,6 +43,47 @@ const pool = new Pool({
   password: process.env.INVENTORY_DB_PASSWORD || 'postgres123',
 });
 
+// Auto-create GeneralStock tables if not exist
+async function ensureGSTables() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS gs_items (
+        id              TEXT PRIMARY KEY,
+        name            TEXT NOT NULL,
+        spec            TEXT,
+        category        TEXT DEFAULT 'Other',
+        unit            TEXT DEFAULT 'ชิ้น',
+        stock           NUMERIC DEFAULT 0,
+        min_stock       NUMERIC DEFAULT 5,
+        price           NUMERIC,
+        lead_time       TEXT,
+        supplier        TEXT,
+        country         TEXT,
+        image           TEXT,
+        created_at      TIMESTAMPTZ DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS gs_transactions (
+        id              TEXT PRIMARY KEY,
+        item_id         TEXT NOT NULL,
+        item_name       TEXT,
+        type            TEXT NOT NULL,
+        qty             NUMERIC NOT NULL DEFAULT 0,
+        remaining       NUMERIC DEFAULT 0,
+        date            TEXT,
+        time            TEXT,
+        note            TEXT,
+        created_at      TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_gs_transactions_item_id ON gs_transactions(item_id);
+    `);
+    console.log('[DB] ✅ gs_items, gs_transactions tables ready');
+  } catch (err) {
+    console.error('[DB] ❌ Failed to create GS tables:', err.message);
+  }
+}
+ensureGSTables();
+
 // API Config
 app.get('/api/config', (req, res) => {
   const protocol = req.protocol;

@@ -158,7 +158,8 @@ app.get('/api/config', (req, res) => {
   // ใช้ relative path เพื่อหลีกเลี่ยง Mixed Content เมื่ออยู่หลัง HTTPS proxy
   res.json({
     apiBase: '/api',
-    appsScriptGeneralStock: process.env.APPS_SCRIPT_GENERALSTOCK || ''
+    appsScriptGeneralStock: process.env.APPS_SCRIPT_GENERALSTOCK || '',
+    sheetGeneralStockId: process.env.SHEET_GENERALSTOCK_ID || ''
   });
 });
 

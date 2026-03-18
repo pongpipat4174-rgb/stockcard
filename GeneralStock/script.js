@@ -7,6 +7,7 @@
 // --- CONFIGURATION ---
 let API_BASE = ''; // จะถูก set อัตโนมัติจาก /api/config
 let APPS_SCRIPT_GENERALSTOCK = '';
+let SHEET_GENERALSTOCK_ID = '';
 
 let items = [];
 let transactions = [];
@@ -28,6 +29,7 @@ async function detectApiBase() {
             const config = await configRes.json();
             API_BASE = config.apiBase || '/api';
             APPS_SCRIPT_GENERALSTOCK = config.appsScriptGeneralStock || '';
+            SHEET_GENERALSTOCK_ID = config.sheetGeneralStockId || '';
             console.log('[Config] API Base:', API_BASE);
             return;
         }
@@ -43,8 +45,8 @@ async function syncGeneralStockToSheet() {
     if (!APPS_SCRIPT_GENERALSTOCK) return;
 
     const payload = {
-        action: 'save_all',
-        sheet: 'GeneralStock',
+        action: 'save_all_general',
+        spreadsheetId: SHEET_GENERALSTOCK_ID,
         items: items,
         transactions: transactions
     };

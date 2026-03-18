@@ -37,17 +37,38 @@ function checkAdmin(req, res, next) {
   res.status(403).json({ error: 'ต้องมีสิทธิ์ Admin' });
 }
 
-// Database connection (อ่านจาก stockcard/.env)
-const pool = new Pool({
+// Database connection — auto-detect port (local:5432 หรือ tunnel:15432)
+const DB_CONFIG = {
   host: process.env.INVENTORY_DB_HOST || 'localhost',
-  port: parseInt(process.env.INVENTORY_DB_PORT || '5432'),
   database: process.env.INVENTORY_DB_NAME || 'inventory_rm_tan',
   user: process.env.INVENTORY_DB_USER || 'postgres',
   password: process.env.INVENTORY_DB_PASSWORD || 'postgres123',
-});
+};
+
+let pool = null;
+
+async function initDB() {
+  const configuredPort = parseInt(process.env.INVENTORY_DB_PORT || '5432');
+  const fallbackPort = configuredPort === 5432 ? 15432 : 5432;
+
+  for (const port of [configuredPort, fallbackPort]) {
+    try {
+      const testPool = new Pool({ ...DB_CONFIG, port, connectionTimeoutMillis: 3000 });
+      await testPool.query('SELECT 1');
+      console.log(`[DB] ✅ Connected: ${DB_CONFIG.host}:${port}/${DB_CONFIG.database}`);
+      pool = testPool;
+      return;
+    } catch (e) {
+      console.warn(`[DB] ❌ Port ${port} failed: ${e.message}`);
+    }
+  }
+  console.error('[DB] ❌ ไม่สามารถเชื่อมต่อ DB ได้ทั้ง port ' + configuredPort + ' และ ' + fallbackPort);
+  console.error('[DB] Server จะทำงานต่อแบบ read-only (Google Sheets fallback)');
+}
 
 // Auto-create module tables if not exist
 async function ensureAllTables() {
+  if (!pool) return;
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS gs_items (
@@ -119,7 +140,18 @@ async function ensureAllTables() {
     console.error('[DB] ❌ Failed to create tables:', err.message);
   }
 }
-ensureAllTables();
+// Startup: connect DB then create tables
+initDB().then(() => ensureAllTables());
+
+// DB availability middleware — return 503 if DB not connected
+app.use('/api', (req, res, next) => {
+  // Allow config and health endpoints without DB
+  if (req.path === '/config' || req.path === '/health') return next();
+  if (!pool) {
+    return res.status(503).json({ error: 'Database not connected', message: 'DB ยังไม่พร้อม — กรุณาตรวจสอบ tunnel/PostgreSQL' });
+  }
+  next();
+});
 
 // API Config
 app.get('/api/config', (req, res) => {
@@ -132,6 +164,14 @@ app.get('/api/config', (req, res) => {
 
 // Health Check - DB diagnostic
 app.get('/api/health', async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({
+      status: 'no_db',
+      db: 'not connected',
+      message: 'DB pool ยังไม่ได้สร้าง — ตรวจสอบ PostgreSQL/Cloudflare Tunnel',
+      configured_port: process.env.INVENTORY_DB_PORT || '5432'
+    });
+  }
   try {
     const dbTest = await pool.query('SELECT NOW() as now');
     const gsCount = await pool.query('SELECT COUNT(*) as cnt FROM gs_items');
@@ -142,18 +182,15 @@ app.get('/api/health', async (req, res) => {
       time: dbTest.rows[0].now,
       gs_items: parseInt(gsCount.rows[0].cnt),
       gs_transactions: parseInt(gsTransCount.rows[0].cnt),
-      db_host: process.env.INVENTORY_DB_HOST || 'localhost',
-      db_port: process.env.INVENTORY_DB_PORT || '5432',
-      db_name: process.env.INVENTORY_DB_NAME || 'inventory_rm_tan'
+      db_host: DB_CONFIG.host,
+      db_port: pool.options.port,
+      db_name: DB_CONFIG.database
     });
   } catch (err) {
     res.status(500).json({
       status: 'error',
       db: 'disconnected',
-      error: err.message,
-      db_host: process.env.INVENTORY_DB_HOST || 'localhost',
-      db_port: process.env.INVENTORY_DB_PORT || '5432',
-      db_name: process.env.INVENTORY_DB_NAME || 'inventory_rm_tan'
+      error: err.message
     });
   }
 });

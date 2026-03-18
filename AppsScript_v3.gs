@@ -44,6 +44,9 @@ function doPost(e) {
     } else if (action === 'save_all_general') {
       // GeneralStock module save
       return saveGeneralStockData(data);
+    } else if (action === 'save_all_rm') {
+      // RM module full backup from DB
+      return saveAllRMData(data);
     } else if (action === 'delete_consumable_transaction') {
       // Delete a specific transaction from Consumable_Transactions
       return deleteConsumableTransaction(data);
@@ -796,6 +799,96 @@ function recalculateProductBalances(sheet, productCode) {
         sheet.getRange(i + 1, 16).setValue(Math.round(lotBalances[lotNo] * 100) / 100);
       }
     }
+  }
+}
+
+/**
+ * Backup RM data from DB to Sheet
+ * Called with action: 'save_all_rm'
+ * Clears all data rows (keeps header) and rewrites from DB data
+ */
+function saveAllRMData(data) {
+  try {
+    var spreadsheetId = data.spreadsheetId;
+    var sheetName = data.sheetName;
+    var rmData = data.data; // array of RM records from DB
+    
+    if (!rmData || rmData.length === 0) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'No data to save'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var ss = SpreadsheetApp.openById(spreadsheetId);
+    var sheet = ss.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Sheet not found: ' + sheetName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Keep header row, clear all data rows
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+    }
+    
+    // Build rows from DB data
+    // Column order: A=date, B=productCode, C=productName, D=type,
+    //   E=containerQty, F=containerWeight, G=remainder, H=inQty, I=outQty,
+    //   J=balance, K=lotNo, L=vendorLot, M=mfgDate, N=expDate,
+    //   O=daysLeft, P=lotBalance, Q=supplier, R=remark, S=containerOut
+    var rows = [];
+    for (var i = 0; i < rmData.length; i++) {
+      var r = rmData[i];
+      rows.push([
+        r.date || '',
+        r.productCode || '',
+        r.productName || '',
+        r.type || '',
+        r.containerQty || 0,
+        r.containerWeight || 0,
+        r.remainder || 0,
+        r.inQty || 0,
+        r.outQty || 0,
+        r.balance || 0,
+        r.lotNo || '',
+        r.vendorLot || '',
+        r.mfgDate || '',
+        r.expDate || '',
+        r.daysLeft || '',
+        r.lotBalance || '',
+        r.supplier || '',
+        r.remark || '',
+        r.containerOut || 0
+      ]);
+    }
+    
+    // Batch write all rows at once
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+    }
+    
+    // Recalculate balances
+    try {
+      manualRecalculateSheet(sheet);
+    } catch (e) {
+      Logger.log('Recalculate after backup error: ' + e.message);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'Backup complete: ' + rows.length + ' rows written to ' + sheetName
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 

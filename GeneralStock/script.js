@@ -652,10 +652,7 @@ window.deleteTransaction = async (transId) => {
 
         closeModal('history-modal');
 
-        // DB success → backup to Sheet (fire-and-forget)
-        syncGeneralStockToSheet().catch(sheetErr => {
-            console.warn('[GeneralStock] Sheet backup failed:', sheetErr);
-        });
+        // Sheet sync removed — use Admin Backup button instead
 
         renderTable();
         updateStats();
@@ -705,10 +702,7 @@ window.editTransaction = async (transId) => {
 
         closeModal('history-modal');
 
-        // DB success → backup to Sheet (fire-and-forget)
-        syncGeneralStockToSheet().catch(sheetErr => {
-            console.warn('[GeneralStock] Sheet backup failed:', sheetErr);
-        });
+        // Sheet sync removed — use Admin Backup button instead
 
         renderTable();
         updateStats();
@@ -734,10 +728,7 @@ window.deleteItem = async (index) => {
         items.splice(index, 1);
         localStorage.setItem('genItems', JSON.stringify(items));
 
-        // DB success → backup to Sheet (fire-and-forget)
-        syncGeneralStockToSheet().catch(sheetErr => {
-            console.warn('[GeneralStock] Sheet backup failed:', sheetErr);
-        });
+        // Sheet sync removed — use Admin Backup button instead
 
         renderTable();
         updateStats();
@@ -800,6 +791,58 @@ window.printDetail = function () {
     printWindow.focus();
     setTimeout(() => printWindow.print(), 500);
 };
+
+// --- ADMIN: BACKUP TO SHEET ---
+window.backupToSheet = async function () {
+    if (!confirm('ต้องการ Backup ข้อมูลปัจจุบันไป Google Sheet หรือไม่?\n\n(ข้อมูลใน Sheet จะถูกเขียนทับด้วยข้อมูลจาก DB)')) return;
+
+    showLoading();
+    showSaveStatus(true); // show "กำลัง backup..."
+
+    try {
+        await syncGeneralStockToSheet();
+        hideLoading();
+        const toast = document.getElementById('save-status-toast');
+        if (toast) toast.remove();
+        showSaveStatusMsg('✅ Backup สำเร็จ! ข้อมูลใน Sheet อัปเดตแล้ว');
+    } catch (e) {
+        console.error('[GeneralStock] Backup to Sheet failed:', e);
+        hideLoading();
+        showSaveStatusMsg('❌ Backup ล้มเหลว: ' + e.message, false);
+    }
+};
+
+function showSaveStatusMsg(msg, success = true) {
+    const existing = document.getElementById('save-status-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'save-status-toast';
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        color: white;
+        font-size: 0.9rem;
+        font-weight: 600;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease;
+        background: ${success ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #dc2626, #ef4444)'};
+    `;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
 
 // --- START APP ---
 initApp();

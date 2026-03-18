@@ -1022,8 +1022,8 @@ transForm.addEventListener('submit', async (e) => {
 
     transactions.unshift(newTrans);
 
-    await saveData(); // Save all
     closeModal('transaction-modal');
+    await saveData(); // Save all
 });
 
 // --- History Modal with Delete ---

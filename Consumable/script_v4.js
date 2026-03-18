@@ -517,280 +517,73 @@ if (document.readyState === 'loading') {
 }
 
 const loadData = async () => {
-    // FORCE REFRESH: Clear stale local data to fix display issues
-    try {
-        console.log("Force Clearing Local Data...");
-        localStorage.removeItem('shrinkItems');
-    } catch (e) { }
-
-    // === 1. ลอง DB API ก่อน (เร็วกว่า Google Sheet มาก) ===
+    // === DB Only Mode — อ่านจาก DB เท่านั้น (ไม่ fallback Sheet) ===
     try {
         const dbRes = await fetch('/api/consumable/data');
-        if (dbRes.ok) {
-            const ct = dbRes.headers.get('content-type') || '';
-            if (ct.includes('application/json')) {
-                const dbData = await dbRes.json();
-                if (dbData.success && Array.isArray(dbData.items) && Array.isArray(dbData.transactions)) {
-                    // DB data is already in correct format — no Thai header mapping needed
-                    items = dbData.items.map(item => ({
-                        name: item.name,
-                        category: item.category || 'weight',
-                        stockCartons: Number(item.stockCartons || 0),
-                        stockPartialKg: Number(item.stockPartialKg || 0),
-                        kgPerCarton: Number(item.kgPerCarton || 25),
-                        pcsPerKg: Number(item.pcsPerKg || 0),
-                        minThreshold: Number(item.minThreshold || 0),
-                        pcsPerPack: (item.pcsPerPack !== undefined && item.pcsPerPack !== null) ? Number(item.pcsPerPack) : 1,
-                        fgPcsPerCarton: Number(item.fgPcsPerCarton || 1),
-                        rollLength: Number(item.rollLength || 0),
-                        cutLength: Number(item.cutLength || 0),
-                        pcsPerRoll: Number(item.pcsPerRoll || 0),
-                        fgYieldPerRoll: Number(item.fgYieldPerRoll || 0),
-                        stockCode: item.stockCode || ""
-                    }));
-
-                    if (dbData.transactions && Array.isArray(dbData.transactions)) {
-                        transactions = dbData.transactions;
-                    }
-
-                    console.log(`[Consumable] ✅ Loaded from DB: ${items.length} items, ${transactions.length} transactions`);
-                    return; // สำเร็จ ไม่ต้อง fallback
-                }
-            }
+        if (!dbRes.ok) {
+            throw new Error('DB responded ' + dbRes.status);
         }
-        console.warn('[Consumable] DB returned empty/invalid, falling back to Sheet');
+        const ct = dbRes.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            throw new Error('DB returned non-JSON response');
+        }
+        const dbData = await dbRes.json();
+        if (!dbData.success || !Array.isArray(dbData.items)) {
+            throw new Error('DB returned invalid data');
+        }
+
+        // DB data is already in correct format
+        items = dbData.items.map(item => ({
+            name: item.name,
+            category: item.category || 'weight',
+            stockCartons: Number(item.stockCartons || 0),
+            stockPartialKg: Number(item.stockPartialKg || 0),
+            kgPerCarton: Number(item.kgPerCarton || 25),
+            pcsPerKg: Number(item.pcsPerKg || 0),
+            minThreshold: Number(item.minThreshold || 0),
+            pcsPerPack: (item.pcsPerPack !== undefined && item.pcsPerPack !== null) ? Number(item.pcsPerPack) : 1,
+            fgPcsPerCarton: Number(item.fgPcsPerCarton || 1),
+            rollLength: Number(item.rollLength || 0),
+            cutLength: Number(item.cutLength || 0),
+            pcsPerRoll: Number(item.pcsPerRoll || 0),
+            fgYieldPerRoll: Number(item.fgYieldPerRoll || 0),
+            stockCode: item.stockCode || ""
+        }));
+
+        if (dbData.transactions && Array.isArray(dbData.transactions)) {
+            transactions = dbData.transactions;
+        }
+
+        console.log(`[Consumable] ✅ Loaded from DB: ${items.length} items, ${transactions.length} transactions`);
+
     } catch (dbErr) {
-        console.warn('[Consumable] DB failed, falling back to Sheet:', dbErr.message);
-    }
-
-    // === 2. Fallback: Google Apps Script (ของเดิม) ===
-    if (API_URL) {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased timeout to 10s
-
-            // Add t parameter for cache busting and sheet parameter for data separation
-            const response = await fetch(`${API_URL}?action=load_all&sheet=Consumable&t=${Date.now()}`, { signal: controller.signal });
-            clearTimeout(timeoutId);
-
-            if (!response.ok) throw new Error("Network response was not ok: " + response.statusText);
-
-            const data = await response.json();
-
-            if (data.error) {
-                alert("Google Script Error: " + data.error);
-                throw new Error(data.error);
-            }
-
-            if (data.items && Array.isArray(data.items) && data.items.length > 0) {
-                // Map Thai headers if present
-                let loadedItems = data.items;
-
-                // CHECK: If backend already sent correct keys (name, category, stock...), USE THEM DIRECTLY!
-                // Don't try to re-map unless it's raw data (which it isn't anymore).
-                if (loadedItems[0].name !== undefined && loadedItems[0].stock !== undefined) {
-                    console.log("Backend sent mapped data. Using directly.");
-                    items = loadedItems;
-                } else if (loadedItems[0]["ID"] || loadedItems[0]["ชื่อสินค้า"] || loadedItems[0]["name"]) {
-                    // Check if it's the raw format or mapped format
-                    const row = loadedItems[0];
-
-                    // Check if product name is in "ID" field (column shift issue with garbled Thai headers)
-                    const idValue = row["ID"] || "";
-                    const hasLetters = /[a-zA-Zก-๙]/.test(idValue);
-                    const isProductNameInID = idValue.length > 3 && hasLetters;
-
-                    if (isProductNameInID) {
-                        // Use positional mapping since Thai column names are garbled
-                        console.log("Mapping from ID field (using positional mapping)...");
-                        loadedItems = loadedItems.map(row => {
-                            const keys = Object.keys(row);
-                            // Map by position:
-                            // 0: ID = name
-                            // 1: category
-                            // 2: stockCartons
-                            // 3: stockPartialKg
-                            // 4: kgPerCarton
-                            // 5: totalKg (skip - calculated)
-                            // 6: minThreshold
-                            // 7: pcsPerKg
-                            // 8: empty
-                            // 9: pcsPerPack
-                            // 10: fgPcsPerCarton
-                            const values = Object.values(row);
-                            // Debug log first item
-                            if (loadedItems.indexOf(row) === 0) {
-                                console.log("Keys:", Object.keys(row));
-                                console.log("Values:", values);
-                                console.log("pcsPerPack position [9]:", values[9]);
-                            }
-                            // Map by position using values array:
-                            // 0: name (ID)
-                            // 1: category
-                            // 2: stockCartons
-                            // 3: stockPartialKg
-                            // 4: kgPerCarton
-                            // 5: totalKg (skip - calculated)
-                            // 6: minThreshold
-                            // 7: pcsPerKg
-                            // 8: cutLength (or empty for shrink)
-                            // 9: pcsPerPack
-                            // 10: fgPcsPerCarton
-                            // 11: totalPcs (calculated)
-                            // 12: fgYield (calculated)
-                            // 13: status
-                            // 14: Yield/roll
-                            // 15: StockCode
-                            // 16: rollLength
-                            return {
-                                name: values[0],  // Product name
-                                category: values[1] || 'weight',
-                                stockCartons: parseFloat(String(values[2]).replace(/,/g, '')) || 0,
-                                stockPartialKg: parseFloat(String(values[3]).replace(/,/g, '')) || 0,
-                                kgPerCarton: parseFloat(String(values[4]).replace(/,/g, '')) || 25,
-                                // values[5] is totalKg (calculated) - skip
-                                minThreshold: parseFloat(String(values[6]).replace(/,/g, '')) || 0,
-                                pcsPerKg: parseFloat(String(values[7]).replace(/,/g, '')) || 0,
-                                // values[8] is empty for shrink
-                                pcsPerPack: parseFloat(String(values[9]).replace(/,/g, '')) || 1,
-                                fgPcsPerCarton: parseFloat(String(values[10]).replace(/,/g, '')) || 1,
-                                // Roll-specific fields (CORRECTED positions):
-                                // [14] = rollLength (ความยาวม้วน ม.) = 2664
-                                // [15] = cutLength (ความยาวตัด มม.) = 180, 260, etc.
-                                // [16] = pcsPerRoll (ชิ้น/ม้วน) = 14800, 10246, etc.
-                                // [18] = stockCode = F450, etc.
-                                rollLength: parseFloat(String(values[14]).replace(/,/g, '')) || 0,
-                                cutLength: parseFloat(String(values[15]).replace(/,/g, '')) || 0,
-                                pcsPerRoll: parseFloat(String(values[16]).replace(/,/g, '')) || 0,
-                                fgYieldPerRoll: 0,  // Will be calculated from pcsPerRoll / fgPcsPerCarton
-                                stockCode: values[18] || ""
-                            };
-                        });
-                    } else if (row["ชื่อสินค้า"]) {
-                        console.log("Mapping Thai Headers (normal)...");
-                        loadedItems = loadedItems.map(row => ({
-                            name: row["ชื่อสินค้า"],
-                            category: row["ประเภท"] || 'weight',
-                            stockCartons: parseFloat(row["สต็อก (ลัง)"] || row["สต๊อก (ลัง)"] || row["คงเหลือปัจจุบัน (ลัง)"] || 0),
-                            stockPartialKg: parseFloat(row["เศษ(กก.)"] || row["เศษ (กก.)"] || 0),
-                            kgPerCarton: parseFloat(row["กก./ลัง"] || row["น้ำหนักต่อลัง (kg)"] || 25),
-                            pcsPerKg: parseFloat(row["ชิ้น/กก.1"] || row["ชิ้น/กก."] || row["จำนวนซองต่อ กก."] || 0),
-                            minThreshold: parseFloat(row["จุดสั่งซื้อ (กก.)"] || row["แจ้งเตือนเมื่อต่ำกว่า (กก.)"] || 0),
-                            pcsPerPack: parseFloat(row["ชิ้นงาน/ถุง"] || row["จำนวนชิ้นงาน ต่อ 1 ถุงชริ้ง"] || 1),
-                            fgPcsPerCarton: parseFloat(row["ชิ้น FG/ลัง"] || row["จำนวนชิ้น FG ต่อลัง"] || 1),
-                            rollLength: parseFloat(row["ความยาวม้วน (ม.)"] || 0),
-                            cutLength: parseFloat(row["ความยาวตัด (มม.)"] || 0),
-                            pcsPerRoll: parseFloat(row["ชิ้น/ม้วน"] || 0),
-                            fgYieldPerRoll: parseFloat(row["Yield/ม้วน"] || 0),
-                            stockCode: row["StockCode"] || row["รหัสสต็อก"] || ""
-                        }));
-                    }
-                }
-
-                // FINAL SAFETY MAP: Ensure all numbers are actually numbers
-                items = loadedItems.map(item => ({
-                    name: item.name,
-                    category: item.category || 'weight',
-                    stockCartons: Number(item.stock || item.stockCartons || 0),
-                    stockPartialKg: Number(item.stockPartial || item.stockPartialKg || 0),
-                    kgPerCarton: Number(item.kgPerCarton || 25),
-                    pcsPerKg: Number(item.pcsPerKg || 0),
-                    minThreshold: Number(item.min || item.minThreshold || 0),
-                    // Fix: Do not force default 1 if value is 0 or valid number. Only if undefined/null.
-                    pcsPerPack: (item.pcsPerPack !== undefined && item.pcsPerPack !== null) ? Number(item.pcsPerPack) : 1,
-                    fgPcsPerCarton: Number(item.fgPerCarton || item.fgPcsPerCarton || 1),
-                    rollLength: Number(item.rollLength || 0),
-                    cutLength: Number(item.cutLength || 0),
-                    pcsPerRoll: Number(item.pcsPerRoll || 0),
-                    fgYieldPerRoll: Number(item.fgYieldPerRoll || 0),
-                    stockCode: item.stockCode || ""
-                }));
-
-
-                // items = loadedItems; // (Already assigned above)
-
-                if (data.transactions && Array.isArray(data.transactions)) {
-                    let loadedTrans = data.transactions;
-                    if (loadedTrans.length > 0 && (loadedTrans[0]["ชื่อสินค้า"] || loadedTrans[0]["วันที่"])) {
-                        loadedTrans = loadedTrans.map(row => {
-                            // Format time - handle both string and Date object from Sheet
-                            let timeStr = '';
-                            if (row["เวลา"]) {
-                                if (typeof row["เวลา"] === 'string') {
-                                    // If it's an ISO date string like "1899-12-30T03:52:56.000Z"
-                                    if (row["เวลา"].includes('T')) {
-                                        const d = new Date(row["เวลา"]);
-                                        timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-                                    } else {
-                                        timeStr = row["เวลา"]; // Already formatted like "10:33"
-                                    }
-                                } else {
-                                    timeStr = row["เวลา"].toString();
-                                }
-                            }
-
-                            return {
-                                id: row["ID"],
-                                date: row["วันที่"],
-                                time: timeStr,
-                                type: row["ประเภท"],
-                                itemIndex: row["ItemIndex"],
-                                itemName: row["ชื่อสินค้า"],
-                                qtyKg: row["จำนวน (กก.)"],
-                                qtyCartons: row["จำนวน (ลัง)"],
-                                qtyUnit: row["จำนวน (ลัง)"], // For roll items: qtyUnit = qtyCartons
-                                remainingStock: row["คงเหลือ (ลัง)"],
-                                note: row["หมายเหตุ"]
-                            };
-                        });
-                    }
-                    transactions = loadedTrans.reverse();
-                }
-
-                console.log(`Loaded ${items.length} items from Cloud.`);
-                return; // Success!
-            } else {
-                alert("Connected to Sheet but found 0 items! Check Sheet Name in Script.");
-            }
-
-            console.log("Cloud returned 0 items. Falling back to Local...");
-
-        } catch (e) {
-            console.warn("Online load failed:", e);
-            alert("Connection Failed: " + e.message + "\n\nChecking: " + API_URL);
-        }
-    }
-
-    // 2. Offline Mode (Fallback)
-    try {
-        const localItems = JSON.parse(localStorage.getItem('shrinkItems'));
-        if (Array.isArray(localItems) && localItems.length > 0) {
-            console.log(`Loaded ${localItems.length} items from LocalStorage.`);
-            items = localItems;
-        } else {
-            console.log("Local empty. Using Initial.");
-            items = JSON.parse(JSON.stringify(initialData));
-        }
-
-        transactions = JSON.parse(localStorage.getItem('shrinkTransactions')) || [];
-    } catch (e) {
-        console.error("Local load error:", e);
-        items = JSON.parse(JSON.stringify(initialData));
+        console.error('[Consumable] ❌ DB load failed:', dbErr.message);
+        items = [];
         transactions = [];
+        // Show error to user
+        const tableBody = document.getElementById('table-body');
+        if (tableBody) {
+            tableBody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding:40px 20px;">
+                <div style="color:#dc2626; font-size:1.1rem; font-weight:600; margin-bottom:8px;">
+                    ⚠️ ไม่สามารถโหลดข้อมูลจาก DB ได้
+                </div>
+                <div style="color:#64748b; font-size:0.9rem; margin-bottom:12px;">
+                    ${dbErr.message}
+                </div>
+                <button class="btn primary" onclick="initApp()" style="padding:8px 20px;">
+                    <i class="fa-solid fa-arrows-rotate"></i> ลองใหม่
+                </button>
+            </td></tr>`;
+        }
     }
 };
 
 window.saveData = async () => {
     showLoading('กำลังบันทึกข้อมูล...');
 
-    // 1. Always save to LocalStorage as backup
-    localStorage.setItem('shrinkItems', JSON.stringify(items));
-    localStorage.setItem('shrinkTransactions', JSON.stringify(transactions));
-
-    // 2. DB-first: บันทึก DB ก่อน — ต้องสำเร็จก่อนจึง backup ไป Sheet
+    // === DB Only Mode — บันทึกลง DB เท่านั้น (ไม่ส่ง Sheet ทุกครั้ง) ===
     try {
-        const dbBase = window.location.origin + '/api';
-        const dbRes = await fetch(dbBase + '/consumable/save', {
+        const dbRes = await fetch('/api/consumable/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ items, transactions })
@@ -800,99 +593,6 @@ window.saveData = async () => {
             throw new Error('DB responded ' + dbRes.status + ': ' + errText);
         }
         console.log('[Consumable] ✅ Saved to DB');
-
-        // 3. DB success → backup to Sheet (fire-and-forget)
-        if (API_URL) {
-            try {
-                // SAFETY FILTER
-                const validItems = items.filter(item => item.name && item.name.trim() !== "");
-                if (validItems.length < items.length) {
-                    console.error("Stopping sheet backup: Missing item names detected.");
-                    // DB already saved, just skip sheet backup
-                } else {
-                    // Map to Thai Headers matching Web Page EXACTLY
-                    const sheetItems = validItems.map(item => {
-                        const isRoll = item.category === 'unit';
-                        const stockPartial = isRoll ? 0 : (item.stockPartialKg || 0);
-
-                        let totalKg = 0;
-                        let totalPcs = 0;
-
-                        // Common fields
-                        const pcsPerPack = item.pcsPerPack || 1;
-                        const fgPcsPerCarton = item.fgPcsPerCarton || 1;
-
-                        if (isRoll) {
-                            totalPcs = item.stockCartons * (item.pcsPerRoll || 0);
-                        } else {
-                            totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
-                            totalPcs = totalKg * item.pcsPerKg * pcsPerPack;
-                        }
-
-                        let fgYield = 0;
-                        if (isRoll && item.fgYieldPerRoll) {
-                            fgYield = item.stockCartons * item.fgYieldPerRoll;
-                        } else {
-                            fgYield = (fgPcsPerCarton > 0) ? (totalPcs / fgPcsPerCarton) : 0;
-                        }
-
-                        const isLowSaving = isRoll ? (item.stockCartons < item.minThreshold) : (totalKg < item.minThreshold);
-
-                        return {
-                            "ชื่อสินค้า": item.name,
-                            "ประเภท": item.category || 'weight',
-                            "สต็อก (ลัง)": item.stockCartons,
-                            "เศษ(กก.)": stockPartial,
-                            "กก./ลัง": item.kgPerCarton,
-                            "รวม (กก.)": parseFloat(totalKg.toFixed(2)),
-                            "จุดสั่งซื้อ (กก.)": item.minThreshold,
-                            "ชิ้น/กก.": item.pcsPerKg,
-                            "รวมถุง (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
-                            "ชิ้นงาน/ถุง": pcsPerPack,
-                            "ชิ้น FG/ลัง": fgPcsPerCarton,
-                            "ผลิตได้ (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
-                            "ผลิตได้ (ลัง)": parseFloat(fgYield.toFixed(1)),
-                            "สถานะ": isLowSaving ? "ต้องสั่งซื้อ" : "ปกติ",
-                            "ความยาวม้วน (ม.)": item.rollLength || 0,
-                            "ความยาวตัด (มม.)": item.cutLength || 0,
-                            "ชิ้น/ม้วน": item.pcsPerRoll || 0,
-                            "Yield/ม้วน": item.fgYieldPerRoll || 0,
-                            "StockCode": item.stockCode || ""
-                        };
-                    });
-
-                    const sheetTransactions = transactions.map(t => ({
-                        "ID": t.id,
-                        "วันที่": t.date,
-                        "เวลา": t.time || '',
-                        "ประเภท": t.type,
-                        "ItemIndex": t.itemIndex,
-                        "ชื่อสินค้า": t.itemName,
-                        "จำนวน (กก.)": t.qtyKg,
-                        "จำนวน (ลัง)": t.qtyCartons,
-                        "คงเหลือ (ลัง)": t.remainingStock,
-                        "หมายเหตุ": t.note
-                    }));
-
-                    const payload = {
-                        action: 'save_all',
-                        sheet: 'Consumable',
-                        items: sheetItems,
-                        transactions: sheetTransactions
-                    };
-
-                    fetch(API_URL, {
-                        method: 'POST',
-                        body: JSON.stringify(payload),
-                        headers: { "Content-Type": "text/plain" }
-                    }).catch(e => console.warn('[Consumable] Sheet backup failed:', e));
-                    console.log('[Consumable] Sheet backup sent');
-                }
-            } catch (e) {
-                console.warn('[Consumable] Sheet backup error:', e);
-                // DB already saved successfully, just log sheet backup failure
-            }
-        }
 
         renderTable();
         updateStats();
@@ -908,26 +608,114 @@ window.saveData = async () => {
     }
 };
 
-// --- Force Sync to Google Sheet ---
-// Recalculates ALL values and pushes to Sheet to ensure consistency
+// --- Admin: Backup to Google Sheet ---
+// ปุ่มสำหรับ Admin กดเมื่อต้องการ backup ข้อมูลปัจจุบันไป Google Sheet
+// ไม่ได้ทำงานอัตโนมัติทุกครั้งที่บันทึก — นานๆทำครั้งนึง
 window.forceSyncToSheet = async () => {
     if (!API_URL) {
-        alert('ไม่มี API URL สำหรับ Google Sheet');
+        alert('ไม่มี API URL สำหรับ Google Sheet\nกรุณาตรวจสอบ APPS_SCRIPT_CONSUMABLE ใน .env');
         return;
     }
     
-    if (!confirm('ต้องการ Sync ข้อมูลปัจจุบันลง Google Sheet หรือไม่?\n(จะคำนวณค่าใหม่ทั้งหมดและเขียนทับข้อมูลเดิมในชีท)')) {
+    if (!confirm('📤 Admin Backup\n\nต้องการส่งข้อมูลปัจจุบันไป Google Sheet หรือไม่?\n(จะคำนวณค่าใหม่ทั้งหมดและเขียนทับข้อมูลเดิมในชีท)\n\nหมายเหตุ: ขั้นตอนนี้อาจใช้เวลา 10-30 วินาที')) {
         return;
     }
     
-    showLoading('กำลัง Sync ข้อมูลลง Google Sheet...');
+    showLoading('กำลัง Backup ข้อมูลลง Google Sheet...');
     
     try {
-        await saveData();
-        alert('✅ Sync สำเร็จ! ข้อมูลในชีทถูกอัปเดตแล้ว');
+        // SAFETY FILTER
+        const validItems = items.filter(item => item.name && item.name.trim() !== '');
+        if (validItems.length === 0) {
+            throw new Error('ไม่มีข้อมูลสินค้าให้ Backup');
+        }
+        if (validItems.length < items.length) {
+            console.warn(`[Admin Backup] Skipping ${items.length - validItems.length} items with no name`);
+        }
+
+        // Map to Thai Headers matching Sheet format
+        const sheetItems = validItems.map(item => {
+            const isRoll = item.category === 'unit';
+            const stockPartial = isRoll ? 0 : (item.stockPartialKg || 0);
+            let totalKg = 0, totalPcs = 0;
+            const pcsPerPack = item.pcsPerPack || 1;
+            const fgPcsPerCarton = item.fgPcsPerCarton || 1;
+
+            if (isRoll) {
+                totalPcs = item.stockCartons * (item.pcsPerRoll || 0);
+            } else {
+                totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
+                totalPcs = totalKg * item.pcsPerKg * pcsPerPack;
+            }
+
+            let fgYield = 0;
+            if (isRoll && item.fgYieldPerRoll) {
+                fgYield = item.stockCartons * item.fgYieldPerRoll;
+            } else {
+                fgYield = (fgPcsPerCarton > 0) ? (totalPcs / fgPcsPerCarton) : 0;
+            }
+
+            const isLowSaving = isRoll ? (item.stockCartons < item.minThreshold) : (totalKg < item.minThreshold);
+
+            return {
+                "ชื่อสินค้า": item.name,
+                "ประเภท": item.category || 'weight',
+                "สต็อก (ลัง)": item.stockCartons,
+                "เศษ(กก.)": stockPartial,
+                "กก./ลัง": item.kgPerCarton,
+                "รวม (กก.)": parseFloat(totalKg.toFixed(2)),
+                "จุดสั่งซื้อ (กก.)": item.minThreshold,
+                "ชิ้น/กก.": item.pcsPerKg,
+                "รวมถุง (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
+                "ชิ้นงาน/ถุง": pcsPerPack,
+                "ชิ้น FG/ลัง": fgPcsPerCarton,
+                "ผลิตได้ (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
+                "ผลิตได้ (ลัง)": parseFloat(fgYield.toFixed(1)),
+                "สถานะ": isLowSaving ? "ต้องสั่งซื้อ" : "ปกติ",
+                "ความยาวม้วน (ม.)": item.rollLength || 0,
+                "ความยาวตัด (มม.)": item.cutLength || 0,
+                "ชิ้น/ม้วน": item.pcsPerRoll || 0,
+                "Yield/ม้วน": item.fgYieldPerRoll || 0,
+                "StockCode": item.stockCode || ""
+            };
+        });
+
+        const sheetTransactions = transactions.map(t => ({
+            "ID": t.id,
+            "วันที่": t.date,
+            "เวลา": t.time || '',
+            "ประเภท": t.type,
+            "ItemIndex": t.itemIndex,
+            "ชื่อสินค้า": t.itemName,
+            "จำนวน (กก.)": t.qtyKg,
+            "จำนวน (ลัง)": t.qtyCartons,
+            "คงเหลือ (ลัง)": t.remainingStock,
+            "หมายเหตุ": t.note
+        }));
+
+        const payload = {
+            action: 'save_all',
+            sheet: 'Consumable',
+            items: sheetItems,
+            transactions: sheetTransactions
+        };
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'text/plain' }
+        });
+
+        if (!response.ok) {
+            throw new Error('Sheet responded ' + response.status);
+        }
+
+        alert(`✅ Backup สำเร็จ!\n\nส่งข้อมูล ${validItems.length} รายการ + ${transactions.length} transactions ไป Google Sheet แล้ว`);
+        console.log(`[Admin Backup] ✅ Sent ${validItems.length} items, ${transactions.length} transactions to Sheet`);
+
     } catch (e) {
-        console.error('Force Sync failed:', e);
-        alert('❌ Sync ล้มเหลว: ' + e.message);
+        console.error('[Admin Backup] Failed:', e);
+        alert('❌ Backup ล้มเหลว: ' + e.message);
     } finally {
         hideLoading();
     }

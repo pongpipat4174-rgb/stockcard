@@ -787,7 +787,7 @@ window.saveData = async () => {
     localStorage.setItem('shrinkItems', JSON.stringify(items));
     localStorage.setItem('shrinkTransactions', JSON.stringify(transactions));
 
-    // 2. Save to DB first (primary)
+    // 2. DB-first: บันทึก DB ก่อน — ต้องสำเร็จก่อนจึง backup ไป Sheet
     try {
         const dbBase = window.location.origin + '/api';
         const dbRes = await fetch(dbBase + '/consumable/save', {
@@ -795,116 +795,117 @@ window.saveData = async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ items, transactions })
         });
-        if (dbRes.ok) {
-            console.log('[Consumable] ✅ Saved to DB');
-        } else {
-            console.warn('[Consumable] DB save failed:', await dbRes.text());
+        if (!dbRes.ok) {
+            const errText = await dbRes.text();
+            throw new Error('DB responded ' + dbRes.status + ': ' + errText);
         }
-    } catch (dbErr) {
-        console.warn('[Consumable] DB not available for save:', dbErr.message);
-    }
+        console.log('[Consumable] ✅ Saved to DB');
 
-    // 3. Dual-write: Also sync to Google Sheet (backup)
-    if (API_URL) {
-        try {
-            // SAFETY FILTER
-            const validItems = items.filter(item => item.name && item.name.trim() !== "");
-            if (validItems.length < items.length) {
-                console.error("Stopping save: Missing item names detected.");
-                alert("เกิดข้อผิดพลาด: ข้อมูลไม่สมบูรณ์ (ชื่อหาย) กรุณารีเฟรช");
-                return;
+        // 3. DB success → backup to Sheet (fire-and-forget)
+        if (API_URL) {
+            try {
+                // SAFETY FILTER
+                const validItems = items.filter(item => item.name && item.name.trim() !== "");
+                if (validItems.length < items.length) {
+                    console.error("Stopping sheet backup: Missing item names detected.");
+                    // DB already saved, just skip sheet backup
+                } else {
+                    // Map to Thai Headers matching Web Page EXACTLY
+                    const sheetItems = validItems.map(item => {
+                        const isRoll = item.category === 'unit';
+                        const stockPartial = isRoll ? 0 : (item.stockPartialKg || 0);
+
+                        let totalKg = 0;
+                        let totalPcs = 0;
+
+                        // Common fields
+                        const pcsPerPack = item.pcsPerPack || 1;
+                        const fgPcsPerCarton = item.fgPcsPerCarton || 1;
+
+                        if (isRoll) {
+                            totalPcs = item.stockCartons * (item.pcsPerRoll || 0);
+                        } else {
+                            totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
+                            totalPcs = totalKg * item.pcsPerKg * pcsPerPack;
+                        }
+
+                        let fgYield = 0;
+                        if (isRoll && item.fgYieldPerRoll) {
+                            fgYield = item.stockCartons * item.fgYieldPerRoll;
+                        } else {
+                            fgYield = (fgPcsPerCarton > 0) ? (totalPcs / fgPcsPerCarton) : 0;
+                        }
+
+                        const isLowSaving = isRoll ? (item.stockCartons < item.minThreshold) : (totalKg < item.minThreshold);
+
+                        return {
+                            "ชื่อสินค้า": item.name,
+                            "ประเภท": item.category || 'weight',
+                            "สต็อก (ลัง)": item.stockCartons,
+                            "เศษ(กก.)": stockPartial,
+                            "กก./ลัง": item.kgPerCarton,
+                            "รวม (กก.)": parseFloat(totalKg.toFixed(2)),
+                            "จุดสั่งซื้อ (กก.)": item.minThreshold,
+                            "ชิ้น/กก.": item.pcsPerKg,
+                            "รวมถุง (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
+                            "ชิ้นงาน/ถุง": pcsPerPack,
+                            "ชิ้น FG/ลัง": fgPcsPerCarton,
+                            "ผลิตได้ (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
+                            "ผลิตได้ (ลัง)": parseFloat(fgYield.toFixed(1)),
+                            "สถานะ": isLowSaving ? "ต้องสั่งซื้อ" : "ปกติ",
+                            "ความยาวม้วน (ม.)": item.rollLength || 0,
+                            "ความยาวตัด (มม.)": item.cutLength || 0,
+                            "ชิ้น/ม้วน": item.pcsPerRoll || 0,
+                            "Yield/ม้วน": item.fgYieldPerRoll || 0,
+                            "StockCode": item.stockCode || ""
+                        };
+                    });
+
+                    const sheetTransactions = transactions.map(t => ({
+                        "ID": t.id,
+                        "วันที่": t.date,
+                        "เวลา": t.time || '',
+                        "ประเภท": t.type,
+                        "ItemIndex": t.itemIndex,
+                        "ชื่อสินค้า": t.itemName,
+                        "จำนวน (กก.)": t.qtyKg,
+                        "จำนวน (ลัง)": t.qtyCartons,
+                        "คงเหลือ (ลัง)": t.remainingStock,
+                        "หมายเหตุ": t.note
+                    }));
+
+                    const payload = {
+                        action: 'save_all',
+                        sheet: 'Consumable',
+                        items: sheetItems,
+                        transactions: sheetTransactions
+                    };
+
+                    fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(payload),
+                        headers: { "Content-Type": "text/plain" }
+                    }).catch(e => console.warn('[Consumable] Sheet backup failed:', e));
+                    console.log('[Consumable] Sheet backup sent');
+                }
+            } catch (e) {
+                console.warn('[Consumable] Sheet backup error:', e);
+                // DB already saved successfully, just log sheet backup failure
             }
-
-            // Map to Thai Headers matching Web Page EXACTLY
-            const sheetItems = validItems.map(item => {
-                const isRoll = item.category === 'unit';
-                const stockPartial = isRoll ? 0 : (item.stockPartialKg || 0);
-
-                let totalKg = 0;
-                let totalPcs = 0;
-
-                // Common fields
-                const pcsPerPack = item.pcsPerPack || 1;
-                const fgPcsPerCarton = item.fgPcsPerCarton || 1;
-
-                if (isRoll) {
-                    // Roll Logic — same as renderTable
-                    totalPcs = item.stockCartons * (item.pcsPerRoll || 0);
-                } else {
-                    // Weight Logic — same as renderTable
-                    totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
-                    totalPcs = totalKg * item.pcsPerKg * pcsPerPack;
-                }
-
-                // FG Yield — MUST match renderTable logic exactly
-                let fgYield = 0;
-                if (isRoll && item.fgYieldPerRoll) {
-                    fgYield = item.stockCartons * item.fgYieldPerRoll;
-                } else {
-                    fgYield = (fgPcsPerCarton > 0) ? (totalPcs / fgPcsPerCarton) : 0;
-                }
-
-                const isLowSaving = isRoll ? (item.stockCartons < item.minThreshold) : (totalKg < item.minThreshold);
-
-                return {
-                    "ชื่อสินค้า": item.name,
-                    "ประเภท": item.category || 'weight',
-                    "สต็อก (ลัง)": item.stockCartons,
-                    "เศษ(กก.)": stockPartial,
-                    "กก./ลัง": item.kgPerCarton,
-                    "รวม (กก.)": parseFloat(totalKg.toFixed(2)),
-                    "จุดสั่งซื้อ (กก.)": item.minThreshold,
-                    "ชิ้น/กก.": item.pcsPerKg,
-                    "รวมถุง (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
-                    "ชิ้นงาน/ถุง": pcsPerPack,
-                    "ชิ้น FG/ลัง": fgPcsPerCarton,
-                    "ผลิตได้ (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
-                    "ผลิตได้ (ลัง)": parseFloat(fgYield.toFixed(1)),
-                    "สถานะ": isLowSaving ? "ต้องสั่งซื้อ" : "ปกติ",
-                    "ความยาวม้วน (ม.)": item.rollLength || 0,
-                    "ความยาวตัด (มม.)": item.cutLength || 0,
-                    "ชิ้น/ม้วน": item.pcsPerRoll || 0,
-                    "Yield/ม้วน": item.fgYieldPerRoll || 0,
-                    "StockCode": item.stockCode || ""
-                };
-            });
-
-            const sheetTransactions = transactions.map(t => ({
-                "ID": t.id,
-                "วันที่": t.date,
-                "เวลา": t.time || '', // เวลาที่บันทึก
-                "ประเภท": t.type,
-                "ItemIndex": t.itemIndex,
-                "ชื่อสินค้า": t.itemName,
-                "จำนวน (กก.)": t.qtyKg,
-                "จำนวน (ลัง)": t.qtyCartons,
-                "คงเหลือ (ลัง)": t.remainingStock,
-                "หมายเหตุ": t.note
-            }));
-
-            const payload = {
-                action: 'save_all',
-                sheet: 'Consumable',
-                items: sheetItems,
-                transactions: sheetTransactions
-            };
-
-            // ✅ Cloud save enabled - Apps Script now supports save_all
-            await fetch(API_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-                headers: { "Content-Type": "text/plain" }
-            });
-            console.log("Saved to Google Sheets successfully");
-        } catch (e) {
-            console.error("Cloud save failed", e);
-            alert("บันทึกออนไลน์ล้มเหลว ข้อมูลถูกบันทึกลงเครื่องแล้ว");
         }
-    }
 
-    renderTable();
-    updateStats();
-    hideLoading();
+        renderTable();
+        updateStats();
+        hideLoading();
+        showToast('✅ บันทึกสำเร็จ');
+
+    } catch (err) {
+        console.error('[Consumable] Save failed:', err);
+        renderTable();
+        updateStats();
+        hideLoading();
+        showToast('❌ บันทึกล้มเหลว: ' + err.message);
+    }
 };
 
 // --- Force Sync to Google Sheet ---

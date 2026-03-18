@@ -23,12 +23,10 @@ const transForm = document.getElementById('trans-form');
 async function detectApiBase() {
     // ลองดึงจาก server config ก่อน
     try {
-        // ถ้าเปิดผ่าน server (localhost:4000) จะใช้ relative path
-        const baseUrl = window.location.origin;
-        const configRes = await fetch(`${baseUrl}/api/config`);
+        const configRes = await fetch('/api/config');
         if (configRes.ok) {
             const config = await configRes.json();
-            API_BASE = config.apiBase;
+            API_BASE = config.apiBase || '/api';
             APPS_SCRIPT_GENERALSTOCK = config.appsScriptGeneralStock || '';
             console.log('[Config] API Base:', API_BASE);
             return;
@@ -36,8 +34,8 @@ async function detectApiBase() {
     } catch (e) {
         console.warn('[Config] ไม่สามารถดึง config จาก server:', e.message);
     }
-    // Fallback: ใช้ relative path
-    API_BASE = `${window.location.origin}/api`;
+    // Fallback: ใช้ relative path (หลีกเลี่ยง Mixed Content)
+    API_BASE = '/api';
     console.log('[Config] Fallback API Base:', API_BASE);
 }
 
@@ -152,13 +150,12 @@ function hideLoading() { loader.style.display = 'none'; }
 
 // --- DATA MANAGEMENT ---
 async function loadData() {
+    // === 1. ลอง DB API ก่อน (เร็วกว่า) ===
     try {
-        // โหลด items จาก API
         const itemsRes = await fetch(`${API_BASE}/items`);
         if (!itemsRes.ok) throw new Error('Items API error: ' + itemsRes.status);
         items = await itemsRes.json();
 
-        // โหลด transactions จาก API
         const transRes = await fetch(`${API_BASE}/transactions`);
         if (!transRes.ok) throw new Error('Transactions API error: ' + transRes.status);
         transactions = await transRes.json();
@@ -173,17 +170,78 @@ async function loadData() {
             t.remaining = parseFloat(t.remaining) || 0;
         });
 
-        // Backup to LocalStorage
-        localStorage.setItem('genItems', JSON.stringify(items));
-        localStorage.setItem('genTransactions', JSON.stringify(transactions));
+        // ถ้า DB มีข้อมูล → ใช้เลย
+        if (items.length > 0) {
+            localStorage.setItem('genItems', JSON.stringify(items));
+            localStorage.setItem('genTransactions', JSON.stringify(transactions));
+            console.log(`✅ Loaded from DB: ${items.length} items, ${transactions.length} transactions`);
+            return;
+        }
 
-        console.log(`✅ Loaded from DB: ${items.length} items, ${transactions.length} transactions`);
+        console.warn('[GeneralStock] DB returned empty, trying Google Sheets...');
     } catch (e) {
-        console.warn("⚠️ API Load failed, using LocalStorage", e);
-        items = JSON.parse(localStorage.getItem('genItems')) || [];
-        transactions = JSON.parse(localStorage.getItem('genTransactions')) || [];
-        console.log(`📦 Loaded from LocalStorage: ${items.length} items, ${transactions.length} transactions`);
+        console.warn('[GeneralStock] DB API failed:', e.message);
     }
+
+    // === 2. Fallback: Google Sheets (ผ่าน Apps Script) ===
+    if (APPS_SCRIPT_GENERALSTOCK) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const sheetRes = await fetch(
+                `${APPS_SCRIPT_GENERALSTOCK}?action=load_all&sheet=GeneralStock&t=${Date.now()}`,
+                { signal: controller.signal }
+            );
+            clearTimeout(timeoutId);
+
+            if (sheetRes.ok) {
+                const data = await sheetRes.json();
+                if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+                    items = data.items.map(item => ({
+                        id: item.id || item.ID || Date.now().toString(),
+                        name: item.name || item['ชื่อรายการ'] || '',
+                        spec: item.spec || item['สเปก'] || '',
+                        category: item.category || item['หมวดหมู่'] || 'Other',
+                        unit: item.unit || item['หน่วย'] || 'ชิ้น',
+                        stock: parseFloat(item.stock || item['คงเหลือ'] || 0),
+                        min: parseFloat(item.min || item['จุดสั่งซื้อ'] || 0),
+                        price: item.price || item['ราคา'] || '',
+                        leadTime: item.leadTime || item['Lead Time'] || '',
+                        supplier: item.supplier || item['ผู้จำหน่าย'] || '',
+                        country: item.country || item['ประเทศ'] || '',
+                        image: item.image || ''
+                    }));
+
+                    if (data.transactions && Array.isArray(data.transactions)) {
+                        transactions = data.transactions.map(t => ({
+                            id: t.id || t.ID || Date.now().toString(),
+                            itemId: t.itemId || t['itemId'] || '',
+                            itemName: t.itemName || t['ชื่อรายการ'] || '',
+                            type: t.type || t['ประเภท'] || '',
+                            qty: parseFloat(t.qty || t['จำนวน'] || 0),
+                            remaining: parseFloat(t.remaining || t['คงเหลือ'] || 0),
+                            date: t.date || t['วันที่'] || '',
+                            time: t.time || t['เวลา'] || '',
+                            note: t.note || t['หมายเหตุ'] || ''
+                        }));
+                    }
+
+                    localStorage.setItem('genItems', JSON.stringify(items));
+                    localStorage.setItem('genTransactions', JSON.stringify(transactions));
+                    console.log(`✅ Loaded from Google Sheets: ${items.length} items, ${transactions.length} transactions`);
+                    return;
+                }
+            }
+            console.warn('[GeneralStock] Google Sheets returned empty or error');
+        } catch (sheetErr) {
+            console.warn('[GeneralStock] Google Sheets failed:', sheetErr.message);
+        }
+    }
+
+    // === 3. Fallback สุดท้าย: LocalStorage ===
+    items = JSON.parse(localStorage.getItem('genItems')) || [];
+    transactions = JSON.parse(localStorage.getItem('genTransactions')) || [];
+    console.log(`📦 Loaded from LocalStorage: ${items.length} items, ${transactions.length} transactions`);
 }
 
 // Visual save status indicator
@@ -362,14 +420,14 @@ itemForm.addEventListener('submit', async (e) => {
         id: index !== '' ? items[index].id : Date.now().toString()
     };
 
-    // Save to DB via API
+    // DB-first: บันทึก DB ก่อน — ต้องสำเร็จก่อนจึง backup ไป Sheet
     try {
         const res = await fetch(`${API_BASE}/items`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newItem),
         });
-        if (!res.ok) throw new Error('Save failed');
+        if (!res.ok) throw new Error('Save failed: ' + res.status);
 
         // Update local state
         if (index !== '') {
@@ -377,28 +435,20 @@ itemForm.addEventListener('submit', async (e) => {
         } else {
             items.push(newItem);
         }
+        localStorage.setItem('genItems', JSON.stringify(items));
 
         closeModal('item-modal');
-        try {
-            await syncGeneralStockToSheet();
-        } catch (sheetErr) {
-            console.warn('⚠️ Sync GeneralStock sheet failed:', sheetErr);
-        }
+
+        // DB success → backup to Sheet (fire-and-forget)
+        syncGeneralStockToSheet().catch(sheetErr => {
+            console.warn('[GeneralStock] Sheet backup failed:', sheetErr);
+        });
+
         renderTable();
         updateStats();
         showSaveStatus(true);
     } catch (err) {
-        console.error('❌ Save item failed:', err);
-        // Fallback: save locally
-        if (index !== '') {
-            items[index] = newItem;
-        } else {
-            items.push(newItem);
-        }
-        localStorage.setItem('genItems', JSON.stringify(items));
-        closeModal('item-modal');
-        renderTable();
-        updateStats();
+        console.error('[GeneralStock] Save item failed:', err);
         showSaveStatus(false);
     }
 });
@@ -448,6 +498,7 @@ transForm.addEventListener('submit', async (e) => {
         note: note,
     };
 
+    // DB-first: บันทึก DB ก่อน — ต้องสำเร็จก่อนจึง backup ไป Sheet
     try {
         const res = await fetch(`${API_BASE}/transactions`, {
             method: 'POST',
@@ -455,38 +506,28 @@ transForm.addEventListener('submit', async (e) => {
             body: JSON.stringify(transData),
         });
 
-        if (!res.ok) throw new Error('Transaction save failed');
+        if (!res.ok) throw new Error('Transaction save failed: ' + res.status);
         const result = await res.json();
 
         // Update local state
         item.stock = result.remaining !== undefined ? result.remaining : (type === 'IN' ? item.stock + qty : item.stock - qty);
         transData.remaining = item.stock;
         transactions.unshift(transData);
+        localStorage.setItem('genItems', JSON.stringify(items));
+        localStorage.setItem('genTransactions', JSON.stringify(transactions));
 
         closeModal('trans-modal');
-        try {
-            await syncGeneralStockToSheet();
-        } catch (sheetErr) {
-            console.warn('⚠️ Sync GeneralStock sheet failed:', sheetErr);
-        }
+
+        // DB success → backup to Sheet (fire-and-forget)
+        syncGeneralStockToSheet().catch(sheetErr => {
+            console.warn('[GeneralStock] Sheet backup failed:', sheetErr);
+        });
+
         renderTable();
         updateStats();
         showSaveStatus(true);
     } catch (err) {
-        console.error('❌ Transaction failed:', err);
-        // Fallback local
-        if (type === 'IN') {
-            item.stock += qty;
-        } else {
-            item.stock -= qty;
-        }
-        transData.remaining = item.stock;
-        transactions.unshift(transData);
-        localStorage.setItem('genItems', JSON.stringify(items));
-        localStorage.setItem('genTransactions', JSON.stringify(transactions));
-        closeModal('trans-modal');
-        renderTable();
-        updateStats();
+        console.error('[GeneralStock] Transaction failed:', err);
         showSaveStatus(false);
     }
 });
@@ -582,7 +623,7 @@ window.deleteTransaction = async (transId) => {
 
     try {
         const res = await fetch(`${API_BASE}/transactions/${transId}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Delete failed');
+        if (!res.ok) throw new Error('Delete failed: ' + res.status);
         const result = await res.json();
 
         // Update local state
@@ -591,13 +632,16 @@ window.deleteTransaction = async (transId) => {
             items[itemIndex].stock = result.remaining;
         }
         transactions.splice(transIndex, 1);
+        localStorage.setItem('genItems', JSON.stringify(items));
+        localStorage.setItem('genTransactions', JSON.stringify(transactions));
 
         closeModal('history-modal');
-        try {
-            await syncGeneralStockToSheet();
-        } catch (sheetErr) {
-            console.warn('⚠️ Sync GeneralStock sheet failed:', sheetErr);
-        }
+
+        // DB success → backup to Sheet (fire-and-forget)
+        syncGeneralStockToSheet().catch(sheetErr => {
+            console.warn('[GeneralStock] Sheet backup failed:', sheetErr);
+        });
+
         renderTable();
         updateStats();
         showSaveStatus(true);
@@ -606,26 +650,8 @@ window.deleteTransaction = async (transId) => {
             openHistoryModal(currentHistoryItemIndex);
         }
     } catch (err) {
-        console.error('❌ Delete transaction failed:', err);
-        // Fallback local
-        const itemIndex = items.findIndex(i => i.id === trans.itemId);
-        if (itemIndex !== -1) {
-            if (trans.type === 'IN') {
-                items[itemIndex].stock -= trans.qty;
-            } else {
-                items[itemIndex].stock += trans.qty;
-            }
-        }
-        transactions.splice(transIndex, 1);
-        localStorage.setItem('genItems', JSON.stringify(items));
-        localStorage.setItem('genTransactions', JSON.stringify(transactions));
-        closeModal('history-modal');
-        renderTable();
-        updateStats();
+        console.error('[GeneralStock] Delete transaction failed:', err);
         showSaveStatus(false);
-        if (currentHistoryItemIndex !== null) {
-            openHistoryModal(currentHistoryItemIndex);
-        }
     }
 };
 
@@ -649,7 +675,7 @@ window.editTransaction = async (transId) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ newQty: parsedQty }),
         });
-        if (!res.ok) throw new Error('Edit failed');
+        if (!res.ok) throw new Error('Edit failed: ' + res.status);
         const result = await res.json();
 
         // Update local
@@ -659,13 +685,16 @@ window.editTransaction = async (transId) => {
         }
         trans.qty = parsedQty;
         trans.remaining = items[itemIndex]?.stock || trans.remaining;
+        localStorage.setItem('genItems', JSON.stringify(items));
+        localStorage.setItem('genTransactions', JSON.stringify(transactions));
 
         closeModal('history-modal');
-        try {
-            await syncGeneralStockToSheet();
-        } catch (sheetErr) {
-            console.warn('⚠️ Sync GeneralStock sheet failed:', sheetErr);
-        }
+
+        // DB success → backup to Sheet (fire-and-forget)
+        syncGeneralStockToSheet().catch(sheetErr => {
+            console.warn('[GeneralStock] Sheet backup failed:', sheetErr);
+        });
+
         renderTable();
         updateStats();
         showSaveStatus(true);
@@ -674,28 +703,8 @@ window.editTransaction = async (transId) => {
             openHistoryModal(currentHistoryItemIndex);
         }
     } catch (err) {
-        console.error('❌ Edit transaction failed:', err);
-        // Fallback local
-        const qtyDiff = parsedQty - trans.qty;
-        const itemIndex = items.findIndex(i => i.id === trans.itemId);
-        if (itemIndex !== -1) {
-            if (trans.type === 'IN') {
-                items[itemIndex].stock += qtyDiff;
-            } else {
-                items[itemIndex].stock -= qtyDiff;
-            }
-        }
-        trans.qty = parsedQty;
-        trans.remaining = items[itemIndex]?.stock || trans.remaining;
-        localStorage.setItem('genItems', JSON.stringify(items));
-        localStorage.setItem('genTransactions', JSON.stringify(transactions));
-        closeModal('history-modal');
-        renderTable();
-        updateStats();
+        console.error('[GeneralStock] Edit transaction failed:', err);
         showSaveStatus(false);
-        if (currentHistoryItemIndex !== null) {
-            openHistoryModal(currentHistoryItemIndex);
-        }
     }
 };
 
@@ -705,23 +714,21 @@ window.deleteItem = async (index) => {
 
     try {
         const res = await fetch(`${API_BASE}/items/${items[index].id}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Delete failed');
+        if (!res.ok) throw new Error('Delete failed: ' + res.status);
 
         items.splice(index, 1);
-        try {
-            await syncGeneralStockToSheet();
-        } catch (sheetErr) {
-            console.warn('⚠️ Sync GeneralStock sheet failed:', sheetErr);
-        }
+        localStorage.setItem('genItems', JSON.stringify(items));
+
+        // DB success → backup to Sheet (fire-and-forget)
+        syncGeneralStockToSheet().catch(sheetErr => {
+            console.warn('[GeneralStock] Sheet backup failed:', sheetErr);
+        });
+
         renderTable();
         updateStats();
         showSaveStatus(true);
     } catch (err) {
-        console.error('❌ Delete item failed:', err);
-        items.splice(index, 1);
-        localStorage.setItem('genItems', JSON.stringify(items));
-        renderTable();
-        updateStats();
+        console.error('[GeneralStock] Delete item failed:', err);
         showSaveStatus(false);
     }
 };

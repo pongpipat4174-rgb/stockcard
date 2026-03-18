@@ -2552,28 +2552,31 @@ async function saveEntry() {
         remark: remark
     };
 
-    // Dual-write: บันทึก DB ก่อน
+    // DB-first: บันทึก DB ก่อน — ต้องสำเร็จก่อนจึง backup ไป Sheet
     try {
         var dbSaveRes = await fetch((DB_API_BASE || '') + '/api/package/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(entryData)
         });
-        var dbSaveResult = await dbSaveRes.json();
-        if (dbSaveResult.success) {
-            console.log('[Package] ✅ Saved to DB, id:', dbSaveResult.id);
-        } else {
-            console.warn('[Package] DB save returned:', dbSaveResult);
+        if (!dbSaveRes.ok) {
+            var errText = await dbSaveRes.text();
+            throw new Error('DB responded ' + dbSaveRes.status + ': ' + errText);
         }
-    } catch (dbErr) { console.warn('[Package] DB save failed:', dbErr.message); }
+        var dbSaveResult = await dbSaveRes.json();
+        if (!dbSaveResult.success) {
+            throw new Error(dbSaveResult.error || 'DB returned failure');
+        }
+        console.log('[Package] ✅ Saved to DB, id:', dbSaveResult.id);
 
-    // ยังส่ง Sheet ด้วย (backup)
-    fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add', entry: entryData })
-    }).then(function () {
+        // DB success → backup to Sheet (fire-and-forget)
+        fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'add', entry: entryData })
+        }).catch(function (e) { console.warn('[Package] Sheet backup failed:', e); });
+
         hideLoading();
         closeEntryModal();
         showToast('✅ บันทึกเรียบร้อย!');
@@ -2589,7 +2592,12 @@ async function saveEntry() {
             await fetchPackageData();
             showToast('📊 ข้อมูลอัปเดตแล้ว');
         }, 1000);
-    }).catch(function (e) { alert(e); hideLoading(); });
+
+    } catch (err) {
+        console.error('[Package] Save failed:', err);
+        hideLoading();
+        showToast('❌ บันทึกล้มเหลว: ' + err.message);
+    }
 }
 
 // Stats Detail Modal
@@ -2825,11 +2833,9 @@ async function saveEntryRM() {
 
     // กำหนด moduleKey ให้ถูกต้องตาม currentModule
     var saveModuleKey = (currentModule === 'rm_production') ? 'rm_production' : 'rm';
-    var dbSaveSuccess = false;
-    var sheetSaveAttempted = false;
 
     try {
-        // Process sequentially with AWAIT to prevent concurrency issues
+        // DB-first: บันทึก DB ทุก entry ก่อน — ต้องสำเร็จทั้งหมดจึง backup ไป Sheet
         for (var i = 0; i < entriesToSave.length; i++) {
             var entry = entriesToSave[i];
 
@@ -2837,7 +2843,6 @@ async function saveEntryRM() {
                 showToast('กำลังบันทึกรายการที่ ' + (i + 1) + '/' + entriesToSave.length + '...');
             }
 
-            // Determine which sheet to save to based on current module
             var targetConfig = (currentModule === 'rm_production') ? SHEET_CONFIG.rm_production : SHEET_CONFIG.rm;
 
             console.log('=== SAVE DEBUG ===');
@@ -2846,57 +2851,43 @@ async function saveEntryRM() {
             console.log('targetConfig.sheetName:', targetConfig.sheetName);
             console.log('entry.type:', entry.type);
 
-            // Dual-write: บันทึก DB ก่อน (ใช้ /api/rm/save)
-            try {
-                var dbSaveRes = await fetch((DB_API_BASE || '') + '/api/rm/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(Object.assign({}, entry, { sourceModule: saveModuleKey }))
-                });
-                var dbSaveResult = await dbSaveRes.json();
-                if (dbSaveResult.success) {
-                    console.log('[RM] ✅ Saved to DB, id:', dbSaveResult.id);
-                    dbSaveSuccess = true;
-                } else {
-                    console.warn('[RM] DB save returned:', dbSaveResult);
-                }
-            } catch (dbErr) {
-                console.warn('[RM] DB save failed:', dbErr.message);
+            // DB save — ต้องสำเร็จ ถ้า fail จะ throw ทันที
+            var dbSaveRes = await fetch((DB_API_BASE || '') + '/api/rm/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(Object.assign({}, entry, { sourceModule: saveModuleKey }))
+            });
+            if (!dbSaveRes.ok) {
+                var errText = await dbSaveRes.text();
+                throw new Error('DB responded ' + dbSaveRes.status + ': ' + errText);
             }
+            var dbSaveResult = await dbSaveRes.json();
+            if (!dbSaveResult.success) {
+                throw new Error(dbSaveResult.error || 'DB returned failure');
+            }
+            console.log('[RM] ✅ Saved to DB, id:', dbSaveResult.id);
 
-            // ยังส่ง Sheet ด้วย (backup/primary เมื่อ DB ไม่พร้อม)
-            try {
-                sheetSaveAttempted = true;
-                await fetch(APPS_SCRIPT_URL, {
-                    method: "POST",
-                    mode: "no-cors",
-                    headers: { "Content-Type": "application/json" },
-                    redirect: "follow",
-                    body: JSON.stringify({
-                        action: 'add_rm',
-                        spreadsheetId: targetConfig.id,
-                        sheetName: targetConfig.sheetName,
-                        entry: entry
-                    })
-                });
-                console.log('[RM] Sheet save request sent (no-cors, cannot verify)');
-            } catch (sheetErr) {
-                console.warn('[RM] Sheet save failed:', sheetErr.message);
-            }
+            // DB success → backup to Sheet (fire-and-forget)
+            fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                redirect: "follow",
+                body: JSON.stringify({
+                    action: 'add_rm',
+                    spreadsheetId: targetConfig.id,
+                    sheetName: targetConfig.sheetName,
+                    entry: entry
+                })
+            }).catch(function (sheetErr) { console.warn('[RM] Sheet backup failed:', sheetErr); });
 
             // Small safety delay between writes
-            await new Promise(r => setTimeout(r, 800));
+            if (i < entriesToSave.length - 1) {
+                await new Promise(r => setTimeout(r, 800));
+            }
         }
 
-        // แจ้งผลลัพธ์ตามจริง
-        if (dbSaveSuccess) {
-            showToast('✅ บันทึกสำเร็จ (DB + Sheet)!');
-        } else if (sheetSaveAttempted) {
-            showToast('⚠️ บันทึกไป Google Sheet แล้ว (DB ไม่พร้อม — รอ sync)');
-            console.warn('[RM] DB save failed for all entries, only Sheet was used');
-        } else {
-            showToast('❌ บันทึกไม่สำเร็จ กรุณาลองใหม่');
-        }
+        showToast('✅ บันทึกสำเร็จ!');
 
         // Check if any entry contains "เบิกผลิต" - ask to transfer to Production
         // *** IMPORTANT: Only trigger transfer when in RM CENTER, not RM Production ***
@@ -2934,29 +2925,15 @@ async function saveEntryRM() {
         hideLoading();
         showToast('กำลังโหลดข้อมูลใหม่...');
 
-        if (dbSaveSuccess) {
-            // DB พร้อม — รอแค่ 1 วินาทีแล้ว fetch จาก DB ได้เลย
-            await new Promise(r => setTimeout(r, 1000));
-            await fetchRMData();
-            showToast('📊 ข้อมูลอัปเดตแล้ว (จาก DB)');
-        } else {
-            // DB ไม่พร้อม — ต้องรอ Google Sheets propagate นานขึ้น
-            showToast('⏳ รอ Google Sheets อัปเดต (~5 วินาที)...');
-            await new Promise(r => setTimeout(r, 5000));
-            await fetchRMData();
-            showToast('📊 ข้อมูลอัปเดตแล้ว (จาก Sheet)');
-
-            // Retry อีกครั้งหลัง 5 วินาที เผื่อ Sheet ช้า
-            setTimeout(async function () {
-                await fetchRMData();
-                showToast('📊 ข้อมูลอัปเดตรอบ 2');
-            }, 5000);
-        }
+        // DB พร้อม — รอแค่ 1 วินาทีแล้ว fetch จาก DB ได้เลย
+        await new Promise(r => setTimeout(r, 1000));
+        await fetchRMData();
+        showToast('📊 ข้อมูลอัปเดตแล้ว');
 
     } catch (e) {
-        console.error('Save Error:', e);
-        alert('เกิดข้อผิดพลาดในการบันทึก: ' + e);
+        console.error('[RM] Save failed:', e);
         hideLoading();
+        showToast('❌ บันทึกล้มเหลว: ' + e.message);
     }
 }
 

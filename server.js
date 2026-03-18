@@ -12,6 +12,9 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust reverse proxy (Cloudflare/nginx) for correct protocol detection
+app.set('trust proxy', true);
+
 // CORS & Parsing
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -45,10 +48,9 @@ const pool = new Pool({
 
 // API Config
 app.get('/api/config', (req, res) => {
-  const protocol = req.protocol;
-  const host = req.get('host');
+  // ใช้ relative path เพื่อหลีกเลี่ยง Mixed Content เมื่ออยู่หลัง HTTPS proxy
   res.json({
-    apiBase: `${protocol}://${host}/api`,
+    apiBase: '/api',
     appsScriptGeneralStock: process.env.APPS_SCRIPT_GENERALSTOCK || ''
   });
 });

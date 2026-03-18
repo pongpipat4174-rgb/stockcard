@@ -43,8 +43,8 @@ const pool = new Pool({
   password: process.env.INVENTORY_DB_PASSWORD || 'postgres123',
 });
 
-// Auto-create GeneralStock tables if not exist
-async function ensureGSTables() {
+// Auto-create module tables if not exist
+async function ensureAllTables() {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS gs_items (
@@ -76,13 +76,47 @@ async function ensureGSTables() {
         created_at      TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_gs_transactions_item_id ON gs_transactions(item_id);
+
+      CREATE TABLE IF NOT EXISTS sc_consumable_items (
+        id              SERIAL PRIMARY KEY,
+        name            TEXT NOT NULL,
+        category        TEXT DEFAULT 'weight',
+        stock_cartons   NUMERIC DEFAULT 0,
+        stock_partial_kg NUMERIC DEFAULT 0,
+        kg_per_carton   NUMERIC DEFAULT 25,
+        pcs_per_kg      NUMERIC DEFAULT 0,
+        min_threshold   NUMERIC DEFAULT 0,
+        pcs_per_pack    NUMERIC DEFAULT 1,
+        fg_pcs_per_carton NUMERIC DEFAULT 1,
+        roll_length     NUMERIC DEFAULT 0,
+        cut_length      NUMERIC DEFAULT 0,
+        pcs_per_roll    NUMERIC DEFAULT 0,
+        fg_yield_per_roll NUMERIC DEFAULT 0,
+        stock_code      TEXT DEFAULT '',
+        created_at      TIMESTAMPTZ DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS sc_consumable_transactions (
+        id              TEXT PRIMARY KEY,
+        item_index      INTEGER DEFAULT 0,
+        item_name       TEXT,
+        date            TEXT,
+        time            TEXT,
+        type            TEXT,
+        qty_kg          NUMERIC DEFAULT 0,
+        qty_cartons     NUMERIC DEFAULT 0,
+        qty_unit        NUMERIC DEFAULT 0,
+        remaining_stock NUMERIC DEFAULT 0,
+        note            TEXT,
+        created_at      TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
-    console.log('[DB] ✅ gs_items, gs_transactions tables ready');
+    console.log('[DB] ✅ All module tables ready (gs_items, gs_transactions, sc_consumable_items, sc_consumable_transactions)');
   } catch (err) {
-    console.error('[DB] ❌ Failed to create GS tables:', err.message);
+    console.error('[DB] ❌ Failed to create tables:', err.message);
   }
 }
-ensureGSTables();
+ensureAllTables();
 
 // API Config
 app.get('/api/config', (req, res) => {

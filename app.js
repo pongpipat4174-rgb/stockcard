@@ -2030,12 +2030,8 @@ async function deleteEntryRM(rowIndex, productCode, type) {
 
     showToast('✅ ลบรายการเรียบร้อย!');
 
-    // Reload ทันที ไม่ต้องรอ
-    if (currentModule === 'rm_production') {
-        await fetchRMProductionData();
-    } else {
-        await fetchRMData();
-    }
+    // Reload ทันที
+    await fetchRMData();
     hideLoading();
 }
 

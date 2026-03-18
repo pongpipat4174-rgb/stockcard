@@ -94,6 +94,34 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// Health Check - DB diagnostic
+app.get('/api/health', async (req, res) => {
+  try {
+    const dbTest = await pool.query('SELECT NOW() as now');
+    const gsCount = await pool.query('SELECT COUNT(*) as cnt FROM gs_items');
+    const gsTransCount = await pool.query('SELECT COUNT(*) as cnt FROM gs_transactions');
+    res.json({
+      status: 'ok',
+      db: 'connected',
+      time: dbTest.rows[0].now,
+      gs_items: parseInt(gsCount.rows[0].cnt),
+      gs_transactions: parseInt(gsTransCount.rows[0].cnt),
+      db_host: process.env.INVENTORY_DB_HOST || 'localhost',
+      db_port: process.env.INVENTORY_DB_PORT || '5432',
+      db_name: process.env.INVENTORY_DB_NAME || 'inventory_rm_tan'
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      db: 'disconnected',
+      error: err.message,
+      db_host: process.env.INVENTORY_DB_HOST || 'localhost',
+      db_port: process.env.INVENTORY_DB_PORT || '5432',
+      db_name: process.env.INVENTORY_DB_NAME || 'inventory_rm_tan'
+    });
+  }
+});
+
 function calculateDaysLeft(expDateValue) {
   const expDate = expDateValue || '';
   if (!expDate || expDate === '-') return '';

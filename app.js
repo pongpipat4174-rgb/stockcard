@@ -2016,45 +2016,27 @@ async function deleteEntryRM(rowIndex, productCode, type) {
         sourceModule = 'rm_production';
     }
 
-    // Dual-write: ลบจาก DB
-    if (DB_API_BASE !== false) {
-        try {
-            await fetch((DB_API_BASE || '') + '/api/rm/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rowIndex, sourceModule, criteria: { productCode, type } })
-            });
-            console.log('[RM] ✅ Deleted from DB');
-        } catch (dbErr) { console.warn('[RM] DB delete failed:', dbErr.message); }
-    }
-
-    // ลบจาก Sheet ด้วย
+    // DB delete (ต้องสำเร็จ)
     try {
-        await fetch(APPS_SCRIPT_URL, {
+        await fetch((DB_API_BASE || '') + '/api/rm/delete', {
             method: 'POST',
-            mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'delete_rm',
-                spreadsheetId: config.id,
-                sheetName: config.sheetName,
-                rowIndex: rowIndex,
-                criteria: { productCode: productCode, type: type }
-            })
+            body: JSON.stringify({ rowIndex, sourceModule, criteria: { productCode, type } })
         });
-        console.log('[RM] ✅ Sent delete to Sheet');
-    } catch (sheetErr) { console.warn('[RM] Sheet delete failed:', sheetErr.message); }
+        console.log('[RM] ✅ Deleted from DB');
+    } catch (dbErr) { console.warn('[RM] DB delete failed:', dbErr.message); }
+
+    // หมายเหตุ: ไม่ลบจาก Sheet — ใช้ปุ่ม Admin Backup sync Sheet แทน
 
     showToast('✅ ลบรายการเรียบร้อย!');
-    setTimeout(async function () {
-        if (currentModule === 'rm_production') {
-            await fetchRMProductionData();
-        } else {
-            await fetchRMData();
-        }
-        hideLoading();
-        showToast('📊 ข้อมูลอัปเดตแล้ว');
-    }, 1500);
+
+    // Reload ทันที ไม่ต้องรอ
+    if (currentModule === 'rm_production') {
+        await fetchRMProductionData();
+    } else {
+        await fetchRMData();
+    }
+    hideLoading();
 }
 
 // Print All Cards (Works for both Package and RM)

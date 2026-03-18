@@ -1284,28 +1284,7 @@ window.deleteTransaction = async (transId, itemIndex) => {
     // 4. Remove transaction from local array
     transactions.splice(transIdx, 1);
 
-    // 5. Delete from Google Sheet
-    try {
-        const deletePayload = {
-            action: 'delete_consumable_transaction',
-            transactionId: transId
-        };
-
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify(deletePayload),
-            headers: { "Content-Type": "text/plain" }
-        });
-
-        const result = await response.json();
-        if (result.success) {
-            console.log('Deleted from Sheet:', transId);
-        } else {
-            console.error('Sheet delete failed:', result.error);
-        }
-    } catch (e) {
-        console.error('Delete from Sheet failed:', e);
-    }
+    // หมายเหตุ: ไม่ลบจาก Sheet แยก — saveData() จะ sync ทั้ง DB + Sheet ทีเดียว
 
     // Re-render modal list immediately (visual only)
     openHistoryModal(itemIndex);

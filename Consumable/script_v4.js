@@ -596,17 +596,69 @@ window.saveData = async () => {
 
         // Sheet backup (fire-and-forget — ไม่รอผลลัพธ์ ไม่บล็อก)
         if (API_URL) {
-            const validItems = items.filter(item => item.name && item.name.trim() !== '');
-            fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({
-                    action: 'save_all',
-                    sheet: 'Consumable',
-                    items: validItems,
-                    transactions: transactions
-                })
-            }).catch(e => console.warn('[Consumable] Sheet backup failed (ignored):', e.message));
+            try {
+                const validItems = items.filter(item => item.name && item.name.trim() !== '');
+                const sheetItems = validItems.map(item => {
+                    const isRoll = item.category === 'unit';
+                    const stockPartial = isRoll ? 0 : (item.stockPartialKg || 0);
+                    const pcsPerPack = item.pcsPerPack || 1;
+                    const fgPcsPerCarton = item.fgPcsPerCarton || 1;
+                    let totalKg = 0, totalPcs = 0;
+                    if (isRoll) {
+                        totalPcs = item.stockCartons * (item.pcsPerRoll || 0);
+                    } else {
+                        totalKg = (item.stockCartons * item.kgPerCarton) + stockPartial;
+                        totalPcs = totalKg * item.pcsPerKg * pcsPerPack;
+                    }
+                    let fgYield = 0;
+                    if (isRoll && item.fgYieldPerRoll) {
+                        fgYield = item.stockCartons * item.fgYieldPerRoll;
+                    } else {
+                        fgYield = (fgPcsPerCarton > 0) ? (totalPcs / fgPcsPerCarton) : 0;
+                    }
+                    const isLow = isRoll ? (item.stockCartons < item.minThreshold) : (totalKg < item.minThreshold);
+                    return {
+                        "ชื่อสินค้า": item.name,
+                        "ประเภท": item.category || 'weight',
+                        "สต็อก (ลัง)": item.stockCartons,
+                        "เศษ(กก.)": stockPartial,
+                        "กก./ลัง": item.kgPerCarton,
+                        "รวม (กก.)": parseFloat(totalKg.toFixed(2)),
+                        "จุดสั่งซื้อ (กก.)": item.minThreshold,
+                        "ชิ้น/กก.": item.pcsPerKg,
+                        "รวมถุง (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
+                        "ชิ้นงาน/ถุง": pcsPerPack,
+                        "ชิ้น FG/ลัง": fgPcsPerCarton,
+                        "ผลิตได้ (ชิ้น)": parseFloat(totalPcs.toFixed(0)),
+                        "ผลิตได้ (ลัง)": parseFloat(fgYield.toFixed(1)),
+                        "สถานะ": isLow ? "ต้องสั่งซื้อ" : "ปกติ",
+                        "ความยาวม้วน (ม.)": item.rollLength || 0,
+                        "ความยาวตัด (มม.)": item.cutLength || 0,
+                        "ชิ้น/ม้วน": item.pcsPerRoll || 0,
+                        "Yield/ม้วน": item.fgYieldPerRoll || 0,
+                        "StockCode": item.stockCode || ""
+                    };
+                });
+                const sheetTrans = transactions.map(t => ({
+                    "ID": t.id, "วันที่": t.date, "เวลา": t.time || '',
+                    "ประเภท": t.type, "ItemIndex": t.itemIndex,
+                    "ชื่อสินค้า": t.itemName, "จำนวน (กก.)": t.qtyKg,
+                    "จำนวน (ลัง)": t.qtyCartons, "คงเหลือ (ลัง)": t.remainingStock,
+                    "หมายเหตุ": t.note
+                }));
+                fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'save_all',
+                        sheet: 'Consumable',
+                        items: sheetItems,
+                        transactions: sheetTrans
+                    })
+                }).catch(e => console.warn('[Consumable] Sheet backup failed (ignored):', e.message));
+            } catch (mapErr) {
+                console.warn('[Consumable] Sheet mapping error (ignored):', mapErr.message);
+            }
         }
 
         renderTable();

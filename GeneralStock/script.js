@@ -51,15 +51,13 @@ async function syncGeneralStockToSheet() {
         transactions: transactions
     };
 
-    const response = await fetch(APPS_SCRIPT_GENERALSTOCK, {
+    await fetch(APPS_SCRIPT_GENERALSTOCK, {
         method: 'POST',
+        mode: 'no-cors',
+        redirect: 'follow',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
     });
-
-    if (!response.ok) {
-        throw new Error('Sheet sync failed: ' + response.status);
-    }
 }
 
 // --- HELPER: Resize Image to Base64 ---
@@ -799,14 +797,14 @@ window.backupToSheet = async function () {
     if (!confirm('ต้องการ Backup ข้อมูลปัจจุบันไป Google Sheet หรือไม่?\n\n(ข้อมูลใน Sheet จะถูกเขียนทับด้วยข้อมูลจาก DB)')) return;
 
     showLoading();
-    showSaveStatus(true); // show "กำลัง backup..."
 
     try {
         await syncGeneralStockToSheet();
-        hideLoading();
-        const toast = document.getElementById('save-status-toast');
-        if (toast) toast.remove();
-        showSaveStatusMsg('✅ Backup สำเร็จ! ข้อมูลใน Sheet อัปเดตแล้ว');
+        // no-cors → อ่าน response ไม่ได้ → รอแล้ว assume สำเร็จ
+        setTimeout(function () {
+            hideLoading();
+            showSaveStatusMsg('✅ ส่ง Backup ไปแล้ว! เช็ค Sheet ใน 10-30 วินาที');
+        }, 5000);
     } catch (e) {
         console.error('[GeneralStock] Backup to Sheet failed:', e);
         hideLoading();

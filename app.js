@@ -474,6 +474,7 @@ async function fetchPackageData() {
                         updateStats();
                         showAllProducts();
                         hideLoading();
+                        initDailySummary();
                         return; // สำเร็จ ไม่ต้อง fallback
                     }
                 }
@@ -567,6 +568,7 @@ async function fetchPackageData() {
         updateStats();
         showAllProducts();
         hideLoading();
+        initDailySummary();
 
     } catch (error) {
         console.error('Error fetching package data:', error);
@@ -659,6 +661,7 @@ async function fetchRMData() {
 
         updateExpiryAlerts();
         hideLoading();
+        initDailySummary();
 
     } catch (dbErr) {
         console.error('[RM] ❌ DB load failed:', dbErr.message);
@@ -1391,7 +1394,18 @@ function updateExpiryAlerts() {
 
     // Show balance summary for package module too
     if (currentModule === 'package') {
-        alertSection.style.display = 'none';
+        // Show the section (for daily banners) but hide expiry-specific banners
+        alertSection.style.display = 'block';
+        var alertReval = document.getElementById('alertReval');
+        var alertCritical = document.getElementById('alertCritical');
+        var alertWarning = document.getElementById('alertWarning');
+        var alertBalance = document.getElementById('alertBalanceSummary');
+        var printAllBtn = alertSection.querySelector('.btn-print-all-expiry');
+        if (alertReval) alertReval.style.display = 'none';
+        if (alertCritical) alertCritical.style.display = 'none';
+        if (alertWarning) alertWarning.style.display = 'none';
+        if (alertBalance) alertBalance.style.display = 'none';
+        if (printAllBtn) printAllBtn.style.display = 'none';
         // Show balance banner for Package (create separate approach)
         showPackageBalanceBanner();
         return;
@@ -1812,11 +1826,27 @@ function filterByDate(dateStr) {
         year = inputDate.getFullYear();
     }
     var thaiDateStr = day + '/' + month + '/' + year;
+    var thaiDateStrBE = day + '/' + month + '/' + (year + 543); // พ.ศ. version
+
+    // Helper: normalize a DD/MM/YYYY or D/M/YYYY date string to D/M/YYYY (no zero-padding)
+    // so that "18/03/2026" and "18/3/2026" both become "18/3/2026" for comparison
+    function normalizeDate(d) {
+        if (!d) return '';
+        var p = d.split('/');
+        if (p.length !== 3) return d;
+        return parseInt(p[0], 10) + '/' + parseInt(p[1], 10) + '/' + parseInt(p[2], 10);
+    }
+
+    // Helper: check if item date matches the filter date (handles both CE and BE years)
+    function dateMatches(itemDate) {
+        var norm = normalizeDate(itemDate);
+        return norm === thaiDateStr || norm === thaiDateStrBE;
+    }
 
     if (currentModule === 'package') {
         // Filter package data by date
         var filtered = stockData.filter(function (item) {
-            return item.date && item.date.includes(thaiDateStr);
+            return item.date && dateMatches(item.date);
         });
 
         // Group by product
@@ -1854,7 +1884,7 @@ function filterByDate(dateStr) {
     } else {
         // Filter RM data by date
         var filtered = rmStockData.filter(function (item) {
-            return item.date && item.date.includes(thaiDateStr);
+            return item.date && dateMatches(item.date);
         });
 
         // Group by product
@@ -1889,6 +1919,274 @@ function filterByDate(dateStr) {
 
         renderStockCardsRM(searchedProducts);
         showToast('กรองวันที่: ' + thaiDateStr + ' (' + searchedProducts.length + ' วัตถุดิบ)');
+    }
+}
+
+// ==================== DAILY SUMMARY BOX ====================
+
+function updateDailySummary(dateStr) {
+    // dateStr is YYYY-MM-DD format from native date input
+    if (!dateStr) return;
+
+    var inputDate = new Date(dateStr);
+    var day = inputDate.getDate();
+    var month = inputDate.getMonth() + 1;
+    var year = inputDate.getFullYear();
+
+    var thaiDateStr = day + '/' + month + '/' + year;
+    var thaiDateStrBE = day + '/' + month + '/' + (year + 543);
+
+    function normalizeDate(d) {
+        if (!d) return '';
+        var p = d.split('/');
+        if (p.length !== 3) return d;
+        return parseInt(p[0], 10) + '/' + parseInt(p[1], 10) + '/' + parseInt(p[2], 10);
+    }
+
+    function dateMatches(itemDate) {
+        var norm = normalizeDate(itemDate);
+        return norm === thaiDateStr || norm === thaiDateStrBE;
+    }
+
+    var data, unit, isRM;
+    if (currentModule === 'package') {
+        data = stockData || [];
+        unit = '';
+        isRM = false;
+    } else {
+        data = rmStockData || [];
+        unit = ' Kg';
+        isRM = true;
+    }
+
+    // Filter by date
+    var filtered = data.filter(function (item) {
+        return item.date && dateMatches(item.date);
+    });
+
+    // Calculate totals
+    var totalIn = 0;
+    var totalOut = 0;
+    var inCount = 0;
+    var outCount = 0;
+    var productCodes = new Set();
+
+    filtered.forEach(function (item) {
+        var inQty = parseFloat(item.inQty) || 0;
+        var outQty = parseFloat(item.outQty) || 0;
+        if (inQty > 0) {
+            totalIn += inQty;
+            inCount++;
+        }
+        if (outQty > 0) {
+            totalOut += outQty;
+            outCount++;
+        }
+        if (item.productCode) {
+            productCodes.add(item.productCode);
+        }
+    });
+
+    // Round for display
+    totalIn = Math.round(totalIn * 100) / 100;
+    totalOut = Math.round(totalOut * 100) / 100;
+
+    // Update UI - single banner
+    var elText = document.getElementById('dailySummaryText');
+    var elBadge = document.getElementById('dailySummaryBadge');
+    var totalCount = inCount + outCount;
+
+    if (elText) elText.textContent = 'รับ +' + formatNumber(totalIn) + unit + '  ·  เบิก -' + formatNumber(totalOut) + unit + '  (' + productCodes.size + ' สินค้า)';
+    if (elBadge) elBadge.textContent = totalCount + ' รายการ';
+}
+
+function initDailySummary() {
+    var dateInput = document.getElementById('dailySummaryDateInput');
+    if (!dateInput) return;
+
+    // Set default to today
+    var today = new Date();
+    var yyyy = today.getFullYear();
+    var mm = String(today.getMonth() + 1).padStart(2, '0');
+    var dd = String(today.getDate()).padStart(2, '0');
+    dateInput.value = yyyy + '-' + mm + '-' + dd;
+
+    // Listen for date changes
+    dateInput.addEventListener('change', function () {
+        updateDailySummary(this.value);
+    });
+
+    // Initial update
+    updateDailySummary(dateInput.value);
+}
+
+// ==================== DAILY DETAIL MODAL ====================
+
+function showDailyDetail() {
+    var dateInput = document.getElementById('dailySummaryDateInput');
+    if (!dateInput || !dateInput.value) return;
+
+    var dateStr = dateInput.value;
+    var inputDate = new Date(dateStr);
+    var day = inputDate.getDate();
+    var month = inputDate.getMonth() + 1;
+    var year = inputDate.getFullYear();
+
+    var thaiDateStr = day + '/' + month + '/' + year;
+    var thaiDateStrBE = day + '/' + month + '/' + (year + 543);
+    var displayDate = String(day).padStart(2, '0') + '/' + String(month).padStart(2, '0') + '/' + year;
+
+    function normalizeDate(d) {
+        if (!d) return '';
+        var p = d.split('/');
+        if (p.length !== 3) return d;
+        return parseInt(p[0], 10) + '/' + parseInt(p[1], 10) + '/' + parseInt(p[2], 10);
+    }
+    function dateMatches(itemDate) {
+        var norm = normalizeDate(itemDate);
+        return norm === thaiDateStr || norm === thaiDateStrBE;
+    }
+
+    var data, unit, isPackage;
+    if (currentModule === 'package') {
+        data = stockData || [];
+        unit = 'ชิ้น';
+        isPackage = true;
+    } else {
+        data = rmStockData || [];
+        unit = 'Kg';
+        isPackage = false;
+    }
+
+    // Filter by date
+    var filtered = data.filter(function (item) {
+        return item.date && dateMatches(item.date);
+    });
+
+    // Separate IN and OUT
+    var inItems = [];
+    var outItems = [];
+    filtered.forEach(function (item) {
+        var inQty = parseFloat(item.inQty) || 0;
+        var outQty = parseFloat(item.outQty) || 0;
+        if (inQty > 0) inItems.push(item);
+        if (outQty > 0) outItems.push(item);
+    });
+
+    // Build content
+    var titleEl = document.getElementById('dailyDetailTitle');
+    if (titleEl) titleEl.textContent = '📊 สรุปรายวัน — ' + displayDate + ' (' + getModuleLabel() + ')';
+
+    var html = '';
+    var colSpan = 3;
+
+    // === Section: รับเข้า ===
+    html += '<div style="margin-bottom:20px;">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+    html += '<span style="font-size:1.1rem;font-weight:700;color:#059669;">📥 รับเข้า</span>';
+    html += '<span style="font-size:0.8rem;background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:999px;font-weight:600;">' + inItems.length + ' รายการ</span>';
+    html += '</div>';
+
+    if (inItems.length > 0) {
+        html += '<table class="balance-summary-table" style="width:100%">';
+        html += '<thead><tr>';
+        html += '<th style="width:40px;text-align:center">#</th>';
+        html += '<th>รหัสสินค้า</th>';
+        html += '<th>ชื่อสินค้า</th>';
+        html += '<th style="text-align:right">จำนวน (' + unit + ')</th>';
+        html += '<th>Lot No.</th>';
+        if (!isPackage) html += '<th>Supplier</th>';
+        html += '</tr></thead><tbody>';
+
+        var totalIn = 0;
+        inItems.forEach(function (item, idx) {
+            var qty = parseFloat(item.inQty) || 0;
+            totalIn += qty;
+            html += '<tr>';
+            html += '<td style="text-align:center;color:#94a3b8">' + (idx + 1) + '</td>';
+            html += '<td><strong>' + (item.productCode || '-') + '</strong></td>';
+            html += '<td class="product-name-cell" title="' + (item.productName || '') + '">' + (item.productName || '-') + '</td>';
+            html += '<td style="text-align:right;color:#059669;font-weight:700">+' + formatNumber(Math.round(qty * 100) / 100) + '</td>';
+            html += '<td>' + (item.lotNo || '-') + '</td>';
+            if (!isPackage) html += '<td>' + (item.supplier || '-') + '</td>';
+            html += '</tr>';
+        });
+
+        // Total row
+        html += '<tr style="background:#ecfdf5;font-weight:700;border-top:2px solid #10b981;">';
+        html += '<td colspan="' + colSpan + '" style="text-align:right;padding-right:12px;">รวมรับเข้า:</td>';
+        html += '<td style="text-align:right;color:#059669;font-size:1rem">+' + formatNumber(Math.round(totalIn * 100) / 100) + ' ' + unit + '</td>';
+        html += '<td></td>';
+        if (!isPackage) html += '<td></td>';
+        html += '</tr>';
+        html += '</tbody></table>';
+    } else {
+        html += '<div style="text-align:center;color:#94a3b8;padding:12px;font-size:0.9rem;">ไม่มีรายการรับเข้า</div>';
+    }
+    html += '</div>';
+
+    // === Section: เบิกออก ===
+    html += '<div>';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+    html += '<span style="font-size:1.1rem;font-weight:700;color:#dc2626;">📤 เบิกออก</span>';
+    html += '<span style="font-size:0.8rem;background:#fee2e2;color:#991b1b;padding:2px 10px;border-radius:999px;font-weight:600;">' + outItems.length + ' รายการ</span>';
+    html += '</div>';
+
+    if (outItems.length > 0) {
+        html += '<table class="balance-summary-table" style="width:100%">';
+        html += '<thead><tr>';
+        html += '<th style="width:40px;text-align:center">#</th>';
+        html += '<th>รหัสสินค้า</th>';
+        html += '<th>ชื่อสินค้า</th>';
+        html += '<th style="text-align:right">จำนวน (' + unit + ')</th>';
+        html += '<th>Lot No.</th>';
+        if (!isPackage) html += '<th>Supplier</th>';
+        html += '</tr></thead><tbody>';
+
+        var totalOut = 0;
+        outItems.forEach(function (item, idx) {
+            var qty = parseFloat(item.outQty) || 0;
+            totalOut += qty;
+            html += '<tr>';
+            html += '<td style="text-align:center;color:#94a3b8">' + (idx + 1) + '</td>';
+            html += '<td><strong>' + (item.productCode || '-') + '</strong></td>';
+            html += '<td class="product-name-cell" title="' + (item.productName || '') + '">' + (item.productName || '-') + '</td>';
+            html += '<td style="text-align:right;color:#dc2626;font-weight:700">-' + formatNumber(Math.round(qty * 100) / 100) + '</td>';
+            html += '<td>' + (item.lotNo || '-') + '</td>';
+            if (!isPackage) html += '<td>' + (item.supplier || '-') + '</td>';
+            html += '</tr>';
+        });
+
+        // Total row
+        html += '<tr style="background:#fef2f2;font-weight:700;border-top:2px solid #ef4444;">';
+        html += '<td colspan="' + colSpan + '" style="text-align:right;padding-right:12px;">รวมเบิกออก:</td>';
+        html += '<td style="text-align:right;color:#dc2626;font-size:1rem">-' + formatNumber(Math.round(totalOut * 100) / 100) + ' ' + unit + '</td>';
+        html += '<td></td>';
+        if (!isPackage) html += '<td></td>';
+        html += '</tr>';
+        html += '</tbody></table>';
+    } else {
+        html += '<div style="text-align:center;color:#94a3b8;padding:12px;font-size:0.9rem;">ไม่มีรายการเบิกออก</div>';
+    }
+    html += '</div>';
+
+    var content = document.getElementById('dailyDetailContent');
+    if (content) content.innerHTML = html;
+
+    var modal = document.getElementById('dailyDetailModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.opacity = '1';
+        modal.style.visibility = 'visible';
+    }
+}
+
+function closeDailyDetailModal() {
+    var modal = document.getElementById('dailyDetailModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
     }
 }
 

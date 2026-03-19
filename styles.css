@@ -6296,4 +6296,143 @@ body.dark-mode #dailyDetailModal .btn-outline:hover {
 /* --- Checkbox label --- */
 body.dark-mode #balanceSummaryModal label[style*="font-size:13px"] {
     color: #374151 !important;
+}
+
+/* ==========================================================================
+   FINAL PRINT OVERRIDE — placed AFTER all dark mode rules to win cascade
+   This ensures print output is always light/white even from dark mode.
+   ========================================================================== */
+@media print {
+
+    /* --- Stock Card Header (Package & RM) force light for dark mode --- */
+    body.dark-mode .stock-card-header,
+    body.dark-mode .stock-card-rm .stock-card-header,
+    body.dark-mode .stock-card-header-rm {
+        background: #f0f7ff !important;
+        border-bottom: 1px solid #dbeafe !important;
+        border-bottom-color: #dbeafe !important;
+    }
+
+    body.dark-mode .stock-card-header h2,
+    body.dark-mode .stock-card-header h3,
+    body.dark-mode .stock-card-title h2,
+    body.dark-mode .stock-card-title h3 {
+        color: #1e3a5f !important;
+    }
+
+    body.dark-mode .stock-card-title .product-code,
+    body.dark-mode .product-code {
+        color: #64748b !important;
+    }
+
+    /* --- Summary Section force light for dark mode --- */
+    body.dark-mode .stock-card-summary,
+    body.dark-mode .stock-card-summary-rm {
+        background: #f8fafc !important;
+        border-bottom-color: #e5e7eb !important;
+    }
+
+    body.dark-mode .summary-item {
+        background: #fff !important;
+        border-color: #e5e7eb !important;
+    }
+
+    body.dark-mode .summary-label {
+        color: #6b7280 !important;
+    }
+
+    body.dark-mode .summary-value {
+        color: #1f2937 !important;
+    }
+
+    body.dark-mode .summary-value.positive {
+        color: #059669 !important;
+    }
+
+    body.dark-mode .summary-value.negative {
+        color: #dc2626 !important;
+    }
+
+    /* --- Stock Cards body force light --- */
+    body.dark-mode .stock-card,
+    body.dark-mode .stock-card-rm {
+        background: #fff !important;
+        border-color: #d1d5db !important;
+        box-shadow: none !important;
+    }
+
+    /* --- Tables force light --- */
+    body.dark-mode .stock-table,
+    body.dark-mode .stock-table-rm {
+        background: #fff !important;
+    }
+
+    body.dark-mode .stock-table thead th,
+    body.dark-mode .stock-table-rm thead th {
+        background: #f3f4f6 !important;
+        color: #374151 !important;
+        border-color: #e5e7eb !important;
+    }
+
+    body.dark-mode .stock-table tbody td,
+    body.dark-mode .stock-table-rm tbody td {
+        color: #374151 !important;
+        border-color: #e5e7eb !important;
+        background: transparent !important;
+    }
+
+    body.dark-mode .stock-table tbody tr:nth-child(even),
+    body.dark-mode .stock-table-rm tbody tr:nth-child(even) {
+        background: #f9fafb !important;
+    }
+
+    /* --- Table container --- */
+    body.dark-mode .stock-table-container {
+        background: #fff !important;
+    }
+
+    /* --- Type badges --- */
+    body.dark-mode .type-in {
+        background: #d1fae5 !important;
+        color: #065f46 !important;
+    }
+
+    body.dark-mode .type-out {
+        background: #fef3c7 !important;
+        color: #92400e !important;
+    }
+
+    /* --- Qty colors --- */
+    body.dark-mode .qty-in {
+        color: #059669 !important;
+    }
+
+    body.dark-mode .qty-out {
+        color: #dc2626 !important;
+    }
+
+    body.dark-mode .balance-cell {
+        color: #1f2937 !important;
+    }
+
+    body.dark-mode .date-cell {
+        color: #374151 !important;
+    }
+
+    body.dark-mode .lot-cell {
+        color: #6b7280 !important;
+    }
+
+    /* --- Body & general --- */
+    body.dark-mode {
+        background: #fff !important;
+        color: #1f2937 !important;
+    }
+
+    /* --- Print header --- */
+    body.dark-mode .print-header,
+    body.dark-mode .print-header h2,
+    body.dark-mode .print-header p {
+        color: #1f2937 !important;
+    }
 }

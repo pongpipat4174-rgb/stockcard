@@ -6118,3 +6118,182 @@ body.dark-mode .stock-card-rm .stock-card-header {
 body.dark-mode .stock-table-container {
     background: transparent;
 }
+
+/* ==========================================================================
+   FORCE LIGHT THEME ON REPORT MODALS (regardless of dark mode)
+   These modals should always look like the print-ready light theme.
+   ========================================================================== */
+
+/* --- Scope: Balance Summary, Daily Detail, Print Preview --- */
+body.dark-mode #balanceSummaryModal .modal-content,
+body.dark-mode #dailyDetailModal .modal-content,
+body.dark-mode #printModal .modal-content {
+    background: #fff !important;
+    color: #1f2937 !important;
+    border-color: #e5e7eb !important;
+}
+
+/* Modal Header — keep the gradient header as-is (it uses inline gradient) */
+
+/* Modal Body */
+body.dark-mode #balanceSummaryModal .modal-body,
+body.dark-mode #dailyDetailModal .modal-body,
+body.dark-mode #printModal .modal-body {
+    background: #fff !important;
+    color: #1f2937 !important;
+}
+
+/* Modal Footer */
+body.dark-mode #balanceSummaryModal .modal-footer,
+body.dark-mode #dailyDetailModal .modal-footer,
+body.dark-mode #printModal .modal-footer {
+    background: #fff !important;
+    border-top-color: #e5e7eb !important;
+    color: #374151 !important;
+}
+
+body.dark-mode #balanceSummaryModal .modal-footer span,
+body.dark-mode #dailyDetailModal .modal-footer span {
+    color: #64748b !important;
+}
+
+/* --- Search input inside modals --- */
+body.dark-mode #balanceSummaryModal input[type="text"],
+body.dark-mode #balanceSummaryModal input[type="search"],
+body.dark-mode #dailyDetailModal input[type="text"] {
+    background: #fff !important;
+    color: #1f2937 !important;
+    border-color: #d1d5db !important;
+}
+
+body.dark-mode #balanceSummaryModal label,
+body.dark-mode #dailyDetailModal label {
+    color: #374151 !important;
+}
+
+/* --- Balance Summary Table (force light) --- */
+body.dark-mode #balanceSummaryModal .balance-summary-table th {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe) !important;
+    color: #0369a1 !important;
+    border-bottom-color: #bae6fd !important;
+}
+
+body.dark-mode #balanceSummaryModal .balance-summary-table td {
+    color: #374151 !important;
+    border-bottom-color: #e5e7eb !important;
+    background: transparent !important;
+}
+
+body.dark-mode #balanceSummaryModal .balance-summary-table tr:nth-child(even) td {
+    background: #fafafa !important;
+}
+
+body.dark-mode #balanceSummaryModal .balance-summary-table tr:hover td {
+    background: #f0f9ff !important;
+}
+
+body.dark-mode #balanceSummaryModal .balance-summary-table .click-row {
+    color: #374151 !important;
+}
+
+body.dark-mode #balanceSummaryModal .balance-summary-table strong {
+    color: #1f2937 !important;
+}
+
+body.dark-mode #balanceSummaryModal .balance-summary-table .product-name-cell {
+    color: #374151 !important;
+}
+
+/* Total row in balance summary */
+body.dark-mode #balanceSummaryModal .balance-summary-table tr[style*="background:#f0f9ff"],
+body.dark-mode #balanceSummaryModal .balance-summary-table tr[style*="background: #f0f9ff"] {
+    background: #f0f9ff !important;
+}
+
+/* --- Daily Detail Modal content (force light) --- */
+body.dark-mode #dailyDetailModal .balance-summary-table th {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe) !important;
+    color: #0369a1 !important;
+    border-bottom-color: #bae6fd !important;
+}
+
+body.dark-mode #dailyDetailModal .balance-summary-table td {
+    color: #374151 !important;
+    border-bottom-color: #e5e7eb !important;
+    background: transparent !important;
+}
+
+body.dark-mode #dailyDetailModal .balance-summary-table tr:nth-child(even) td {
+    background: #fafafa !important;
+}
+
+body.dark-mode #dailyDetailModal .balance-summary-table tr:hover td {
+    background: #f0f9ff !important;
+}
+
+body.dark-mode #dailyDetailModal .balance-summary-table strong {
+    color: #1f2937 !important;
+}
+
+/* Section headers (รับเข้า / เบิกออก) */
+body.dark-mode #dailyDetailModal div[style*="color:#059669"],
+body.dark-mode #dailyDetailModal span[style*="color:#059669"] {
+    color: #059669 !important;
+}
+
+body.dark-mode #dailyDetailModal div[style*="color:#dc2626"],
+body.dark-mode #dailyDetailModal span[style*="color:#dc2626"] {
+    color: #dc2626 !important;
+}
+
+/* Badge pills */
+body.dark-mode #dailyDetailModal span[style*="background:#d1fae5"] {
+    background: #d1fae5 !important;
+    color: #065f46 !important;
+}
+
+body.dark-mode #dailyDetailModal span[style*="background:#fee2e2"] {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+}
+
+/* Generic text in daily detail content */
+body.dark-mode #dailyDetailContent {
+    color: #1f2937 !important;
+}
+
+body.dark-mode #dailyDetailContent * {
+    color: inherit;
+}
+
+/* Ensure inline styles for qty colors still show properly */
+body.dark-mode #dailyDetailContent td[style*="color:#059669"] {
+    color: #059669 !important;
+}
+
+body.dark-mode #dailyDetailContent td[style*="color:#dc2626"] {
+    color: #dc2626 !important;
+}
+
+body.dark-mode #dailyDetailContent td[style*="color:#94a3b8"] {
+    color: #94a3b8 !important;
+}
+
+/* --- Buttons inside modals --- */
+body.dark-mode #balanceSummaryModal .btn-outline,
+body.dark-mode #dailyDetailModal .btn-outline {
+    background: transparent !important;
+    color: #6b7280 !important;
+    border-color: #d1d5db !important;
+}
+
+body.dark-mode #balanceSummaryModal .btn-outline:hover,
+body.dark-mode #dailyDetailModal .btn-outline:hover {
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+}
+
+/* --- Checkbox label --- */
+body.dark-mode #balanceSummaryModal label[style*="font-size:13px"] {
+    color: #374151 !important;
+}

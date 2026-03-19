@@ -5080,35 +5080,49 @@ mark.search-highlight {
         display: none !important;
     }
 
-    /* === FORCE LIGHT MODE FOR PRINT (override dark mode) === */
+    /* ================================================================
+       FORCE LIGHT MODE FOR PRINT — override ALL dark mode styles
+       so that printouts always use white/light backgrounds and dark text.
+       ================================================================ */
+
+    /* --- Base body --- */
     body,
     body.dark-mode {
         background: white !important;
-        color: #000 !important;
+        color: #1f2937 !important;
     }
 
+    /* --- Stock Cards --- */
     body.dark-mode .stock-card,
     body.dark-mode .stock-card-rm {
         background: white !important;
         border-color: #ccc !important;
+        box-shadow: none !important;
     }
 
-    body.dark-mode .stock-card-header {
-        background: #f8fafc !important;
-        border-bottom-color: #e5e7eb !important;
+    /* --- Card Header --- */
+    body.dark-mode .stock-card-header,
+    body.dark-mode .stock-card-rm .stock-card-header,
+    body.dark-mode .stock-card-header-rm {
+        background: #f0f7ff !important;
+        border-bottom-color: #dbeafe !important;
     }
 
-    body.dark-mode .stock-card-header h3 {
+    body.dark-mode .stock-card-header h3,
+    body.dark-mode .stock-card-title h2 {
         color: #1f2937 !important;
     }
 
-    body.dark-mode .product-code {
+    body.dark-mode .product-code,
+    body.dark-mode .stock-card-title .product-code {
         color: #6b7280 !important;
     }
 
+    /* --- Summary Section --- */
     body.dark-mode .stock-card-summary,
     body.dark-mode .stock-card-summary-rm {
-        background: white !important;
+        background: #f9fafb !important;
+        border-bottom-color: #e5e7eb !important;
     }
 
     body.dark-mode .summary-item {
@@ -5124,6 +5138,15 @@ mark.search-highlight {
         color: #1f2937 !important;
     }
 
+    body.dark-mode .summary-value.positive {
+        color: #059669 !important;
+    }
+
+    body.dark-mode .summary-value.negative {
+        color: #dc2626 !important;
+    }
+
+    /* --- Tables (Package) --- */
     body.dark-mode .stock-table {
         background: white !important;
     }
@@ -5137,12 +5160,178 @@ mark.search-highlight {
     body.dark-mode .stock-table tbody td {
         border-color: #e5e7eb !important;
         color: #374151 !important;
+        background: transparent !important;
     }
 
     body.dark-mode .stock-table tbody tr:nth-child(even) {
         background: #f9fafb !important;
     }
 
+    body.dark-mode .stock-table tbody tr:hover {
+        background: #f3f4f6 !important;
+    }
+
+    /* --- Tables (RM) --- */
+    body.dark-mode .stock-table-rm {
+        background: white !important;
+    }
+
+    body.dark-mode .stock-table-rm thead th {
+        background: #f3f4f6 !important;
+        color: #374151 !important;
+        border-color: #e5e7eb !important;
+    }
+
+    body.dark-mode .stock-table-rm tbody td {
+        border-color: #e5e7eb !important;
+        color: #374151 !important;
+        background: transparent !important;
+    }
+
+    body.dark-mode .stock-table-rm tbody tr:nth-child(even) {
+        background: #f9fafb !important;
+    }
+
+    /* --- Table container background --- */
+    body.dark-mode .stock-table-container {
+        background: white !important;
+    }
+
+    /* --- Type badges --- */
+    body.dark-mode .stock-table .type-in,
+    body.dark-mode .stock-table-rm .type-in {
+        background: #d1fae5 !important;
+        color: #065f46 !important;
+        border-color: #a7f3d0 !important;
+    }
+
+    body.dark-mode .stock-table .type-out,
+    body.dark-mode .stock-table-rm .type-out {
+        background: #fef3c7 !important;
+        color: #92400e !important;
+        border-color: #fde68a !important;
+    }
+
+    /* --- Quantity colors --- */
+    body.dark-mode .stock-table .qty-in,
+    body.dark-mode .stock-table-rm .qty-in {
+        color: #059669 !important;
+    }
+
+    body.dark-mode .stock-table .qty-out,
+    body.dark-mode .stock-table-rm .qty-out {
+        color: #dc2626 !important;
+    }
+
+    body.dark-mode .stock-table .balance-cell,
+    body.dark-mode .stock-table-rm .balance-cell {
+        color: #1f2937 !important;
+    }
+
+    body.dark-mode .stock-table .date-cell,
+    body.dark-mode .stock-table-rm .date-cell {
+        color: #374151 !important;
+    }
+
+    body.dark-mode .stock-table .lot-cell,
+    body.dark-mode .stock-table-rm .lot-cell {
+        color: #6b7280 !important;
+    }
+
+    /* --- Days left cells --- */
+    body.dark-mode .stock-table td[style*="color: red"],
+    body.dark-mode .stock-table td[style*="color:red"] {
+        color: #dc2626 !important;
+    }
+
+    body.dark-mode .stock-table td[style*="background"] {
+        background: transparent !important;
+    }
+
+    /* --- Type cell text --- */
+    body.dark-mode .stock-table .type-cell,
+    body.dark-mode .stock-table-rm .type-cell {
+        color: #374151 !important;
+    }
+
+    /* --- Modals (hide for print) --- */
+    body.dark-mode .modal-content,
+    body.dark-mode .modal-backdrop {
+        background: white !important;
+    }
+
+    body.dark-mode .modal-header {
+        border-bottom-color: #e5e7eb !important;
+    }
+
+    body.dark-mode .modal-header h2 {
+        color: #1f2937 !important;
+    }
+
+    body.dark-mode .modal-body {
+        color: #374151 !important;
+    }
+
+    /* --- Balance Summary Table --- */
+    body.dark-mode .balance-summary-table th {
+        background: #f3f4f6 !important;
+        color: #374151 !important;
+    }
+
+    body.dark-mode .balance-summary-table td {
+        border-color: #e5e7eb !important;
+        color: #374151 !important;
+    }
+
+    body.dark-mode .balance-summary-table tr:nth-child(even) {
+        background: #f9fafb !important;
+    }
+
+    /* --- Form Elements --- */
+    body.dark-mode input[type="text"],
+    body.dark-mode input[type="number"],
+    body.dark-mode input[type="date"],
+    body.dark-mode select,
+    body.dark-mode textarea {
+        background: white !important;
+        color: #1f2937 !important;
+        border-color: #d1d5db !important;
+    }
+
+    body.dark-mode label {
+        color: #374151 !important;
+    }
+
+    /* --- Print Header --- */
+    body.dark-mode .print-header,
+    body.dark-mode .print-header h2,
+    body.dark-mode .print-header p {
+        color: #1f2937 !important;
+    }
+
+    /* --- Generic text overrides for dark mode --- */
+    body.dark-mode .stat-value,
+    body.dark-mode .stat-label,
+    body.dark-mode .brand-text h1,
+    body.dark-mode .brand-text span,
+    body.dark-mode .filter-label,
+    body.dark-mode .selected-value,
+    body.dark-mode .module-info h2,
+    body.dark-mode .module-info p,
+    body.dark-mode .module-banner-content {
+        color: #1f2937 !important;
+    }
+
+    /* --- Scrollbar reset (just in case) --- */
+    body.dark-mode ::-webkit-scrollbar-track {
+        background: white !important;
+    }
+
+    body.dark-mode ::-webkit-scrollbar-thumb {
+        background: #d1d5db !important;
+    }
+
+    /* --- Non dark-mode specific card styles --- */
     .stock-card,
     .stock-card-rm {
         box-shadow: none !important;

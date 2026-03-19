@@ -6435,4 +6435,10 @@ body.dark-mode #balanceSummaryModal label[style*="font-size:13px"] {
     body.dark-mode .print-header p {
         color: #1f2937 !important;
     }
+
+    /* --- Hide duplicate stock card header when print-header is present --- */
+    /* printAll() inserts .print-header before .stock-card-header, making them redundant */
+    .print-header ~ .stock-card-header {
+        display: none !important;
+    }
 }

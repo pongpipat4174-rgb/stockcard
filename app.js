@@ -314,11 +314,11 @@ function refreshData() {
     }
 }
 
-// Fetch RM Master Data (code, name, supplier) from DB only
+// Fetch RM Master Data (code, name, supplier) from DB
+// ดึงจาก DB อย่างเดียว (เร็ว) — ถ้าต้องการอัปเดตจากชีท RawMaterial ให้กดปุ่ม "Sync สินค้า"
 async function fetchRMMasterData() {
-    console.log('[RM Master] Fetching...');
+    console.log('[RM Master] Fetching from DB...');
 
-    // === DB Only Mode ===
     try {
         var dbRes = await fetch((DB_API_BASE || '') + '/api/rm/master');
         if (!dbRes.ok) {
@@ -4991,10 +4991,35 @@ async function transferToProductionAuto(entries) {
 // === Admin: Backup RM data to Google Sheet ===
 // ส่งข้อมูล rmStockData ปัจจุบันทั้งหมดไป Sheet เพื่อ sync ให้ตรงกับ DB
 async function backupRMToSheet() {
-    if (!confirm('ต้องการ Backup ข้อมูล RM ปัจจุบันไป Google Sheet หรือไม่?\n\n(ข้อมูลใน Sheet จะถูกเขียนทับด้วยข้อมูลจาก DB)')) return;
+    if (!confirm('ต้องการ Backup ข้อมูล RM ไป Google Sheet หรือไม่?\n\n• ดึงรายชื่อสินค้าจากชีท RawMaterial มาอัปเดต\n• Backup ข้อมูล transaction ไป Sheet')) return;
 
     showLoading();
-    showToast('กำลัง Backup ไป Sheet... อาจใช้เวลาสักครู่');
+
+    // === Step 1: Sync master data from RawMaterial sheet → DB ===
+    showToast('🔄 กำลัง Sync รายชื่อสินค้าจากชีท RawMaterial...');
+    try {
+        var syncRes = await fetch((DB_API_BASE || '') + '/api/rm/master/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        if (syncRes.ok) {
+            var syncResult = await syncRes.json();
+            if (syncResult.success) {
+                console.log('[RM Master] ✅ Synced ' + syncResult.synced + ' products (total: ' + syncResult.total + ')');
+                showToast('✅ Sync สินค้าสำเร็จ! (' + syncResult.total + ' รายการ)');
+                // Reload master data to update dropdowns
+                await fetchRMMasterData();
+                populateRMProductDropdown();
+            }
+        }
+    } catch (syncErr) {
+        console.warn('[RM Master] Sync failed:', syncErr.message);
+        showToast('⚠️ Sync สินค้าล้มเหลว แต่จะ Backup ต่อ...');
+    }
+
+    // === Step 2: Backup transaction data to Sheet (existing logic) ===
+    showToast('☁️ กำลัง Backup ข้อมูลไป Sheet... อาจใช้เวลาสักครู่');
 
     var moduleKey = (currentModule === 'rm_production') ? 'rm_production' : 'rm';
     var config = SHEET_CONFIG[moduleKey];
@@ -5017,7 +5042,7 @@ async function backupRMToSheet() {
         // no-cors ทำให้อ่าน response ไม่ได้ → รอ 5 วินาทีแล้ว assume สำเร็จ
         setTimeout(function () {
             hideLoading();
-            showToast('✅ ส่ง Backup ไปแล้ว! เช็ค Sheet ใน 10-30 วินาที');
+            showToast('✅ Sync + Backup สำเร็จ! เช็ค Sheet ใน 10-30 วินาที');
         }, 5000);
 
     } catch (e) {

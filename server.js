@@ -134,8 +134,16 @@ async function ensureAllTables() {
         note            TEXT,
         created_at      TIMESTAMPTZ DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS rm_master (
+        code            TEXT PRIMARY KEY,
+        name            TEXT NOT NULL DEFAULT '',
+        supplier        TEXT DEFAULT '',
+        created_at      TIMESTAMPTZ DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
-    console.log('[DB] ✅ All module tables ready (gs_items, gs_transactions, sc_consumable_items, sc_consumable_transactions)');
+    console.log('[DB] ✅ All module tables ready (gs_items, gs_transactions, sc_consumable_items, sc_consumable_transactions, rm_master)');
   } catch (err) {
     console.error('[DB] ❌ Failed to create tables:', err.message);
   }
@@ -698,19 +706,125 @@ app.get('/api/rm/data', async (req, res) => {
   }
 });
 
-// GET /api/rm/master — ดึง master data (product code, name, supplier) ที่ไม่ซ้ำ
+// GET /api/rm/master — ดึง master data จาก rm_master UNION sc_rm (ได้ทั้งสินค้าที่มี transaction และที่ยังไม่มี)
 app.get('/api/rm/master', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT DISTINCT product_code as code, product_name as name,
-              (SELECT supplier FROM sc_rm r2 WHERE r2.product_code = r1.product_code AND r2.supplier != '' ORDER BY r2.row_index DESC LIMIT 1) as supplier
-       FROM sc_rm r1
-       WHERE product_code != '' AND product_code != 'รหัสสินค้า'
-       ORDER BY product_code ASC`
+      `SELECT code, name, supplier FROM (
+        -- Source 1: rm_master table (จากชีท RawMaterial หรือเพิ่มใหม่)
+        SELECT code, name, supplier FROM rm_master
+        UNION
+        -- Source 2: sc_rm transactions (existing products with transactions)
+        SELECT DISTINCT product_code as code, product_name as name,
+              COALESCE((SELECT supplier FROM sc_rm r2 WHERE r2.product_code = r1.product_code AND r2.supplier != '' ORDER BY r2.row_index DESC LIMIT 1), '') as supplier
+        FROM sc_rm r1
+        WHERE product_code != '' AND product_code != 'รหัสสินค้า'
+      ) combined
+      ORDER BY code ASC`
     );
-    res.json({ success: true, data: result.rows });
+    // Deduplicate: prefer rm_master data (has proper name/supplier)
+    const dedupMap = new Map();
+    for (const row of result.rows) {
+      const existing = dedupMap.get(row.code);
+      if (!existing || (row.name && row.name.trim() !== '' && (!existing.name || existing.name.trim() === ''))) {
+        dedupMap.set(row.code, row);
+      }
+    }
+    const data = Array.from(dedupMap.values()).sort((a, b) => a.code.localeCompare(b.code));
+    res.json({ success: true, data, count: data.length });
   } catch (err) {
     console.error('[RM Master API] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/rm/master/add — เพิ่มสินค้าใหม่ลง rm_master
+app.post('/api/rm/master/add', async (req, res) => {
+  const { code, name, supplier } = req.body;
+  if (!code || !code.trim()) {
+    return res.status(400).json({ error: 'Product code is required' });
+  }
+  try {
+    await pool.query(
+      `INSERT INTO rm_master (code, name, supplier, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (code) DO UPDATE SET
+         name = COALESCE(NULLIF($2, ''), rm_master.name),
+         supplier = COALESCE(NULLIF($3, ''), rm_master.supplier),
+         updated_at = NOW()`,
+      [code.trim(), (name || '').trim(), (supplier || '').trim()]
+    );
+    console.log(`[RM Master] ✅ Added/Updated: ${code.trim()}`);
+    res.json({ success: true, message: `Added/updated ${code.trim()}` });
+  } catch (err) {
+    console.error('[RM Master] add error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/rm/master/sync — Sync จากชีท RawMaterial ของ Google Sheets เข้า rm_master
+app.post('/api/rm/master/sync', async (req, res) => {
+  try {
+    const sheetId = process.env.SHEET_RM_ID;
+    if (!sheetId) {
+      return res.status(400).json({ error: 'SHEET_RM_ID not configured in .env' });
+    }
+
+    const sheetName = 'RawMaterial';
+    const timestamp = Date.now();
+    const encodedName = encodeURIComponent(sheetName);
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodedName}&tq=SELECT%20*&_=${timestamp}`;
+
+    console.log(`[RM Master Sync] Fetching from Sheet: ${sheetName}...`);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const text = await response.text();
+    if (text.includes('google.com/accounts')) throw new Error('Sheet not shared publicly');
+
+    const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
+    const jsonText = match ? match[1] : text;
+    const json = JSON.parse(jsonText);
+    const rows = json.table.rows;
+
+    // Parse: Column A = code, Column B = name, Column C = supplier
+    let syncCount = 0;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const row of rows) {
+        const c = row.c;
+        const code = (c[0]?.v || '').toString().trim();
+        const name = (c[1]?.v || '').toString().trim();
+        const supplier = (c[2]?.v || '').toString().trim();
+
+        if (!code || code === 'รหัสสินค้า' || code === 'code' || code === 'Product Code1') continue;
+
+        await client.query(
+          `INSERT INTO rm_master (code, name, supplier, updated_at)
+           VALUES ($1, $2, $3, NOW())
+           ON CONFLICT (code) DO UPDATE SET
+             name = COALESCE(NULLIF($2, ''), rm_master.name),
+             supplier = COALESCE(NULLIF($3, ''), rm_master.supplier),
+             updated_at = NOW()`,
+          [code, name, supplier]
+        );
+        syncCount++;
+      }
+      await client.query('COMMIT');
+      console.log(`[RM Master Sync] ✅ Synced ${syncCount} products from RawMaterial sheet`);
+
+      // Return updated master data
+      const masterResult = await pool.query('SELECT code, name, supplier FROM rm_master ORDER BY code ASC');
+      res.json({ success: true, synced: syncCount, total: masterResult.rowCount, data: masterResult.rows });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('[RM Master Sync] error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

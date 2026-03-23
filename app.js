@@ -216,6 +216,9 @@ function switchModule(module, event) {
         // Show Backup Sheet button for RM
         const backupBtn = document.getElementById('backupSheetBtn');
         if (backupBtn) backupBtn.style.display = 'inline-flex';
+        // Hide PK Sync button for RM
+        const syncPkBtn = document.getElementById('syncPkMasterBtn');
+        if (syncPkBtn) syncPkBtn.style.display = 'none';
         // Transfer button - show only for RM Center, hide for RM Production
         const transferBtn = document.getElementById('transferBtn');
         if (transferBtn) {
@@ -236,6 +239,9 @@ function switchModule(module, event) {
         // Hide Backup Sheet button for Package
         const backupBtn = document.getElementById('backupSheetBtn');
         if (backupBtn) backupBtn.style.display = 'none';
+        // Show PK Sync button for Package
+        const syncPkBtn = document.getElementById('syncPkMasterBtn');
+        if (syncPkBtn) syncPkBtn.style.display = 'inline-flex';
         // Hide Transfer button for Package
         const transferBtn = document.getElementById('transferBtn');
         if (transferBtn) transferBtn.style.display = 'none';
@@ -462,12 +468,32 @@ async function fetchPackageData() {
                         stockData = dbResult.data;
                         console.log('[Package] ✅ Loaded from DB:', stockData.length, 'records');
 
+                        // Build productMasterData from transactions first
                         var uniqueProducts = new Map();
                         stockData.forEach(function (item) {
                             if (item.productCode && !uniqueProducts.has(item.productCode)) {
                                 uniqueProducts.set(item.productCode, { code: item.productCode, name: item.productName });
                             }
                         });
+
+                        // Also fetch from pk_master (includes products without transactions)
+                        try {
+                            var masterRes = await fetch((DB_API_BASE || '') + '/api/package/master');
+                            if (masterRes.ok) {
+                                var masterResult = await masterRes.json();
+                                if (masterResult.success && masterResult.data) {
+                                    masterResult.data.forEach(function (p) {
+                                        if (p.code && !uniqueProducts.has(p.code)) {
+                                            uniqueProducts.set(p.code, { code: p.code, name: p.name });
+                                        }
+                                    });
+                                    console.log('[Package] ✅ Master data merged:', uniqueProducts.size, 'products');
+                                }
+                            }
+                        } catch (masterErr) {
+                            console.warn('[Package] Master data fetch failed:', masterErr.message);
+                        }
+
                         productMasterData = Array.from(uniqueProducts.values());
 
                         populateProductDropdown();
@@ -2238,6 +2264,35 @@ function populateProductDropdownRM() {
     rmProductMasterData.forEach(function (p) {
         datalist.innerHTML += '<option value="' + p.code + '">' + p.code + ' - ' + p.name + '</option>';
     });
+}
+
+// Sync Package Master Data from Google Sheet → DB pk_master table
+async function syncPkMasterFromSheet() {
+    if (!confirm('ดึงรายชื่อสินค้าจากชีท "ข้อมูลรหัสสินค้า" มาอัปเดต?\nข้อมูล transaction ไม่ถูกแก้ไข')) return;
+
+    showLoading();
+    showToast('กำลัง Sync ข้อมูลจากชีท ข้อมูลรหัสสินค้า...');
+
+    try {
+        var res = await fetch((DB_API_BASE || '') + '/api/package/master/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        var result = await res.json();
+        if (result.success) {
+            showToast('✅ Sync สำเร็จ! อัปเดต ' + result.synced + ' รายการ (ทั้งหมด ' + result.total + ' รายการ)');
+            // Reload package data (will also fetch master)
+            await fetchPackageData();
+        } else {
+            showToast('❌ Sync ล้มเหลว: ' + (result.error || 'Unknown error'));
+        }
+    } catch (err) {
+        console.error('[PK Sync] Error:', err);
+        showToast('❌ Sync ล้มเหลว: ' + err.message);
+    } finally {
+        hideLoading();
+    }
 }
 
 // Print Single Card

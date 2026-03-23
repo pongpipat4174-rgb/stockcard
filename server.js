@@ -142,8 +142,16 @@ async function ensureAllTables() {
         created_at      TIMESTAMPTZ DEFAULT NOW(),
         updated_at      TIMESTAMPTZ DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS pk_master (
+        code            TEXT PRIMARY KEY,
+        name            TEXT NOT NULL DEFAULT '',
+        supplier        TEXT DEFAULT '',
+        created_at      TIMESTAMPTZ DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
-    console.log('[DB] ✅ All module tables ready (gs_items, gs_transactions, sc_consumable_items, sc_consumable_transactions, rm_master)');
+    console.log('[DB] ✅ All module tables ready (gs_items, gs_transactions, sc_consumable_items, sc_consumable_transactions, rm_master, pk_master)');
   } catch (err) {
     console.error('[DB] ❌ Failed to create tables:', err.message);
   }
@@ -561,6 +569,100 @@ app.post('/api/admin/switch-db-mode', checkAdmin, (req, res) => {
 // ============================================================
 // Package API (sc_package table)
 // ============================================================
+
+// GET /api/package/master — ดึง master data จาก pk_master UNION sc_package
+app.get('/api/package/master', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT code, name, supplier FROM (
+        SELECT code, name, supplier FROM pk_master
+        UNION
+        SELECT DISTINCT product_code as code, product_name as name, '' as supplier
+        FROM sc_package
+        WHERE product_code != '' AND product_code != 'รหัสสินค้า' AND source_module = 'package'
+      ) combined
+      ORDER BY code ASC`
+    );
+    const dedupMap = new Map();
+    for (const row of result.rows) {
+      const existing = dedupMap.get(row.code);
+      if (!existing || (row.name && row.name.trim() !== '' && (!existing.name || existing.name.trim() === ''))) {
+        dedupMap.set(row.code, row);
+      }
+    }
+    const data = Array.from(dedupMap.values()).sort((a, b) => a.code.localeCompare(b.code));
+    res.json({ success: true, data, count: data.length });
+  } catch (err) {
+    console.error('[PK Master API] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/package/master/sync — Sync จากชีท "ข้อมูลรหัสสินค้า" เข้า pk_master
+app.post('/api/package/master/sync', async (req, res) => {
+  try {
+    const sheetId = process.env.SHEET_PACKAGE_ID;
+    if (!sheetId) {
+      return res.status(400).json({ error: 'SHEET_PACKAGE_ID not configured in .env' });
+    }
+
+    const sheetName = 'ข้อมูลรหัสสินค้า';
+    const timestamp = Date.now();
+    const encodedName = encodeURIComponent(sheetName);
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodedName}&tq=SELECT%20*&_=${timestamp}`;
+
+    console.log(`[PK Master Sync] Fetching from Sheet: ${sheetName}...`);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const text = await response.text();
+    if (text.includes('google.com/accounts')) throw new Error('Sheet not shared publicly');
+
+    const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
+    const jsonText = match ? match[1] : text;
+    const json = JSON.parse(jsonText);
+    const rows = json.table.rows;
+
+    // Parse: Column A = code, Column B = name, Column C = supplier
+    let syncCount = 0;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const row of rows) {
+        const c = row.c;
+        const code = (c[0]?.v || '').toString().trim();
+        const name = (c[1]?.v || '').toString().trim();
+        const supplier = (c[2]?.v || '').toString().trim();
+
+        if (!code || code === 'รหัส' || code === 'code' || code === 'รหัสสินค้า') continue;
+
+        await client.query(
+          `INSERT INTO pk_master (code, name, supplier, updated_at)
+           VALUES ($1, $2, $3, NOW())
+           ON CONFLICT (code) DO UPDATE SET
+             name = COALESCE(NULLIF($2, ''), pk_master.name),
+             supplier = COALESCE(NULLIF($3, ''), pk_master.supplier),
+             updated_at = NOW()`,
+          [code, name, supplier]
+        );
+        syncCount++;
+      }
+      await client.query('COMMIT');
+      console.log(`[PK Master Sync] ✅ Synced ${syncCount} products from ข้อมูลรหัสสินค้า sheet`);
+
+      const masterResult = await pool.query('SELECT code, name, supplier FROM pk_master ORDER BY code ASC');
+      res.json({ success: true, synced: syncCount, total: masterResult.rowCount, data: masterResult.rows });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('[PK Master Sync] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // GET /api/package/data — ดึงข้อมูล Package ทั้งหมด
 app.get('/api/package/data', async (req, res) => {
